@@ -14,12 +14,13 @@ def main():
 
     print("Hämtar aktiviteter från Garmin Personal API...")
     
-    # Garmins personliga API använder ofta 'Api-Key' i headern istället för Bearer
-    url = "https://apis.garmin.com/wellness-api/rest/activities?start=0&limit=30"
+    # Rätt endpoint enligt Garmins Swagger-specifikation för aktivitessökning
+    url = "https://personal.connectapi.garmin.com/activitylist-service/activities/search/activities?start=0&limit=30"
+    
     req = urllib.request.Request(
         url,
         headers={
-            "Api-Key": API_KEY,
+            "Authorization": f"ApiKey {API_KEY}",
             "Content-Type": "application/json"
         }
     )
