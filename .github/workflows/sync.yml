@@ -1,0 +1,37 @@
+name: Garmin Daily Sync
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Körs varje dag kl 06:00 UTC
+  workflow_dispatch: # Gör att du kan köra den manuellt när du vill via en knapp
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install garminconnect
+
+      - name: Run Garmin script
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: |
+          python garmin_sync.py
+
+      - name: Commit and push updated csv
+        run: |
+          git config --global user.name "Garmin Bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git status
+          git add garmin_activities.csv
+          git diff --staged --quiet || (git commit -m "Automated Garmin sync update" && git push)
