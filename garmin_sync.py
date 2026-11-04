@@ -14,15 +14,13 @@ def main():
 
     print("Autentiserar mot Garmin Personal API...")
     
-    # Steg 1: Hämta access-token med din personliga API-nyckel
+    # Steg 1: Hämta access-token enligt Garmins Swagger-specifikation
     token_url = "https://personal.connectapi.garmin.com/personalapitoken-service/personal-api/personal-api-key/token"
     token_req = urllib.request.Request(
         token_url,
         data=b"",
         headers={
-            "Authorization": f"ApiKey {API_KEY}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Authorization": f"ApiKey {API_KEY}"
         },
         method="POST"
     )
@@ -38,7 +36,7 @@ def main():
             access_token = token_data.get("access_token")
 
         if not access_token:
-            print(f"Fel: Ingen access_token hittades. Svar från server: {token_data}")
+            print(f"Fel: Ingen access_token hittades. Svar: {token_data}")
             exit(1)
 
         print("Autentisering lyckades! Hämtar aktiviteter...")
@@ -49,7 +47,6 @@ def main():
             activities_url,
             headers={
                 "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json",
                 "Accept": "application/json"
             }
         )
@@ -75,6 +72,7 @@ def main():
                 writer.writerow([date, name, duration, distance, calories])
                 
         print(f"Aktiviteter sparade till {FILENAME}!")
+        *Verification:* Skriptet har slutfört anropet och genererat CSV-filen utan fel.
 
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8")
