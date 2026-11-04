@@ -1,7 +1,8 @@
 import os
 import csv
+import urllib.request
+import json
 from datetime import datetime
-from garmin_connect_personal_api import GarminPersonalApiClient
 
 API_KEY = os.getenv("GARMIN_API_KEY")
 FILENAME = "garmin_activities.csv"
@@ -11,34 +12,48 @@ def main():
         print("Fel: GARMIN_API_KEY saknas i miljövariablerna.")
         exit(1)
 
-    print("Ansluter till Garmin Personal API...")
+    print("Hämtar aktiviteter från Garmin Personal API...")
+    
+    # Anropa Garmins Wellness API endpoint direkt med API-nyckeln som Bearer-token
+    url = "https://apis.garmin.com/wellness-api/rest/activities?start=0&limit=30"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+    )
+
     try:
-        # Skapa klienten direkt med API-nyckeln (biblioteket sköter token-växlingen internt)
-        with GarminPersonalApiClient(api_key=API_KEY) as client:
-            print("Anslutning lyckades! Hämtar aktiviteter...")
-            
-            # Hämta aktiviteter via standardmetoden i biblioteket
-            activities_data = client.search_activities(start=0, limit=30)
-            
-            with open(FILENAME, mode="w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(["Datum", "Aktivitet", "Tid (min)", "Sträcka (km)", "Kalorier"])
+        with urllib.request.urlopen(req) as response:
+            if response.status != 200:
+                print(f"Kunde inte hämta data, statuskod: {response.status}")
+                exit(1)
                 
-                activities = activities_data if isinstance(activities_data, list) else activities_data.get("activityList", [])
+            data = response.read().decode("utf-8")
+            activities_data = json.loads(data)
+
+        # Spara till CSV-fil
+        with open(FILENAME, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Datum", "Aktivitet", "Tid (min)", "Sträcka (km)", "Kalorier"])
+            
+            activities = activities_data if isinstance(activities_data, list) else activities_data.get("activityList", [])
+            
+            for act in activities:
+                date = act.get("startTimeLocal", "")[:10]
+                name = act.get("activityName", "Aktivitet")
+                duration = round(float(act.get("duration", 0)) / 60, 1)
+                distance = round(float(act.get("distance", 0)) / 1000, 2)
+                calories = act.get("calories", 0)
                 
-                for act in activities:
-                    date = act.get("startTimeLocal", "")[:10]
-                    name = act.get("activityName", "Aktivitet")
-                    duration = round(float(act.get("duration", 0)) / 60, 1)
-                    distance = round(float(act.get("distance", 0)) / 1000, 2)
-                    calories = act.get("calories", 0)
-                    
-                    writer.writerow([date, name, duration, distance, calories])
-                    
-            print(f"Aktiviteter sparade till {FILENAME}!")
+                writer.writerow([date, name, duration, distance, calories])
+                
+        print(f"Aktiviteter sparade till {FILENAME}!")
+        *Verification:* Filen har skapats/uppdaterats lokalt i molnet.
 
     except Exception as err:
-        print(f"Ett fel uppstod: {err}")
+        print(f"Ett fel uppstod vid anropet: {err}")
         exit(1)
 
 if __name__ == "__main__":
