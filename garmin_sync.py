@@ -1,9 +1,8 @@
 import os
 import csv
 from datetime import datetime
-from garmin_connect_personal_api import GarminPersonalApiClient
+from garmin_personal_api import PersonalApiAuthenticator, GarminPersonalApiClient
 
-# Hämtar din personliga API-nyckel från GitHub Secrets
 API_KEY = os.getenv("GARMIN_API_KEY")
 FILENAME = "garmin_activities.csv"
 
@@ -12,24 +11,22 @@ def main():
         print("Fel: GARMIN_API_KEY saknas i miljövariablerna.")
         exit(1)
 
-    print("Ansluter till Garmin Personal API...")
+    print("Autentiserar mot Garmin Personal API...")
     try:
-        # Autentisera direkt med din personliga API-nyckel enligt Garmins Swagger-flöde
-        with GarminPersonalApiClient(api_key=API_KEY) as client:
-            print("Autentisering lyckades!")
+        # Generera Bearer-token med din personliga API-nyckel enligt Garmins specifikation
+        with PersonalApiAuthenticator() as authenticator:
+            token = authenticator.obtain_token(API_KEY)
             
-            # Hämta de senaste aktiviteterna via Personal API (search_activities)
-            print("Hämtar senaste aktiviteter...")
-            activities_data = client.search_activities(start=0, limit=30)
+        with GarminPersonalApiClient(token.access_token) as client:
+            print("Anslutning lyckades! Hämtar aktiviteter...")
             
-            # Spara till CSV-fil för enkel åtkomst
+            # Använd Garmins officiella metod för att hämta aktiviteter
+            activities_data = client.get("/wellness-api/rest/activities")
+            
             with open(FILENAME, mode="w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerows([
-                    ["Datum", "Aktivitet", "Tid (min)", "Sträcka (km)", "Puls (snitt)", "Kalorier"]
-                ])
+                writer.writerow(["Datum", "Aktivitet", "Tid (min)", "Sträcka (km)", "Kalorier"])
                 
-                # Hantera listan beroende på hur strukturen returneras
                 activities = activities_data if isinstance(activities_data, list) else activities_data.get("activityList", [])
                 
                 for act in activities:
@@ -37,15 +34,14 @@ def main():
                     name = act.get("activityName", "Aktivitet")
                     duration = round(float(act.get("duration", 0)) / 60, 1)
                     distance = round(float(act.get("distance", 0)) / 1000, 2)
-                    hr = act.get("averageHR", "N/A")
                     calories = act.get("calories", 0)
                     
-                    writer.writerow([date, name, duration, distance, hr, calories])
+                    writer.writerow([date, name, duration, distance, calories])
                     
             print(f"Aktiviteter sparade till {FILENAME}!")
 
     except Exception as err:
-        print(f"Ett fel uppstod vid kommunikation med Garmins API: {err}")
+        print(f"Ett fel uppstod: {err}")
         exit(1)
 
 if __name__ == "__main__":
