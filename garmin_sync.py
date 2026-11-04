@@ -1,7 +1,7 @@
 import os
 import csv
 from datetime import datetime
-from garmin_personal_api import PersonalApiAuthenticator, GarminPersonalApiClient
+from garmin_connect_personal_api import GarminPersonalApiClient
 
 API_KEY = os.getenv("GARMIN_API_KEY")
 FILENAME = "garmin_activities.csv"
@@ -11,17 +11,14 @@ def main():
         print("Fel: GARMIN_API_KEY saknas i miljövariablerna.")
         exit(1)
 
-    print("Autentiserar mot Garmin Personal API...")
+    print("Ansluter till Garmin Personal API...")
     try:
-        # Generera Bearer-token med din personliga API-nyckel enligt Garmins specifikation
-        with PersonalApiAuthenticator() as authenticator:
-            token = authenticator.obtain_token(API_KEY)
-            
-        with GarminPersonalApiClient(token.access_token) as client:
+        # Skapa klienten direkt med API-nyckeln (biblioteket sköter token-växlingen internt)
+        with GarminPersonalApiClient(api_key=API_KEY) as client:
             print("Anslutning lyckades! Hämtar aktiviteter...")
             
-            # Använd Garmins officiella metod för att hämta aktiviteter
-            activities_data = client.get("/wellness-api/rest/activities")
+            # Hämta aktiviteter via standardmetoden i biblioteket
+            activities_data = client.search_activities(start=0, limit=30)
             
             with open(FILENAME, mode="w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
