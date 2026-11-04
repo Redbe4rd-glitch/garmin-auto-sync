@@ -14,47 +14,49 @@ def main():
 
     print("Autentiserar mot Garmin Personal API...")
     
-    # Steg 1: Hämta access-token med din personliga API-nyckel enligt Swagger
+    # Steg 1: Hämta access-token med din personliga API-nyckel
     token_url = "https://personal.connectapi.garmin.com/personalapitoken-service/personal-api/personal-api-key/token"
     token_req = urllib.request.Request(
         token_url,
-        data=b"",  # POST-anrop med tom kropp
+        data=b"",
         headers={
             "Authorization": f"ApiKey {API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Accept": "application/json"
         },
         method="POST"
     )
 
     try:
         with urllib.request.urlopen(token_req) as token_response:
-            if token_response.status != 200:
-                print(f"Kunde inte autentisera, statuskod: {token_response.status}")
+            raw_response = token_response.read().decode("utf-8")
+            if not raw_response.strip():
+                print("Fel: Tomt svar från token-endpointen.")
                 exit(1)
-            token_data = json.loads(token_response.read().decode("utf-8"))
+                
+            token_data = json.loads(raw_response)
             access_token = token_data.get("access_token")
 
         if not access_token:
-            print("Fel: Ingen access_token hittades i svaret från Garmin.")
+            print(f"Fel: Ingen access_token hittades. Svar från server: {token_data}")
             exit(1)
 
         print("Autentisering lyckades! Hämtar aktiviteter...")
 
-        # Steg 2: Använd access-token för att hämta aktiviteter från rätt Swagger-endpoint
+        # Steg 2: Använd access-token för att hämta aktiviteter
         activities_url = "https://personal.connectapi.garmin.com/activitylist-service/activities/search/activities?start=0&limit=30"
         act_req = urllib.request.Request(
             activities_url,
             headers={
                 "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Accept": "application/json"
             }
         )
 
         with urllib.request.urlopen(act_req) as act_response:
-            if act_response.status != 200:
-                print(f"Kunde inte hämta aktiviteter, statuskod: {act_response.status}")
-                exit(1)
-            activities_data = json.loads(act_response.read().decode("utf-8"))
+            act_raw = act_response.read().decode("utf-8")
+            activities_data = json.loads(act_raw)
 
         # Steg 3: Spara till CSV-fil
         with open(FILENAME, mode="w", newline="", encoding="utf-8") as f:
@@ -74,6 +76,10 @@ def main():
                 
         print(f"Aktiviteter sparade till {FILENAME}!")
 
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8")
+        print(f"HTTP-fel {e.code}: {e.reason} - Detaljer: {error_body}")
+        exit(1)
     except Exception as err:
         print(f"Ett fel uppstod vid anropet: {err}")
         exit(1)
