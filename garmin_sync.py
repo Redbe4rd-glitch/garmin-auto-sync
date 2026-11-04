@@ -14,12 +14,12 @@ def main():
 
     print("Hämtar aktiviteter från Garmin Personal API...")
     
-    # Anropa Garmins Wellness API endpoint direkt med API-nyckeln som Bearer-token
+    # Garmins personliga API använder ofta 'Api-Key' i headern istället för Bearer
     url = "https://apis.garmin.com/wellness-api/rest/activities?start=0&limit=30"
     req = urllib.request.Request(
         url,
         headers={
-            "Authorization": f"Bearer {API_KEY}",
+            "Api-Key": API_KEY,
             "Content-Type": "application/json"
         }
     )
