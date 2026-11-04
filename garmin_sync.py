@@ -50,7 +50,6 @@ def main():
                 writer.writerow([date, name, duration, distance, calories])
                 
         print(f"Aktiviteter sparade till {FILENAME}!")
-        *Verification:* Filen har skapats/uppdaterats lokalt i molnet.
 
     except Exception as err:
         print(f"Ett fel uppstod vid anropet: {err}")
