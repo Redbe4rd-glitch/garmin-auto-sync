@@ -72,7 +72,7 @@ def main():
                 writer.writerow([date, name, duration, distance, calories])
                 
         print(f"Aktiviteter sparade till {FILENAME}!")
-        *Verification:* Skriptet har slutfört anropet och genererat CSV-filen utan fel.
+        
 
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8")
