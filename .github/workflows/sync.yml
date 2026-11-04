@@ -25,6 +25,7 @@ jobs:
         env:
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          GARMIN_API_KEY: ${{ secrets.GARMIN_API_KEY }}
         run: |
           python garmin_sync.py
 
