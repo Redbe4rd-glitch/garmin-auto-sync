@@ -18,7 +18,7 @@ def main():
     token_url = "https://personal.connectapi.garmin.com/personalapitoken-service/personal-api/personal-api-key/token"
     token_req = urllib.request.Request(
         token_url,
-        data=b"", # POST-anrop med tom kropp
+        data=b"",  # POST-anrop med tom kropp
         headers={
             "Authorization": f"ApiKey {API_KEY}",
             "Content-Type": "application/json"
