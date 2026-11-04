@@ -1,6 +1,7 @@
 import os
 import csv
 import urllib.request
+import urllib.error
 import json
 from datetime import datetime
 
@@ -14,7 +15,7 @@ def main():
 
     print("Autentiserar mot Garmin Personal API...")
     
-    # Steg 1: Hämta access-token enligt Garmins Swagger-specifikation
+    # Steg 1: Hämta access-token
     token_url = "https://personal.connectapi.garmin.com/personalapitoken-service/personal-api/personal-api-key/token"
     token_req = urllib.request.Request(
         token_url,
@@ -28,6 +29,9 @@ def main():
     try:
         with urllib.request.urlopen(token_req) as token_response:
             raw_response = token_response.read().decode("utf-8")
+            print(f"Token-svar status: {token_response.status}")
+            print(f"Token-svar body: {raw_response}")
+            
             if not raw_response.strip():
                 print("Fel: Tomt svar från token-endpointen.")
                 exit(1)
@@ -72,7 +76,6 @@ def main():
                 writer.writerow([date, name, duration, distance, calories])
                 
         print(f"Aktiviteter sparade till {FILENAME}!")
-        
 
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8")
