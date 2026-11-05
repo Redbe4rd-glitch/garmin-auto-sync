@@ -32,13 +32,24 @@
             background-color: #0f172a;
             color: #f8fafc;
         }
+        /* Custom scrollbar for chat */
+        .chat-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+        .chat-scroll::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        .chat-scroll::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 4px;
+        }
     </style>
 </head>
-<body class="min-h-screen pb-12">
+<body class="min-h-screen pb-12 relative overflow-x-hidden">
 
     <!-- Header / Navigation -->
-    <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3">
-        <div class="max-w-4xl mx-auto flex items-center justify-between">
+    <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3">
+        <div class="max-w-5xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
                     <i data-lucide="activity" class="w-6 h-6"></i>
@@ -48,14 +59,20 @@
                     <p class="text-xs text-slate-400">Garmin 50+ Vad & Hälseneskydd</p>
                 </div>
             </div>
-            <button id="refreshBtn" onclick="fetchData()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refreshIcon"></i>
-                <span>Synka</span>
-            </button>
+            <div class="flex items-center gap-2">
+                <button id="refreshBtn" onclick="fetchData()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refreshIcon"></i>
+                    <span class="hidden sm:inline">Synka</span>
+                </button>
+                <button onclick="toggleChatDrawer()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 transition">
+                    <i data-lucide="bot" class="w-4 h-4"></i>
+                    <span>Chatta med Coachen</span>
+                </button>
+            </div>
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 pt-6 space-y-6">
+    <main class="max-w-5xl mx-auto px-4 pt-6 space-y-6">
 
         <!-- Data Ingestion Accordion & Controls -->
         <section class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/60 shadow-lg space-y-4">
@@ -77,6 +94,32 @@
                     <button onclick="fetchData()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shrink-0 transition flex items-center gap-1">
                         <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Hämta
                     </button>
+                </div>
+            </div>
+
+            <!-- Alternative Methods Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-700/50">
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/40 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-300 flex items-center gap-1">
+                            <i data-lucide="upload" class="w-3.5 h-3.5 text-blue-400"></i> Ladda upp lokal CSV
+                        </span>
+                    </div>
+                    <label class="block w-full text-center px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 border-dashed rounded-lg text-xs font-medium text-slate-300 cursor-pointer transition">
+                        <span>Välj fil från telefonen</span>
+                        <input type="file" id="fileInput" accept=".csv" class="hidden" onchange="handleFileUpload(event)">
+                    </label>
+                </div>
+
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/40 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-300 flex items-center gap-1">
+                            <i data-lucide="clipboard-text" class="w-3.5 h-3.5 text-purple-400"></i> Klistra in CSV-text
+                        </span>
+                        <button onclick="parsePastedText()" class="text-[11px] text-purple-400 hover:underline">Läs in</button>
+                    </div>
+                    <input type="text" id="pasteInput" placeholder="Klistra in CSV-rader här..." 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-purple-500">
                 </div>
             </div>
 
@@ -149,7 +192,7 @@
                 <div class="text-[10px] text-slate-400 mt-0.5">Mål: &le; 124 bpm (FatMax)</div>
             </div>
 
-            <!-- 6. GCT & GCT-Balans (Vad/Häl-Status) -->
+            <!-- 6. GCT & GCT-Balans -->
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
                 <div class="flex justify-between items-start mb-1">
                     <span class="text-[11px] text-slate-400">GCT & Balans (Vad/Häl)</span>
@@ -189,30 +232,6 @@
             </div>
         </section>
 
-        <!-- Prompt Generator for Coach Genie -->
-        <section class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-emerald-500/30 shadow-xl space-y-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
-                        <i data-lucide="sparkles" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-base font-bold text-white">Coach-Genie Prompt-Generator</h2>
-                        <p class="text-xs text-slate-400">Genererad rapport redo att klistras in i chatten</p>
-                    </div>
-                </div>
-                <button onclick="copyPrompt()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition">
-                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                    <span id="copyBtnText">Kopiera Prompt</span>
-                </button>
-            </div>
-
-            <div class="relative">
-                <textarea id="promptOutput" readonly rows="7" 
-                    class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs font-mono text-emerald-300 focus:outline-none resize-none leading-relaxed"></textarea>
-            </div>
-        </section>
-
         <!-- Recent Activities Table -->
         <section class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
             <div class="flex items-center justify-between mb-3">
@@ -245,14 +264,92 @@
 
     </main>
 
+    <!-- Slide-over AI Chat Drawer Panel -->
+    <div id="chatOverlay" onclick="toggleChatDrawer()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden transition-opacity"></div>
+    <aside id="chatDrawer" class="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-slate-900 border-l border-slate-800 z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-2xl">
+        <!-- Chat Drawer Header -->
+        <div class="p-4 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-xl">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-sm text-white leading-tight">Coach-Genie AI</h2>
+                    <p class="text-[11px] text-emerald-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Aktivitus-Zoner & Vad/Häl-expert
+                    </p>
+                </div>
+            </div>
+            <button onclick="toggleChatDrawer()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Chat Messages Container -->
+        <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3.5 chat-scroll">
+            <div class="flex gap-2.5 items-start">
+                <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                    <i data-lucide="bot" class="w-4 h-4"></i>
+                </div>
+                <div class="bg-slate-800/90 border border-slate-700/60 p-3 rounded-2xl rounded-tl-sm text-xs text-slate-200 space-y-1.5 leading-relaxed max-w-[85%]">
+                    <p>Hej! Jag är din personliga <strong>Coach-Genie</strong>. Jag har tillgång till din senaste Garmin-data och dina Aktivitus-zoner (FatMax 124 bpm / AT 142 bpm).</p>
+                    <p>Vad vill du analysera eller planera idag?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Prompt Buttons -->
+        <div class="px-4 py-2 border-t border-slate-800/80 bg-slate-950/40 flex gap-1.5 overflow-x-auto no-scrollbar">
+            <button onclick="sendQuickPrompt('Ge mig en snabb utvärdering av min vad- och hälsenerisk just nu.')" 
+                class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium rounded-full border border-slate-700 shrink-0 transition">
+                🛡️ Vad/Häl-status
+            </button>
+            <button onclick="sendQuickPrompt('Hur bör mitt nästa pass se ut baserat på min 80/20-balans?')" 
+                class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium rounded-full border border-slate-700 shrink-0 transition">
+                🏃 Nästa pass
+            </button>
+            <button onclick="sendQuickPrompt('Analysera min GCT-balans och om jag har skaderisk.')" 
+                class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-medium rounded-full border border-slate-700 shrink-0 transition">
+                ⚖️ GCT-Balans
+            </button>
+        </div>
+
+        <!-- Chat Input Form -->
+        <div class="p-3 border-t border-slate-800 bg-slate-900">
+            <form onsubmit="handleChatSubmit(event)" class="flex gap-2">
+                <input type="text" id="chatInput" placeholder="Fråga coachen något..." 
+                    class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                <button type="submit" id="sendBtn" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition flex items-center justify-center shrink-0">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </div>
+    </aside>
+
     <script>
         let gctChartInstance = null;
         let intensityChartInstance = null;
+        let currentSummaryData = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             fetchData();
         });
+
+        function toggleChatDrawer() {
+            const drawer = document.getElementById('chatDrawer');
+            const overlay = document.getElementById('chatOverlay');
+            const isOpen = !drawer.classList.contains('translate-x-full');
+            
+            if (isOpen) {
+                drawer.classList.add('translate-x-full');
+                overlay.classList.add('hidden');
+            } else {
+                drawer.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+            }
+        }
 
         async function fetchData() {
             const rawUrl = document.getElementById('csvUrlInput').value.trim();
@@ -447,12 +544,10 @@
             const weeklyDist = recentPass.reduce((acc, curr) => acc + curr.distance, 0).toFixed(1);
             const weeklyDurationSec = recentPass.reduce((acc, curr) => acc + curr.duration, 0);
 
-            // Styrka senaste 7 dagarna (nu matchar den korrekt)
             const strengthPass = recentPass.filter(r => r.type.toLowerCase().includes('styrka') || r.type.toLowerCase().includes('strength'));
             const strengthCount = strengthPass.length;
             const strengthDuration = strengthPass.reduce((acc, curr) => acc + curr.duration, 0);
 
-            // Alternativ träning senaste 7 dagarna
             const altPass = recentPass.filter(r => r.type.toLowerCase().includes('crosstrainer') || r.type.toLowerCase().includes('cykel') || r.type.toLowerCase().includes('cycling') || r.type.toLowerCase().includes('elliptical'));
             const altCount = altPass.length;
             const altDuration = altPass.reduce((acc, curr) => acc + curr.duration, 0);
@@ -474,7 +569,6 @@
             const avgGct = senasteLop && senasteLop.gct > 0 ? senasteLop.gct : 235;
             const senasteBalans = senasteLop && senasteLop.balance && senasteLop.balance !== '-' ? senasteLop.balance : '50.0% / 50.0%';
 
-            // Trendanalys med vad/häl-fokus
             let trendsHtml = '';
             if (strengthCount >= 2) {
                 trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Positiv trend:</strong> God styrkeinfrastruktur (${strengthCount} st) för vad- och hälseneskydd.</div>`;
@@ -496,7 +590,7 @@
 
             document.getElementById('trendInsights').innerHTML = trendsHtml;
 
-            const summary = {
+            currentSummaryData = {
                 totalActivities: parsedRuns.length,
                 lastDate: parsedRuns[0]?.date ? parsedRuns[0].date.substring(0, 10) : 'Idag',
                 weeklyDistance: weeklyDist,
@@ -513,7 +607,7 @@
                 runs: parsedRuns.slice(0, 8)
             };
 
-            renderDashboard(summary);
+            renderDashboard(currentSummaryData);
         }
 
         function loadFallbackData() {
@@ -577,7 +671,6 @@
 
             renderGctChart(data.runs);
             renderIntensityChart(data.easyPct, data.medPct, data.hardPct);
-            generateCoachPrompt(data);
         }
 
         function renderGctChart(runs) {
@@ -640,36 +733,135 @@
             });
         }
 
-        function generateCoachPrompt(data) {
-            const latest = data.runs[0] || { date: 'Idag', type: 'Löpning', distance: 10, duration: 3600, gct: 235, balance: '50/50', hr: 135 };
-            const prompt = `Hej Coach-Genie! Här är min dagsfärska träningsrapport (med mina Aktivitus-pulszoner: FatMax <=124, AT 142):
+        // --- AI Chat Logic via Gemini API ---
 
-📊 **TRÄNINGSSTATUS (50+ LÖPARE / VAD- & HÄLSENESKYDD)**
-- Totalt antal pass i historik: ${data.totalActivities}
-- Senaste registrerade pass: ${data.lastDate}
-- Senaste 7 dagarnas volym: ${data.weeklyDistance} km (Total tid: ${data.weeklyDuration})
-- Styrkepass senaste 7d: ${data.strengthCount} st (${data.strengthDuration})
-- Alternativa pass senaste 7d: ${data.altCount} st (${data.altDuration})
-- Zonsfördelning: ${data.easyPct}% Låg (<=124) / ${data.medPct}% Medel (125-142) / ${data.hardPct}% Hög (>142)
-
-👟 **SENASTE TRÄNINGSPASS (${latest.date})**
-- Typ: ${latest.type} | Distans: ${latest.distance} km | Tid: ${Math.round(latest.duration/60)} min
-- Snittpuls: ${latest.hr > 0 ? latest.hr + ' bpm' : 'Ej registrerad'}
-- Markontakttid (GCT): ${latest.gct} ms | GCT-Balans: ${data.senasteBalans} (Riskgräns GCT: >240 ms)
-
-🔍 **FRÅGA TILL COACHEN:**
-Utifrån mina trender, GCT-balans och Aktivitus-trösklar: Hur bör jag lägga upp nästa träningsvecka för att balansera styrka, alternativ träning och löpning utan att överbelasta vader och hälsenor?`;
-
-            document.getElementById('promptOutput').value = prompt;
+        function sendQuickPrompt(text) {
+            document.getElementById('chatInput').value = text;
+            handleChatSubmit(new Event('submit'));
         }
 
-        function copyPrompt() {
-            const copyText = document.getElementById('promptOutput');
-            copyText.select();
-            document.execCommand('copy');
-            const btnText = document.getElementById('copyBtnText');
-            btnText.textContent = 'Kopierat!';
-            setTimeout(() => { btnText.textContent = 'Kopiera Prompt'; }, 2000);
+        async function handleChatSubmit(e) {
+            e.preventDefault();
+            const inputEl = document.getElementById('chatInput');
+            const message = inputEl.value.trim();
+            if (!message) return;
+
+            inputEl.value = '';
+            appendChatMessage('user', message);
+
+            // Show Typing Indicator
+            const typingId = appendTypingIndicator();
+
+            try {
+                const response = await callCoachGenieAPI(message);
+                removeTypingIndicator(typingId);
+                appendChatMessage('model', response);
+            } catch (err) {
+                removeTypingIndicator(typingId);
+                appendChatMessage('model', "⚠️ Ursäkta, jag kunde inte ansluta till träningsmotorn just nu. Försök igen om en liten stund!");
+                console.error(err);
+            }
+        }
+
+        function appendChatMessage(role, text) {
+            const container = document.getElementById('chatMessages');
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flex gap-2.5 items-start ' + (role === 'user' ? 'justify-end' : '');
+
+            if (role === 'model') {
+                wrapper.innerHTML = `
+                    <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                        <i data-lucide="bot" class="w-4 h-4"></i>
+                    </div>
+                    <div class="bg-slate-800/90 border border-slate-700/60 p-3 rounded-2xl rounded-tl-sm text-xs text-slate-200 leading-relaxed max-w-[85%] whitespace-pre-wrap">
+                        ${text}
+                    </div>
+                `;
+            } else {
+                wrapper.innerHTML = `
+                    <div class="bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-sm text-xs leading-relaxed max-w-[85%] whitespace-pre-wrap shadow-md">
+                        ${text}
+                    </div>
+                `;
+            }
+
+            container.appendChild(wrapper);
+            lucide.createIcons();
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendTypingIndicator() {
+            const container = document.getElementById('chatMessages');
+            const id = 'typing-' + Date.now();
+            const wrapper = document.createElement('div');
+            wrapper.id = id;
+            wrapper.className = 'flex gap-2.5 items-start';
+            wrapper.innerHTML = `
+                <div class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                    <i data-lucide="bot" class="w-4 h-4"></i>
+                </div>
+                <div class="bg-slate-800/90 border border-slate-700/60 px-4 py-3 rounded-2xl rounded-tl-sm text-xs text-slate-400 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"></span>
+                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                </div>
+            `;
+            container.appendChild(wrapper);
+            lucide.createIcons();
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+
+        function removeTypingIndicator(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        async function callCoachGenieAPI(userPrompt) {
+            const apiKey = ""; // API key populated dynamically at runtime
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const dataContext = currentSummaryData ? `
+AKTUELL GARMIN-DATA FÖR LÖPAREN (50+ Vad & Hälsene-fokus):
+- Totalt antal pass: ${currentSummaryData.totalActivities} (Senaste pass: ${currentSummaryData.lastDate})
+- Senaste 7 dagarnas volym: ${currentSummaryData.weeklyDistance} km (Total tid: ${currentSummaryData.weeklyDuration})
+- Styrkepass senaste 7d: ${currentSummaryData.strengthCount} st (${currentSummaryData.strengthDuration})
+- Alternativa pass (Crosstrainer/cykel) senaste 7d: ${currentSummaryData.altCount} st (${currentSummaryData.altDuration})
+- Intensitetsfördelning (Aktivitus-zoner): ${currentSummaryData.easyPct}% Låg (<=124 bpm), ${currentSummaryData.medPct}% Medel (125-142 bpm), ${currentSummaryData.hardPct}% Hög (>142 bpm)
+- Markontakttid (GCT): ${currentSummaryData.avgGct} ms (Normalt <240 ms)
+- GCT-balans: ${currentSummaryData.senasteBalans}
+- Aktivitus-trösklar: FatMax <=124 bpm, Anaerob Tröskel (AT) = 142 bpm, Maxpuls = 153 bpm.
+            ` : "Ingen Garmin-data är inladdad ännu.";
+
+            const systemInstruction = `Du är Coach-Genie, en experttränare specialiserad på löpare 50+ med strikt fokus på vad- och hälseneskydd, 80/20-principen samt biomekanik (GCT och GCT-balans).
+Svara alltid på svenska. Var uppmuntrande, pedagogisk och konkret.
+Använd alltid användarens tillgängliga träningsdata (Aktivitus-zoner: FatMax <=124 bpm) i dina svar.
+Ge korta, kärnfulla och praktiska råd anpassade för att förebygga skador.`;
+
+            const payload = {
+                contents: [
+                    {
+                        role: "user",
+                        parts: [{ text: `${dataContext}\n\nANVÄNDARENS FRÅGA:\n${userPrompt}` }]
+                    }
+                ],
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                }
+            };
+
+            const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                throw new Error(`API error ${res.status}`);
+            }
+
+            const json = await res.json();
+            return json?.candidates?.[0]?.content?.parts?.[0]?.text || "Kunde inte generera ett svar för tillfället.";
         }
     </script>
 </body>
