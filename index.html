@@ -198,7 +198,7 @@
                     🛡️ Vad/Häl-status
                 </button>
                 <button onclick="sendQuickQuestion('Vad bör mitt nästa träningspass vara för att hålla 80/20-balansen och få in tillräckligt med styrka?')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700">
-                    🏃 Redovisa nästa pass
+                    🏃 Rekommendera nästa pass
                 </button>
             </div>
 
@@ -296,20 +296,53 @@
             const refreshIcon = document.getElementById('refreshIcon');
 
             refreshIcon.classList.add('animate-spin');
+            statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20";
             statusBadge.textContent = "Försöker...";
 
-            try {
-                const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrl)}`, { cache: 'no-cache' });
-                if (res.ok) {
-                    const text = await res.text();
-                    parseCsvText(text);
-                } else {
-                    loadFallbackData();
+            const endpoints = [
+                { name: 'GitHub Direct', url: rawUrl },
+                { name: 'AllOrigins Proxy', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}` },
+                { name: 'JSDelivr CDN', url: rawUrl.replace('raw.githubusercontent.com', 'cdn.jsdelivr.net/gh').replace('/refs/heads/main/', '@main/') }
+            ];
+
+            let csvContent = null;
+            let successMethod = '';
+
+            for (const ep of endpoints) {
+                try {
+                    logEl.textContent = `Försöker hämta via ${ep.name}...`;
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+                    const res = await fetch(ep.url, { cache: 'no-cache', signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (res.ok) {
+                        const text = await res.text();
+                        if (text && text.length > 50 && text.includes(',')) {
+                            csvContent = text;
+                            successMethod = ep.name;
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.log(`${ep.name} misslyckades:`, e);
                 }
-            } catch (e) {
+            }
+
+            refreshIcon.classList.remove('animate-spin');
+
+            if (csvContent) {
+                logEl.textContent = `Live data hämtad via ${successMethod}!`;
+                statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                statusBadge.textContent = "Live Synkad";
+                parseCsvText(csvContent);
+            } else {
+                logEl.textContent = "Kunde inte nå GitHub automatiskt. Laddar säkerhetsdata.";
+                statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                statusBadge.textContent = "Offline / Fallback";
                 loadFallbackData();
-            } finally {
-                refreshIcon.classList.remove('animate-spin');
             }
         }
 
@@ -385,13 +418,29 @@
             const strengthPass = recent.filter(r => r.type === 'Styrketräning');
             const altPass = recent.filter(r => r.type === 'Crosstrainer' || r.type === 'Cykling');
 
+            let trendsHtml = '';
+            if (strengthPass.length >= 2) {
+                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Styrkebas:</strong> ${strengthPass.length} styrkepass (7d) – god sena/sätes-aktivering.</div>`;
+            } else {
+                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Styrkevarning:</strong> Endast ${strengthPass.length} styrkepass (7d). Rekommenderar &ge; 2 pass/vecka.</div>`;
+            }
+
+            const latestGct = parsedRuns.find(r => r.gct > 0)?.gct || 0;
+            if (latestGct > 240) {
+                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Biomekanik:</strong> GCT över gränsvärdet (${latestGct} ms > 240 ms). Vada/häl belastas hårdare.</div>`;
+            } else if (latestGct > 0) {
+                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Markkontakt:</strong> Bra GCT (${latestGct} ms). Skonsam kadens/stegisättning.</div>`;
+            }
+
+            document.getElementById('trendInsights').innerHTML = trendsHtml || '<div class="text-slate-400">Träningsdata redo för analys.</div>';
+
             currentDashboardData = {
                 totalActivities: parsedRuns.length,
                 lastDate: parsedRuns[0]?.date ? parsedRuns[0].date.substring(0, 10) : 'Idag',
                 weeklyDistance: weeklyDist,
                 strengthCount: strengthPass.length,
                 altCount: altPass.length,
-                avgGct: parsedRuns.find(r => r.gct > 0)?.gct || 235,
+                avgGct: latestGct || 235,
                 senasteBalans: parsedRuns.find(r => r.gct > 0)?.balance || '50/50',
                 runs: parsedRuns.slice(0, 8)
             };
@@ -452,17 +501,14 @@
 
             const historyEl = document.getElementById('chatHistory');
             
-            // Append User Message
             historyEl.innerHTML += `<div class="bg-emerald-950/60 border border-emerald-800/60 p-2.5 rounded-lg text-emerald-200 ml-6"><strong>Du:</strong> ${userMsg}</div>`;
             inputEl.value = '';
             historyEl.scrollTop = historyEl.scrollHeight;
 
-            // Loading state
             const loadingId = 'loading-' + Date.now();
             historyEl.innerHTML += `<div id="${loadingId}" class="bg-slate-800 p-2.5 rounded-lg text-slate-400 italic font-mono">Coach-Genie tänker...</div>`;
             historyEl.scrollTop = historyEl.scrollHeight;
 
-            // Prepare system instructions with live dashboard data
             const systemContext = `Du är Coach-Genie, en expertdriven löpcoach för en 50+ löpare med fokus på vad- och hälseneskydd.
 Aktivitus-pulszoner: FatMax <=124 bpm, AT 142 bpm, Maxpuls 153 bpm.
 Dagsaktuell träningsstatus:
