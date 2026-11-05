@@ -137,11 +137,11 @@
 
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
                 <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs text-slate-400">80/20 Balans</span>
+                    <span class="text-xs text-slate-400">80/20 Balans (Test)</span>
                     <i data-lucide="pie-chart" class="w-4 h-4 text-blue-400"></i>
                 </div>
                 <div id="ratioScore" class="text-2xl font-bold text-blue-400">-- / --</div>
-                <div id="ratioStatus" class="text-[11px] text-slate-400 mt-1">Mål: 80% Lågintensiv</div>
+                <div id="ratioStatus" class="text-[11px] text-slate-400 mt-1">Mål: &le; 124 bpm (Z1-Z2)</div>
             </div>
 
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
@@ -173,9 +173,9 @@
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
                         <i data-lucide="heart-pulse" class="w-4 h-4 text-rose-400"></i>
-                        Intensitetsfördelning (80/20)
+                        Intensitetsfördelning (Aktivitus)
                     </h2>
-                    <span class="text-[11px] text-slate-400">Pulszoner Z1-Z5</span>
+                    <span class="text-[11px] text-slate-400">FatMax &le; 124 | AT 142</span>
                 </div>
                 <div class="h-48 flex items-center justify-center">
                     <canvas id="intensityChart"></canvas>
@@ -209,9 +209,16 @@
 
         <!-- Recent Activities Table -->
         <section class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
-            <h2 class="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-                <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass
-            </h2>
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass (Aktivitus Zonschema)
+                </h2>
+                <div class="flex items-center gap-3 text-[10px] text-slate-400">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Låg (&le;124 bpm)</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Medel (125-142)</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Hög (&gt;142 bpm)</span>
+                </div>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-300">
                     <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700/50">
@@ -332,13 +339,11 @@
             });
         }
 
-        // Hjälpfunktion för att hitta kolumn oavsett vad den heter (skottsäker)
         function getField(row, possibleKeys) {
             for (const key of possibleKeys) {
                 if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
                     return row[key];
                 }
-                // Kolla även om någon nyckel i raden matchar case-insensitive
                 const foundKey = Object.keys(row).find(k => k.toLowerCase() === key.toLowerCase());
                 if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') {
                     return row[foundKey];
@@ -374,6 +379,14 @@
             return h + 'h ' + (m > 0 ? m + 'm' : '');
         }
 
+        // Klassificering enligt Aktivitus-test (FatMax <= 124, AT = 142)
+        function getAktivitusZone(hr) {
+            if (!hr || hr <= 0) return 'unknown';
+            if (hr <= 124) return 'easy';   // Z1-Z2 (<= 124 bpm)
+            if (hr <= 142) return 'medium'; // Z3-Z4 (125 - 142 bpm)
+            return 'hard';                  // Z5+ (> 142 bpm)
+        }
+
         function processParsedData(dataRows) {
             if (!dataRows || dataRows.length === 0) {
                 loadFallbackData();
@@ -391,7 +404,7 @@
                 const typeVal = getTypeName(r);
 
                 let distKm = isNaN(distVal) ? 0 : distVal;
-                if (distKm > 100) distKm = distKm / 1000; // Om det är i meter
+                if (distKm > 100) distKm = distKm / 1000;
 
                 return {
                     date: String(dateVal),
@@ -402,11 +415,10 @@
                     balance: String(balanceVal),
                     hr: hrVal,
                     load: isNaN(loadVal) ? 0 : Math.round(loadVal),
-                    zone: hrVal > 0 && hrVal > 150 ? 'Hard' : 'Easy'
+                    zone: getAktivitusZone(hrVal)
                 };
             });
 
-            // Sortera nyast först
             parsedRuns.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             const totalRuns = parsedRuns.length;
@@ -415,12 +427,18 @@
             
             const passMedPuls = parsedRuns.filter(r => r.hr > 0);
             let easyPct = 80;
-            let hardPct = 20;
+            let medPct = 15;
+            let hardPct = 5;
 
             if (passMedPuls.length > 0) {
-                const easyCount = passMedPuls.filter(r => r.zone === 'Easy').length;
-                easyPct = Math.round((easyCount / passMedPuls.length) * 100);
-                hardPct = 100 - easyPct;
+                const easyCount = passMedPuls.filter(r => r.zone === 'easy').length;
+                const medCount = passMedPuls.filter(r => r.zone === 'medium').length;
+                const hardCount = passMedPuls.filter(r => r.zone === 'hard').length;
+                const total = passMedPuls.length;
+
+                easyPct = Math.round((easyCount / total) * 100);
+                medPct = Math.round((medCount / total) * 100);
+                hardPct = Math.max(0, 100 - easyPct - medPct);
             }
 
             const senasteLop = parsedRuns.find(r => r.gct > 0) || parsedRuns[0];
@@ -432,6 +450,7 @@
                 weeklyDistance: weeklyDist,
                 weeklyProgression: 'Senaste 7 pass',
                 easyPct: easyPct,
+                medPct: medPct,
                 hardPct: hardPct,
                 avgGct: avgGct,
                 runs: parsedRuns.slice(0, 8)
@@ -442,8 +461,9 @@
 
         function loadFallbackData() {
             const sampleRuns = [
-                { date: '2026-11-04 10:00', type: 'Löpning', distance: 10.2, duration: 3100, gct: 232, balance: '50.1% L', hr: 134, load: 72, zone: 'Easy' },
-                { date: '2026-11-02 18:00', type: 'Styrketräning', distance: 0, duration: 2700, gct: 0, balance: '-', hr: 110, load: 45, zone: 'Easy' }
+                { date: '2026-11-04 10:00', type: 'Löpning', distance: 10.2, duration: 3100, gct: 232, balance: '50.1% L', hr: 120, load: 72, zone: 'easy' },
+                { date: '2026-11-02 18:00', type: 'Styrketräning', distance: 0, duration: 2700, gct: 0, balance: '-', hr: 110, load: 45, zone: 'easy' },
+                { date: '2026-10-30 17:00', type: 'Intervaller', distance: 8.0, duration: 2400, gct: 228, balance: '50.0%', hr: 146, load: 95, zone: 'hard' }
             ];
             processParsedData(sampleRuns);
         }
@@ -453,7 +473,7 @@
             document.getElementById('lastDateText').textContent = `Senaste: ${data.lastDate}`;
             document.getElementById('weeklyDistance').textContent = `${data.weeklyDistance} km`;
             document.getElementById('weeklyProgression').textContent = data.weeklyProgression;
-            document.getElementById('ratioScore').textContent = `${data.easyPct}% / ${data.hardPct}%`;
+            document.getElementById('ratioScore').textContent = `${data.easyPct}% Låg`;
             
             const riskEl = document.getElementById('tendonRiskLevel');
             const isHighGct = data.avgGct > 240;
@@ -465,7 +485,16 @@
             tbody.innerHTML = '';
             data.runs.forEach(run => {
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-800/40 transition';
+                
+                // Färgkodad flik baserat på Aktivitus-zoner
+                let borderClass = 'border-l-4 border-slate-600'; 
+                if (run.hr > 0) {
+                    if (run.zone === 'easy') borderClass = 'border-l-4 border-emerald-500';      // <= 124 bpm
+                    else if (run.zone === 'medium') borderClass = 'border-l-4 border-amber-400'; // 125-142 bpm
+                    else borderClass = 'border-l-4 border-rose-500';                             // > 142 bpm
+                }
+
+                tr.className = `${borderClass} hover:bg-slate-800/40 transition`;
                 
                 const typOchDistans = `${run.type}<br><span class="text-[10px] text-emerald-400 font-semibold">${run.distance > 0 ? run.distance.toFixed(1) + ' km' : '-'}</span>`;
                 const tidPass = formatDuration(run.duration);
@@ -483,7 +512,7 @@
             });
 
             renderGctChart(data.runs);
-            renderIntensityChart(data.easyPct, data.hardPct);
+            renderIntensityChart(data.easyPct, data.medPct, data.hardPct);
             generateCoachPrompt(data);
         }
 
@@ -522,17 +551,17 @@
             });
         }
 
-        function renderIntensityChart(easy, hard) {
+        function renderIntensityChart(easy, med, hard) {
             const ctx = document.getElementById('intensityChart').getContext('2d');
             if (intensityChartInstance) intensityChartInstance.destroy();
 
             intensityChartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Lågintensiv (Z1-Z2)', 'Högintensiv (Z3-Z5)'],
+                    labels: ['Låg (<=124)', 'Medel (125-142)', 'Hög (>142)'],
                     datasets: [{
-                        data: [easy, hard],
-                        backgroundColor: ['#22c55e', '#ef4444'],
+                        data: [easy, med, hard],
+                        backgroundColor: ['#22c55e', '#fbbf24', '#ef4444'],
                         borderWidth: 0
                     }]
                 },
@@ -540,7 +569,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } }
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
                     },
                     cutout: '70%'
                 }
@@ -549,13 +578,13 @@
 
         function generateCoachPrompt(data) {
             const latest = data.runs[0] || { date: 'Idag', type: 'Löpning', distance: 10, duration: 3600, gct: 235, hr: 135 };
-            const prompt = `Hej Coach-Genie! Här är min dagsfärska träningsrapport direkt från min Garmin-data:
+            const prompt = `Hej Coach-Genie! Här är min dagsfärska träningsrapport (med mina Aktivitus-pulszoner: FatMax <=124, AT 142):
 
 📊 **TRÄNINGSSTATUS (50+ LÖPARE / VAD- & HÄLSENESKYDD)**
 - Totalt antal pass i historik: ${data.totalActivities}
 - Senaste registrerade pass: ${data.lastDate}
 - Senaste periodens volym: ${data.weeklyDistance} km
-- Intensitetsfördelning (80/20): ${data.easyPct}% Lågintensiv (Z1/Z2) / ${data.hardPct}% Högintensiv
+- Zonsfördelning: ${data.easyPct}% Låg (<=124) / ${data.medPct}% Medel (125-142) / ${data.hardPct}% Hög (>142)
 
 👟 **SENASTE TRÄNINGSPASS (${latest.date})**
 - Typ: ${latest.type} | Distans: ${latest.distance} km | Tid: ${Math.round(latest.duration/60)} min
@@ -563,7 +592,7 @@
 - Markontakttid (GCT): ${latest.gct} ms (Tröskelvärde för risk: >240 ms)
 
 🔍 **FRÅGA TILL COACHEN:**
-Utifrån mitt senaste pass och markontakttid (${latest.gct} ms): Hur bör jag utforma de kommande 3 träningspassen för att skydda mina vad- och hälsenor?`;
+Utifrån mitt senaste pass, markontakttid (${latest.gct} ms) och mina Aktivitus-trösklar: Hur bör jag lägga upp nästa pass för att bygga aerob bas (under 124 bpm) utan att överbelasta vader/hälsenor?`;
 
             document.getElementById('promptOutput').value = prompt;
         }
