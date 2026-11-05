@@ -7,6 +7,11 @@ import json
 API_KEY = os.getenv("GARMIN_API_KEY")
 FILENAME = "garmin_activities.csv"
 
+def get_activity_id(act):
+    """Hämtar unikt ID som sträng för säker jämförelse utan dubbletter."""
+    raw_id = act.get("activityId") or act.get("startTimeLocal")
+    return str(raw_id) if raw_id is not None else None
+
 def main():
     if not API_KEY:
         print("Fel: GARMIN_API_KEY saknas i miljövariablerna.")
@@ -34,7 +39,7 @@ def main():
 
         print("Autentisering lyckades! Hämtar all aktivitetsdata med paginering...")
 
-        # 1. Hämta alla aktiviteter genom att loopa tills listan är tom
+        # 1. Hämta alla aktiviteter från API:et
         all_activities = []
         start = 0
         limit = 100
@@ -65,86 +70,47 @@ def main():
                 break
             start += limit
 
-        if not all_activities:
-            print("Inga aktiviteter hittades från API:et.")
-            return
-
-        # Konvertera nya API-data till en dictionary med unikt ID som nyckel för att undvika dubbletter
-        new_activities_dict = {}
-        for act in all_activities:
-            # Använd 'activityId' som unikt ID om det finns, annars 'startTimeLocal'
-            act_id = act.get("activityId") or act.get("startTimeLocal")
-            new_activities_dict[act_id] = act
-
-        # 2. Läs in befintlig CSV-fil om den redan finns (för att bevara historik)
-        existing_activities_dict = {}
-        if os.path.exists(FILENAME):
-            print(f"Läser in befintlig historik från {FILENAME}...")
-            with open(FILENAME, mode="r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    # Försök hitta id-kolumnen
-                    act_id = row.get("activityId") or row.get("startTimeLocal")
-                    if act_id:
-                        # Konvertera tillbaks JSON-strängar till listor/dicts om det behövs vid sammanslagning, 
-                        # men enklast är att lagra raderna direkt.
-                        existing_activities_dict[act_id] = row
-
-            print(f"Hittade {len(existing_activities_dict)} tidigare sparade aktiviteter.")
-
-        # 3. Slå ihop: nya aktiviteter uppdaterar eller läggs till till de gamla
-        # Vi bygger en gemensam pool av råa aktivitetsobjekt om möjligt, annars slår vi ihop på dict-nivå.
-        # Enklaste robustasättet: Låt alla ID:n från API (nyare data) ersätta gamla, och behåll gamla som inte finns i API.
-        combined_dict = {**existing_activities_dict}
-        
-        # För att dynamiskt kunna skriva ut alla kolumner samlar vi in alla unika nycklar från ALLA aktiviteter
-        fieldnames = set()
-        
-        # Omvandla tillbaka till en gemensam lista av dicts för fältanalys
-        final_activities_list = []
-        
-        # Uppdatera med ny data (här sparar vi de råa dictsen från Garmin i en map)
+        # Map för att lagra alla unika pass (ID som sträng)
         raw_combined = {}
-        for row in existing_activities_dict.values():
-            # Återskapa lite struktur om nödvändigt, eller hantera dem som dicts
-            pass
-            
-        # Säkraste metoden för att bygga på utan att tappa historik:
-        # Vi sparar undan allt från API:et, och lägger till rader från gamla CSV om de saknas i API-svaret.
-        # (Om ditt API alltid returnerar hela historiken upp till 100+ så täcker loopen allt).
-        
-        for act in all_activities:
-            act_id = act.get("activityId") or act.get("startTimeLocal")
-            raw_combined[act_id] = act
 
-        # Lägg till gamla som inte finns med i dagens API-batch (om API:et har en gräns bakåt)
+        # Lägg till färska aktiviteter från API:et
+        for act in all_activities:
+            act_id = get_activity_id(act)
+            if act_id:
+                raw_combined[act_id] = act
+
+        # 2. Läs in och slå ihop med befintlig CSV-fil (om den finns)
         if os.path.exists(FILENAME):
+            print(f"Läser in befintlig historik från {FILENAME} för att förhindra dubbletter...")
             with open(FILENAME, mode="r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    act_id = row.get("activityId") or row.get("startTimeLocal")
+                    act_id = get_activity_id(row)
                     if act_id and act_id not in raw_combined:
-                        # Detta är ett äldre pass som inte kom med i den nya batch-sökningen
-                        # Vi rekonstruerar det till dict
+                        # Bevara äldre pass som inte kom med i nya API-batchar
                         restored = {}
                         for k, v in row.items():
                             try:
                                 restored[k] = json.loads(v)
-                            except:
+                            except Exception:
                                 restored[k] = v
                         raw_combined[act_id] = restored
 
-        # Samla in ALLA unika nycklar över alla pass
+        if not raw_combined:
+            print("Inga aktiviteter hittades.")
+            return
+
+        # 3. Bygg gemensam kolumnlista från alla unika nycklar
+        fieldnames = set()
         for act in raw_combined.values():
             fieldnames.update(act.keys())
         fieldnames = sorted(list(fieldnames))
 
-        # 4. Spara till CSV
+        # 4. Spara rensad data tillbaka till CSV
         with open(FILENAME, mode="w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(fieldnames)
             
-            # Sortera gärna efter starttid om fältet finns
             sorted_acts = sorted(
                 raw_combined.values(), 
                 key=lambda x: str(x.get("startTimeLocal", "")), 
@@ -160,7 +126,7 @@ def main():
                     row.append(val)
                 writer.writerow(row)
                 
-        print(f"Klart! Totalt {len(raw_combined)} unika aktiviteter sparade till {FILENAME}.")
+        print(f"Klart! Totalt {len(raw_combined)} unika aktiviteter sparades till {FILENAME}.")
 
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8")
