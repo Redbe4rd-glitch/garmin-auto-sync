@@ -82,7 +82,6 @@
 
             <!-- Alternative Methods Grid (File Upload + Raw Paste) -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-700/50">
-                <!-- Local File Upload -->
                 <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/40 space-y-2">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-medium text-slate-300 flex items-center gap-1">
@@ -95,7 +94,6 @@
                     </label>
                 </div>
 
-                <!-- Paste Raw Text -->
                 <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/40 space-y-2">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-medium text-slate-300 flex items-center gap-1">
@@ -108,7 +106,6 @@
                 </div>
             </div>
 
-            <!-- Status Banner Log -->
             <div id="statusLog" class="p-2.5 bg-slate-900/80 rounded-xl text-xs font-mono text-slate-400 flex items-start gap-2 border border-slate-800">
                 <i data-lucide="info" class="w-4 h-4 shrink-0 text-slate-500 mt-0.5"></i>
                 <span id="statusLogText">Klicka på 'Hämtning' eller ladda upp din fil för att starta analysen.</span>
@@ -214,13 +211,13 @@
                     <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass (Aktivitus Zonschema)
                 </h2>
                 <div class="flex items-center gap-3 text-[10px] text-slate-400">
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Låg (&le;124 bpm)</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Låg (&le;124)</span>
                     <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Medel (125-142)</span>
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Hög (&gt;142 bpm)</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Hög (&gt;142)</span>
                 </div>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-300">
+                <table class="w-full text-left text-xs text-slate-300 border-collapse">
                     <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700/50">
                         <tr>
                             <th class="p-2.5">Datum</th>
@@ -379,12 +376,11 @@
             return h + 'h ' + (m > 0 ? m + 'm' : '');
         }
 
-        // Klassificering enligt Aktivitus-test (FatMax <= 124, AT = 142)
         function getAktivitusZone(hr) {
             if (!hr || hr <= 0) return 'unknown';
-            if (hr <= 124) return 'easy';   // Z1-Z2 (<= 124 bpm)
-            if (hr <= 142) return 'medium'; // Z3-Z4 (125 - 142 bpm)
-            return 'hard';                  // Z5+ (> 142 bpm)
+            if (hr <= 124) return 'easy';   // <= 124 bpm
+            if (hr <= 142) return 'medium'; // 125 - 142 bpm
+            return 'hard';                  // > 142 bpm
         }
 
         function processParsedData(dataRows) {
@@ -433,7 +429,6 @@
             if (passMedPuls.length > 0) {
                 const easyCount = passMedPuls.filter(r => r.zone === 'easy').length;
                 const medCount = passMedPuls.filter(r => r.zone === 'medium').length;
-                const hardCount = passMedPuls.filter(r => r.zone === 'hard').length;
                 const total = passMedPuls.length;
 
                 easyPct = Math.round((easyCount / total) * 100);
@@ -485,17 +480,17 @@
             tbody.innerHTML = '';
             data.runs.forEach(run => {
                 const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition border-b border-slate-800/60';
                 
-                // Färgkodad flik baserat på Aktivitus-zoner
-                let borderClass = 'border-l-4 border-slate-600'; 
+                // Bestäm färg på den vänstra indikator-kanten baserat på puls
+                let borderStyle = 'border-left: 4px solid #64748b'; // Grå som standard
                 if (run.hr > 0) {
-                    if (run.zone === 'easy') borderClass = 'border-l-4 border-emerald-500';      // <= 124 bpm
-                    else if (run.zone === 'medium') borderClass = 'border-l-4 border-amber-400'; // 125-142 bpm
-                    else borderClass = 'border-l-4 border-rose-500';                             // > 142 bpm
+                    if (run.zone === 'easy') borderStyle = 'border-left: 4px solid #22c55e';      // Grön (<=124)
+                    else if (run.zone === 'medium') borderStyle = 'border-left: 4px solid #fbbf24'; // Gul (125-142)
+                    else borderStyle = 'border-left: 4px solid #ef4444';                             // Röd (>142)
                 }
+                tr.style = borderStyle;
 
-                tr.className = `${borderClass} hover:bg-slate-800/40 transition`;
-                
                 const typOchDistans = `${run.type}<br><span class="text-[10px] text-emerald-400 font-semibold">${run.distance > 0 ? run.distance.toFixed(1) + ' km' : '-'}</span>`;
                 const tidPass = formatDuration(run.duration);
                 const pulsText = run.hr > 0 ? run.hr + ' bpm' : '-';
