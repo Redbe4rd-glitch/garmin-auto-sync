@@ -446,6 +446,7 @@
             };
 
             renderDashboard(currentDashboardData);
+            renderCharts(parsedRuns);
         }
 
         function loadFallbackData() {
@@ -469,11 +470,16 @@
             const tbody = document.getElementById('activityTableBody');
             tbody.innerHTML = '';
             data.runs.forEach(run => {
+                let badgeColor = 'bg-slate-700 text-slate-300';
+                if (run.type === 'Löpning') badgeColor = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                else if (run.type === 'Styrketräning') badgeColor = 'bg-purple-500/20 text-purple-400 border border-purple-500/30';
+                else if (run.type === 'Crosstrainer' || run.type === 'Cykling') badgeColor = 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
+
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-slate-800/60';
                 tr.innerHTML = `
                     <td class="p-2.5 font-mono text-[11px]">${run.date.substring(0, 10)}</td>
-                    <td class="p-2.5">${run.type} (${run.distance.toFixed(1)} km)</td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 rounded-md text-[10px] font-medium ${badgeColor}">${run.type}</span> (${run.distance.toFixed(1)} km)</td>
                     <td class="p-2.5">${formatDuration(run.duration)}</td>
                     <td class="p-2.5 font-mono">${run.hr > 0 ? run.hr + ' bpm' : '-'}</td>
                     <td class="p-2.5 font-mono">${run.gct > 0 ? run.gct + ' ms (' + run.balance + ')' : '-'}</td>
@@ -482,34 +488,93 @@
             });
         }
 
-        // Live Chat Logic connected to Gemini API (gemini-3.8-flash)
+        function renderCharts(runs) {
+            const runData = runs.filter(r => r.gct > 0).slice(0, 10).reverse();
+            const labels = runData.map(r => r.date.substring(5, 10));
+            const gctValues = runData.map(r => r.gct);
+
+            // GCT Chart
+            const gctx = document.getElementById('gctChart').getContext('2d');
+            if (gctChartInstance) gctChartInstance.destroy();
+            gctChartInstance = new Chart(gctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'GCT (ms)',
+                        data: gctValues,
+                        borderColor: '#34d399',
+                        backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                    }
+                }
+            });
+
+            // Intensity Distribution Chart
+            const easyCount = runs.filter(r => r.zone === 'easy').length;
+            const medCount = runs.filter(r => r.zone === 'medium').length;
+            const hardCount = runs.filter(r => r.zone === 'hard').length;
+
+            const ictx = document.getElementById('intensityChart').getContext('2d');
+            if (intensityChartInstance) intensityChartInstance.destroy();
+            intensityChartInstance = new Chart(ictx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['FatMax (Lätt)', 'Mellan', 'Hård (>AT)'],
+                    datasets: [{
+                        data: [easyCount, medCount, hardCount],
+                        backgroundColor: ['#34d399', '#38bdf8', '#f87171'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 12 } }
+                    }
+                }
+            });
+        }
+
+        // Live Chat Logic connected to Gemini API
         function sendQuickQuestion(text) {
             document.getElementById('chatInput').value = text;
             sendChatMessage();
         }
 
         async function sendChatMessage() {
-    const inputEl = document.getElementById('chatInput');
-    const userMsg = inputEl.value.trim();
-    if (!userMsg) return;
+            const inputEl = document.getElementById('chatInput');
+            const userMsg = inputEl.value.trim();
+            if (!userMsg) return;
 
-    const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKeyInput').value.trim();
-    if (!apiKey) {
-        alert('Vänligen fyll i din gratis Gemini API-nyckel i fältet högst upp och klicka på Spara först!');
-        return;
-    }
+            const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKeyInput').value.trim();
+            if (!apiKey) {
+                alert('Vänligen fyll i din gratis Gemini API-nyckel i fältet högst upp och klicka på Spara först!');
+                return;
+            }
 
-    const historyEl = document.getElementById('chatHistory');
-    
-    historyEl.innerHTML += `<div class="bg-emerald-950/60 border border-emerald-800/60 p-2.5 rounded-lg text-emerald-200 ml-6"><strong>Du:</strong> ${userMsg}</div>`;
-    inputEl.value = '';
-    historyEl.scrollTop = historyEl.scrollHeight;
+            const historyEl = document.getElementById('chatHistory');
+            
+            historyEl.innerHTML += `<div class="bg-emerald-950/60 border border-emerald-800/60 p-2.5 rounded-lg text-emerald-200 ml-6"><strong>Du:</strong> ${userMsg}</div>`;
+            inputEl.value = '';
+            historyEl.scrollTop = historyEl.scrollHeight;
 
-    const loadingId = 'loading-' + Date.now();
-    historyEl.innerHTML += `<div id="${loadingId}" class="bg-slate-800 p-2.5 rounded-lg text-slate-400 italic font-mono">Coach-Genie tänker...</div>`;
-    historyEl.scrollTop = historyEl.scrollHeight;
+            const loadingId = 'loading-' + Date.now();
+            historyEl.innerHTML += `<div id="${loadingId}" class="bg-slate-800 p-2.5 rounded-lg text-slate-400 italic font-mono">Coach-Genie tänker...</div>`;
+            historyEl.scrollTop = historyEl.scrollHeight;
 
-    const systemContext = `Du är Coach-Genie, en expertdriven löpcoach för en 50+ löpare med fokus på vad- och hälseneskydd.
+            const systemContext = `Du är Coach-Genie, en expertdriven löpcoach för en 50+ löpare med fokus på vad- och hälseneskydd.
 Aktivitus-pulszoner: FatMax <=124 bpm, AT 142 bpm, Maxpuls 153 bpm.
 Dagsaktuell träningsstatus:
 - Totalt pass i databasen: ${currentDashboardData?.totalActivities || 0}
@@ -521,50 +586,49 @@ Dagsaktuell träningsstatus:
 
 Svara kortfattat, uppmuntrande, professionellt och med tydligt fokus på skadeförebyggande åtgärder för vad/hälsena.`;
 
-    // Lista på tillgängliga modeller att prova i ordning
-    const modelsToTry = [
-        'gemini-3.8-flash',
-        'gemini-2.5-flash',
-        'gemini-flash-latest'
-    ];
+            const modelsToTry = [
+                'gemini-3.8-flash',
+                'gemini-2.5-flash',
+                'gemini-flash-latest'
+            ];
 
-    let success = false;
+            let success = false;
 
-    for (const modelName of modelsToTry) {
-        try {
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [
-                        { role: 'user', parts: [{ text: systemContext + "\n\nAnvändarens fråga: " + userMsg }] }
-                    ]
-                })
-            });
+            for (const modelName of modelsToTry) {
+                try {
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [
+                                { role: 'user', parts: [{ text: systemContext + "\n\nAnvändarens fråga: " + userMsg }] }
+                            ]
+                        })
+                    });
 
-            const data = await response.json();
+                    const data = await response.json();
 
-            if (response.ok && data.candidates && data.candidates[0].content.parts[0].text) {
-                document.getElementById(loadingId)?.remove();
-                const replyText = data.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
-                historyEl.innerHTML += `<div class="bg-slate-800/90 border border-slate-700 p-3 rounded-lg text-slate-200">🤖 <strong>Coach-Genie:</strong><br>${replyText}</div>`;
-                success = true;
-                break; // Avbryt loopen om vi fick svar!
+                    if (response.ok && data.candidates && data.candidates[0].content.parts[0].text) {
+                        document.getElementById(loadingId)?.remove();
+                        const replyText = data.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                        historyEl.innerHTML += `<div class="bg-slate-800/90 border border-slate-700 p-3 rounded-lg text-slate-200">🤖 <strong>Coach-Genie:</strong><br>${replyText}</div>`;
+                        success = true;
+                        break;
+                    }
+                } catch (err) {
+                    console.log(`Modell ${modelName} misslyckades, provar nästa...`);
+                }
             }
-        } catch (err) {
-            console.log(`Modell ${modelName} misslyckades, provar nästa...`);
+
+            if (!success) {
+                document.getElementById(loadingId)?.remove();
+                historyEl.innerHTML += `<div class="bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg text-rose-300">⚠️ Hög belastning på Googles servrar just nu. Prova igen om ett ögonblick.</div>`;
+            }
+
+            historyEl.scrollTop = historyEl.scrollHeight;
         }
-    }
-
-    if (!success) {
-        document.getElementById(loadingId)?.remove();
-        historyEl.innerHTML += `<div class="bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg text-rose-300">⚠️ Hög belastning på Googles servrar just nu. Prova igen om ett ögonblick.</div>`;
-    }
-
-    historyEl.scrollTop = historyEl.scrollHeight;
-}
     </script>
 </body>
 </html>
