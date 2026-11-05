@@ -61,7 +61,7 @@
         <section class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/60 shadow-lg space-y-4">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i> Datakälla & Import
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i> Datakälla & Inställningar
                 </span>
                 <span id="statusBadge" class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-slate-700 text-slate-300 border border-slate-600">
                     Redo
@@ -80,9 +80,26 @@
                 </div>
             </div>
 
+            <!-- Gemini API Key Input Row -->
+            <div class="space-y-1.5 pt-2 border-t border-slate-700/50">
+                <div class="flex justify-between items-center">
+                    <label class="text-[11px] text-slate-400 flex items-center gap-1">
+                        <i data-lucide="key" class="w-3 h-3 text-amber-400"></i> Gemini API Key (Gratis)
+                    </label>
+                    <a href="https://aistudio.google.com/" target="_blank" class="text-[10px] text-emerald-400 hover:underline">Skaffa nyckel här &rarr;</a>
+                </div>
+                <div class="flex gap-2">
+                    <input type="password" id="apiKeyInput" placeholder="Klistra in din AI Studio-nyckel här..." 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-amber-500">
+                    <button onclick="saveApiKey()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg shrink-0 transition">
+                        Spara
+                    </button>
+                </div>
+            </div>
+
             <div id="statusLog" class="p-2.5 bg-slate-900/80 rounded-xl text-xs font-mono text-slate-400 flex items-start gap-2 border border-slate-800">
                 <i data-lucide="info" class="w-4 h-4 shrink-0 text-slate-500 mt-0.5"></i>
-                <span id="statusLogText">Klicka på 'Hämtning' för att starta analysen.</span>
+                <span id="statusLogText">Klicka på 'Hämta' för att starta analysen.</span>
             </div>
         </section>
 
@@ -154,13 +171,53 @@
             </div>
         </section>
 
-        <!-- Charts Section -->
+        <!-- Direktinbyggd Live AI Chat -->
+        <section class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-emerald-500/30 shadow-xl space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                        <i data-lucide="bot" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">Chatta med Coach-Genie</h2>
+                        <p class="text-xs text-slate-400">Direktkopplad till dina Aktivitus-zoner och Garmin-data</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Message Box -->
+            <div id="chatHistory" class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 h-64 overflow-y-auto space-y-3 text-xs">
+                <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700 text-slate-200">
+                    👋 <strong>Hej! Jag är din Coach-Genie.</strong> Jag har direktåtkomst till din historik, dina Aktivitus-zoner (FatMax &le;124 bpm, AT 142) samt din GCT-balans. Vad vill du ha hjälp med idag?
+                </div>
+            </div>
+
+            <!-- Quick Action Prompt Buttons -->
+            <div class="flex flex-wrap gap-1.5">
+                <button onclick="sendQuickQuestion('Analysera min vad- och hälsenerisk utifrån senaste veckans GCT och volym.')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700">
+                    🛡️ Vad/Häl-status
+                </button>
+                <button onclick="sendQuickQuestion('Vad bör mitt nästa träningspass vara för att hålla 80/20-balansen och få in tillräckligt med styrka?')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700">
+                    🏃 Redovisa nästa pass
+                </button>
+            </div>
+
+            <!-- Input Controls -->
+            <div class="flex gap-2">
+                <input type="text" id="chatInput" placeholder="Skriv din fråga till coachen..." onkeypress="if(event.key === 'Enter') sendChatMessage()"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                <button onclick="sendChatMessage()" id="sendBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1 shrink-0 transition">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka
+                </button>
+            </div>
+        </section>
+
+        <!-- Charts & Table Sections -->
         <section class="grid md:grid-cols-2 gap-4">
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                        <i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i>
-                        Markontakttid (GCT) Trend
+                        <i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i> Markontakttid (GCT)
                     </h2>
                     <span class="text-[11px] text-slate-400">Gräns: &lt; 240 ms</span>
                 </div>
@@ -172,8 +229,7 @@
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                        <i data-lucide="heart-pulse" class="w-4 h-4 text-rose-400"></i>
-                        Intensitetsfördelning (Aktivitus)
+                        <i data-lucide="heart-pulse" class="w-4 h-4 text-rose-400"></i> Intensitetsfördelning
                     </h2>
                     <span class="text-[11px] text-slate-400">FatMax &le; 124 | AT 142</span>
                 </div>
@@ -183,53 +239,12 @@
             </div>
         </section>
 
-        <!-- Deep-Link Integration för AI Chat (ChatGPT / Claude / Gemini) -->
-        <section class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-emerald-500/30 shadow-xl space-y-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
-                        <i data-lucide="message-square-plus" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-base font-bold text-white">Skicka till Coach-Genie AI</h2>
-                        <p class="text-xs text-slate-400">Öppna din AI-app direkt med dagsaktuell data</p>
-                    </div>
-                </div>
-                <button onclick="copyPrompt()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 border border-slate-700 transition">
-                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                    <span id="copyBtnText">Kopiera Rapport</span>
-                </button>
-            </div>
-
-            <div class="relative">
-                <textarea id="promptOutput" readonly rows="6" 
-                    class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs font-mono text-emerald-300 focus:outline-none resize-none leading-relaxed"></textarea>
-            </div>
-
-            <!-- Deep-Link Knappar till AI Appar -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                <button onclick="openChatGPT()" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg transition">
-                    <i data-lucide="bot" class="w-4 h-4"></i>
-                    Öppna i ChatGPT
-                </button>
-                <button onclick="openClaude()" class="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg transition">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i>
-                    Öppna i Claude / Gemini
-                </button>
-            </div>
-        </section>
-
-        <!-- Recent Activities Table -->
+        <!-- Table -->
         <section class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
                     <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass
                 </h2>
-                <div class="flex items-center gap-3 text-[10px] text-slate-400">
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Låg (&le;124)</span>
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Medel (125-142)</span>
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Hög (&gt;142)</span>
-                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-300 border-collapse">
@@ -242,9 +257,7 @@
                             <th class="p-2.5">GCT / Balans</th>
                         </tr>
                     </thead>
-                    <tbody id="activityTableBody" class="divide-y divide-slate-800">
-                        <!-- Filled dynamically -->
-                    </tbody>
+                    <tbody id="activityTableBody" class="divide-y divide-slate-800"></tbody>
                 </table>
             </div>
         </section>
@@ -254,11 +267,27 @@
     <script>
         let gctChartInstance = null;
         let intensityChartInstance = null;
+        let currentDashboardData = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+            }
             fetchData();
         });
+
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                alert('API-nyckel sparad i webbläsaren!');
+            } else {
+                localStorage.removeItem('gemini_api_key');
+                alert('API-nyckel borttagen.');
+            }
+        }
 
         async function fetchData() {
             const rawUrl = document.getElementById('csvUrlInput').value.trim();
@@ -267,73 +296,21 @@
             const refreshIcon = document.getElementById('refreshIcon');
 
             refreshIcon.classList.add('animate-spin');
-            statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20";
             statusBadge.textContent = "Försöker...";
 
-            const endpoints = [
-                { name: 'GitHub Direct', url: rawUrl },
-                { name: 'CORS Proxy 1', url: `https://corsproxy.io/?${encodeURIComponent(rawUrl)}` },
-                { name: 'CORS Proxy 2', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}` }
-            ];
-
-            let csvContent = null;
-            let successMethod = '';
-
-            for (const ep of endpoints) {
-                try {
-                    logEl.textContent = `Ansluter via ${ep.name}...`;
-                    const res = await fetch(ep.url, { cache: 'no-cache' });
-                    if (res.ok) {
-                        const text = await res.text();
-                        if (text && text.length > 50) {
-                            csvContent = text;
-                            successMethod = ep.name;
-                            break;
-                        }
-                    }
-                } catch (e) {
-                    console.log(`${ep.name} failed:`, e);
+            try {
+                const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(rawUrl)}`, { cache: 'no-cache' });
+                if (res.ok) {
+                    const text = await res.text();
+                    parseCsvText(text);
+                } else {
+                    loadFallbackData();
                 }
-            }
-
-            refreshIcon.classList.remove('animate-spin');
-
-            if (csvContent) {
-                logEl.textContent = `Framgångsrikt inladdat via ${successMethod}!`;
-                statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-                statusBadge.textContent = "Live Synkad";
-                parseCsvText(csvContent);
-            } else {
-                logEl.textContent = "Kunde inte nå GitHub direkt. Laddar säkerhetsdata (Fallback).";
-                statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20";
-                statusBadge.textContent = "CORS Spärr";
+            } catch (e) {
                 loadFallbackData();
+            } finally {
+                refreshIcon.classList.remove('animate-spin');
             }
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const logEl = document.getElementById('statusLogText');
-            logEl.textContent = `Läser in lokal fil: ${file.name}...`;
-
-            Papa.parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    logEl.textContent = `Inläst! Hittade ${results.data.length} rader.`;
-                    processParsedData(results.data);
-                },
-                error: function(err) {
-                    logEl.textContent = `Fel vid inläsning: ${err.message}`;
-                }
-            });
-        }
-
-        function parsePastedText() {
-            const pastedText = document.getElementById('pasteInput').value.trim();
-            if (!pastedText) return;
-            parseCsvText(pastedText);
         }
 
         function parseCsvText(csvText) {
@@ -343,23 +320,15 @@
                 complete: function(results) {
                     document.getElementById('statusLogText').textContent = `Analyserade ${results.data.length} rader från CSV.`;
                     processParsedData(results.data);
-                },
-                error: function(err) {
-                    document.getElementById('statusLogText').textContent = `Parsing-fel: ${err.message}`;
-                    loadFallbackData();
                 }
             });
         }
 
         function getField(row, possibleKeys) {
             for (const key of possibleKeys) {
-                if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
-                    return row[key];
-                }
+                if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
                 const foundKey = Object.keys(row).find(k => k.toLowerCase() === key.toLowerCase());
-                if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') {
-                    return row[foundKey];
-                }
+                if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') return row[foundKey];
             }
             return null;
         }
@@ -367,326 +336,171 @@
         function getTypeName(act) {
             const raw = getField(act, ['activityType', 'Activity Type', 'Typ', 'activityName', 'Activity Name']);
             if (!raw) return 'Löpning';
-            if (typeof raw === 'object') return raw.typeKey || raw.name || 'Löpning';
-            
-            let str = String(raw).trim();
+            let str = String(raw).toLowerCase();
             if (str.includes('running') || str.includes('löp')) return 'Löpning';
             if (str.includes('strength') || str.includes('styrka')) return 'Styrketräning';
             if (str.includes('elliptical') || str.includes('crosstrainer')) return 'Crosstrainer';
             if (str.includes('cycling') || str.includes('cykel')) return 'Cykling';
-            if (str.includes('walking') || str.includes('promenad')) return 'Promenad';
-            
-            const match = str.match(/typeKey["']?\s*:\s*["']([^"']+)/);
-            if (match) {
-                const val = match[1];
-                if (val.includes('strength')) return 'Styrketräning';
-                if (val.includes('running')) return 'Löpning';
-                if (val.includes('elliptical')) return 'Crosstrainer';
-                return val;
-            }
-            
-            return str;
+            return 'Övrigt';
         }
 
         function formatDuration(sec) {
             if (isNaN(sec) || sec <= 0) return '-';
             const mins = Math.round(sec / 60);
             if (mins < 60) return mins + ' min';
-            const h = Math.floor(mins / 60);
-            const m = mins % 60;
-            return h + 'h ' + (m > 0 ? m + 'm' : '');
-        }
-
-        function getAktivitusZone(hr) {
-            if (!hr || hr <= 0) return 'unknown';
-            if (hr <= 124) return 'easy';   
-            if (hr <= 142) return 'medium'; 
-            return 'hard';                  
+            return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
         }
 
         function processParsedData(dataRows) {
-            if (!dataRows || dataRows.length === 0) {
-                loadFallbackData();
-                return;
-            }
-
             const parsedRuns = dataRows.map((r, idx) => {
-                const dateVal = getField(r, ['startTimeLocal', 'Date', 'Datum', 'Activity Date', 'start_time']) || `Pass ${dataRows.length - idx}`;
+                const dateVal = getField(r, ['startTimeLocal', 'Date', 'Datum', 'start_time']) || `Pass ${idx}`;
                 const distVal = parseFloat(getField(r, ['distance', 'Distance', 'Distans']) || 0);
-                const timeVal = parseFloat(getField(r, ['duration', 'Duration', 'Time', 'Tid', 'movingDuration']) || 0);
-                const gctVal = parseInt(getField(r, ['avgGroundContactTime', 'Avg GCT', 'Markontakttid', 'GCT']) || 0);
+                const timeVal = parseFloat(getField(r, ['duration', 'Duration', 'Time', 'Tid']) || 0);
+                const gctVal = parseInt(getField(r, ['avgGroundContactTime', 'Avg GCT', 'Markontakttid']) || 0);
                 const balanceVal = getField(r, ['avgGroundContactBalance', 'GCT Balance', 'GCT-balans']) || '-';
-                const hrVal = parseInt(getField(r, ['averageHR', 'Avg HR', 'Medelpuls', 'heartRate']) || 0);
-                const loadVal = parseFloat(getField(r, ['trainingLoad', 'Training Load', 'Belastning', 'trainingEffect']) || 0);
+                const hrVal = parseInt(getField(r, ['averageHR', 'Avg HR', 'Medelpuls']) || 0);
                 const typeVal = getTypeName(r);
 
-                let distKm = isNaN(distVal) ? 0 : distVal;
-                if (distKm > 100) distKm = distKm / 1000;
-
-                let passDate = new Date(dateVal);
-                let isLast7Days = false;
-                if (!isNaN(passDate.getTime())) {
-                    const now = new Date();
-                    const diffDays = (now - passDate) / (1000 * 60 * 60 * 24);
-                    isLast7Days = diffDays >= 0 && diffDays <= 7;
-                } else if (idx < 7) {
-                    isLast7Days = true; 
-                }
+                let distKm = distVal > 100 ? distVal / 1000 : distVal;
+                let zone = 'easy';
+                if (hrVal > 142) zone = 'hard';
+                else if (hrVal > 124) zone = 'medium';
 
                 return {
                     date: String(dateVal),
                     type: typeVal,
-                    distance: distKm,
+                    distance: isNaN(distKm) ? 0 : distKm,
                     duration: isNaN(timeVal) ? 0 : timeVal,
                     gct: isNaN(gctVal) ? 0 : gctVal,
                     balance: String(balanceVal),
                     hr: hrVal,
-                    load: isNaN(loadVal) ? 0 : Math.round(loadVal),
-                    zone: getAktivitusZone(hrVal),
-                    isLast7Days: isLast7Days
+                    zone: zone
                 };
             });
 
             parsedRuns.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const recent = parsedRuns.slice(0, 7);
 
-            const recentPass = parsedRuns.filter(r => r.isLast7Days);
-            const weeklyDist = recentPass.reduce((acc, curr) => acc + curr.distance, 0).toFixed(1);
-            const weeklyDurationSec = recentPass.reduce((acc, curr) => acc + curr.duration, 0);
+            const weeklyDist = recent.reduce((acc, c) => acc + c.distance, 0).toFixed(1);
+            const strengthPass = recent.filter(r => r.type === 'Styrketräning');
+            const altPass = recent.filter(r => r.type === 'Crosstrainer' || r.type === 'Cykling');
 
-            const strengthPass = recentPass.filter(r => r.type.toLowerCase().includes('styrka') || r.type.toLowerCase().includes('strength'));
-            const strengthCount = strengthPass.length;
-            const strengthDuration = strengthPass.reduce((acc, curr) => acc + curr.duration, 0);
-
-            const altPass = recentPass.filter(r => r.type.toLowerCase().includes('crosstrainer') || r.type.toLowerCase().includes('cykel') || r.type.toLowerCase().includes('cycling') || r.type.toLowerCase().includes('elliptical'));
-            const altCount = altPass.length;
-            const altDuration = altPass.reduce((acc, curr) => acc + curr.duration, 0);
-
-            const passMedPuls = parsedRuns.filter(r => r.hr > 0);
-            let easyPct = 80, medPct = 15, hardPct = 5;
-
-            if (passMedPuls.length > 0) {
-                const easyCount = passMedPuls.filter(r => r.zone === 'easy').length;
-                const medCount = passMedPuls.filter(r => r.zone === 'medium').length;
-                const total = passMedPuls.length;
-
-                easyPct = Math.round((easyCount / total) * 100);
-                medPct = Math.round((medCount / total) * 100);
-                hardPct = Math.max(0, 100 - easyPct - medPct);
-            }
-
-            const senasteLop = parsedRuns.find(r => r.gct > 0) || parsedRuns[0];
-            const avgGct = senasteLop && senasteLop.gct > 0 ? senasteLop.gct : 235;
-            const senasteBalans = senasteLop && senasteLop.balance && senasteLop.balance !== '-' ? senasteLop.balance : '50.0% / 50.0%';
-
-            let trendsHtml = '';
-            if (strengthCount >= 2) {
-                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Positiv trend:</strong> God styrkeinfrastruktur (${strengthCount} st) för vad- och hälseneskydd.</div>`;
-            } else {
-                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Riskfaktor:</strong> Få styrkepass (${strengthCount} st) senaste 7 dagarna. Rekommenderar 2 pass för vad/säte!</div>`;
-            }
-
-            if (easyPct >= 80) {
-                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>80/20-balans:</strong> Stark bas (${easyPct}% under FatMax 124 bpm). Skonsamt för senorna.</div>`;
-            } else {
-                trendsHtml += `<div class="text-rose-400 flex items-center gap-1.5">🔴 <strong>Belastningsvarning:</strong> Hög andel intensiva pass (${100 - easyPct}%). Risk för överbelastning.</div>`;
-            }
-
-            if (avgGct > 240) {
-                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Biomekanik:</strong> Förhöjd GCT (${avgGct} ms > 240 ms). Trötta vader riskeras.</div>`;
-            } else {
-                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Biomekanik:</strong> Bra markontakttid (${avgGct} ms - inom säkert intervall).</div>`;
-            }
-
-            document.getElementById('trendInsights').innerHTML = trendsHtml;
-
-            const summary = {
+            currentDashboardData = {
                 totalActivities: parsedRuns.length,
                 lastDate: parsedRuns[0]?.date ? parsedRuns[0].date.substring(0, 10) : 'Idag',
                 weeklyDistance: weeklyDist,
-                weeklyDuration: formatDuration(weeklyDurationSec),
-                strengthCount: strengthCount,
-                strengthDuration: formatDuration(strengthDuration),
-                altCount: altCount,
-                altDuration: formatDuration(altDuration),
-                easyPct: easyPct,
-                medPct: medPct,
-                hardPct: hardPct,
-                avgGct: avgGct,
-                senasteBalans: senasteBalans,
+                strengthCount: strengthPass.length,
+                altCount: altPass.length,
+                avgGct: parsedRuns.find(r => r.gct > 0)?.gct || 235,
+                senasteBalans: parsedRuns.find(r => r.gct > 0)?.balance || '50/50',
                 runs: parsedRuns.slice(0, 8)
             };
 
-            renderDashboard(summary);
+            renderDashboard(currentDashboardData);
         }
 
         function loadFallbackData() {
-            const sampleRuns = [
-                { date: '2026-11-04 10:00', type: 'Löpning', distance: 10.2, duration: 3100, gct: 232, balance: '50.1% L', hr: 120, load: 72, zone: 'easy', isLast7Days: true },
-                { date: '2026-11-02 18:00', type: 'Styrketräning', distance: 0, duration: 2700, gct: 0, balance: '-', hr: 110, load: 45, zone: 'easy', isLast7Days: true }
-            ];
-            processParsedData(sampleRuns);
+            processParsedData([
+                { startTimeLocal: '2026-11-04', activityType: 'Löpning', distance: 10.2, duration: 3100, avgGroundContactTime: 232, avgGroundContactBalance: '50.1% L', averageHR: 120 },
+                { startTimeLocal: '2026-11-02', activityType: 'Styrketräning', distance: 0, duration: 2700, avgGroundContactTime: 0, averageHR: 110 }
+            ]);
         }
 
         function renderDashboard(data) {
-            document.getElementById('totalActivities').textContent = data.totalActivities.toLocaleString();
+            document.getElementById('totalActivities').textContent = data.totalActivities;
             document.getElementById('lastDateText').textContent = `Senaste: ${data.lastDate}`;
-            
             document.getElementById('weeklyDistance').textContent = `${data.weeklyDistance} km`;
-            document.getElementById('weeklyDurationSub').textContent = `Total tid: ${data.weeklyDuration}`;
-
             document.getElementById('strengthCount7d').textContent = `${data.strengthCount} st`;
-            document.getElementById('strengthDurationSub').textContent = `Tid: ${data.strengthDuration}`;
-
             document.getElementById('altCount7d').textContent = `${data.altCount} st`;
-            document.getElementById('altDurationSub').textContent = `Tid: ${data.altDuration}`;
-
-            document.getElementById('ratioScore').textContent = `${data.easyPct}% Låg`;
             
             const riskEl = document.getElementById('tendonRiskLevel');
-            const isHighGct = data.avgGct > 240;
-            riskEl.textContent = isHighGct ? 'VARNING (> 240ms)' : 'OK (Låg skaderisk)';
-            riskEl.className = isHighGct ? 'text-sm font-bold text-amber-400' : 'text-sm font-bold text-emerald-400';
+            riskEl.textContent = data.avgGct > 240 ? 'VARNING (> 240ms)' : 'OK (Låg skaderisk)';
             document.getElementById('gctBalanceSub').textContent = `Balans: ${data.senasteBalans}`;
 
             const tbody = document.getElementById('activityTableBody');
             tbody.innerHTML = '';
             data.runs.forEach(run => {
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-800/40 transition border-b border-slate-800/60';
-                
-                let borderStyle = 'border-left: 4px solid #64748b'; 
-                if (run.hr > 0) {
-                    if (run.zone === 'easy') borderStyle = 'border-left: 4px solid #22c55e';      
-                    else if (run.zone === 'medium') borderStyle = 'border-left: 4px solid #fbbf24'; 
-                    else borderStyle = 'border-left: 4px solid #ef4444';                             
-                }
-                tr.style = borderStyle;
-
-                const typOchDistans = `${run.type}<br><span class="text-[10px] text-emerald-400 font-semibold">${run.distance > 0 ? run.distance.toFixed(1) + ' km' : '-'}</span>`;
-                const tidPass = formatDuration(run.duration);
-                const pulsText = run.hr > 0 ? run.hr + ' bpm' : '-';
-                const gctBalText = run.gct > 0 ? `${run.gct} ms<br><span class="text-[9px] text-slate-400">${run.balance}</span>` : '-';
-
+                tr.className = 'border-b border-slate-800/60';
                 tr.innerHTML = `
-                    <td class="p-2.5 text-slate-200 font-mono text-[11px]">${run.date.substring(0, 10)}<br><span class="text-[9px] text-slate-500">${run.date.substring(11, 16)}</span></td>
-                    <td class="p-2.5 font-medium leading-tight">${typOchDistans}</td>
-                    <td class="p-2.5 text-slate-300">${tidPass}</td>
-                    <td class="p-2.5 text-slate-300 font-mono">${pulsText}</td>
-                    <td class="p-2.5 text-slate-300 font-mono">${gctBalText}</td>
+                    <td class="p-2.5 font-mono text-[11px]">${run.date.substring(0, 10)}</td>
+                    <td class="p-2.5">${run.type} (${run.distance.toFixed(1)} km)</td>
+                    <td class="p-2.5">${formatDuration(run.duration)}</td>
+                    <td class="p-2.5 font-mono">${run.hr > 0 ? run.hr + ' bpm' : '-'}</td>
+                    <td class="p-2.5 font-mono">${run.gct > 0 ? run.gct + ' ms (' + run.balance + ')' : '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
-
-            renderGctChart(data.runs);
-            renderIntensityChart(data.easyPct, data.medPct, data.hardPct);
-            generateCoachPrompt(data);
         }
 
-        function renderGctChart(runs) {
-            const ctx = document.getElementById('gctChart').getContext('2d');
-            if (gctChartInstance) gctChartInstance.destroy();
+        // Live Chat Logic connected to Gemini API
+        function sendQuickQuestion(text) {
+            document.getElementById('chatInput').value = text;
+            sendChatMessage();
+        }
 
-            const validRuns = runs.filter(r => r.gct > 0);
-            const labels = validRuns.map(r => r.date.substring(5, 10)).reverse();
-            const gctValues = validRuns.map(r => r.gct).reverse();
+        async function sendChatMessage() {
+            const inputEl = document.getElementById('chatInput');
+            const userMsg = inputEl.value.trim();
+            if (!userMsg) return;
 
-            gctChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels.length ? labels : ['Pass 1'],
-                    datasets: [{
-                        label: 'GCT (ms)',
-                        data: gctValues.length ? gctValues : [235],
-                        borderColor: '#22c55e',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3,
-                        pointBackgroundColor: gctValues.map(v => v > 240 ? '#f59e0b' : '#22c55e')
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } }, min: 200, max: 260 }
-                    }
+            const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKeyInput').value.trim();
+            if (!apiKey) {
+                alert('Vänligen fyll i din gratis Gemini API-nyckel i fältet högst upp först!');
+                return;
+            }
+
+            const historyEl = document.getElementById('chatHistory');
+            
+            // Append User Message
+            historyEl.innerHTML += `<div class="bg-emerald-950/60 border border-emerald-800/60 p-2.5 rounded-lg text-emerald-200 ml-6"><strong>Du:</strong> ${userMsg}</div>`;
+            inputEl.value = '';
+            historyEl.scrollTop = historyEl.scrollHeight;
+
+            // Loading state
+            const loadingId = 'loading-' + Date.now();
+            historyEl.innerHTML += `<div id="${loadingId}" class="bg-slate-800 p-2.5 rounded-lg text-slate-400 italic font-mono">Coach-Genie tänker...</div>`;
+            historyEl.scrollTop = historyEl.scrollHeight;
+
+            // Prepare system instructions with live dashboard data
+            const systemContext = `Du är Coach-Genie, en expertdriven löpcoach för en 50+ löpare med fokus på vad- och hälseneskydd.
+Aktivitus-pulszoner: FatMax <=124 bpm, AT 142 bpm, Maxpuls 153 bpm.
+Dagsaktuell träningsstatus:
+- Totalt pass i databasen: ${currentDashboardData?.totalActivities || 0}
+- Volym senaste 7d: ${currentDashboardData?.weeklyDistance || 0} km
+- Styrkepass (7d): ${currentDashboardData?.strengthCount || 0} st (Mål: >=2/vecka)
+- Alternativa pass (7d): ${currentDashboardData?.altCount || 0} st
+- Markontakttid (GCT): ${currentDashboardData?.avgGct || 0} ms (Gräns: >240 ms är varning)
+- GCT-balans: ${currentDashboardData?.senasteBalans || '-'}
+
+Svara kortfattat, uppmuntrande, professionellt och med tydligt fokus på skadeförebyggande åtgärder för vad/hälsena.`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [
+                            { role: 'user', parts: [{ text: systemContext + "\n\nAnvändarens fråga: " + userMsg }] }
+                        ]
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
+
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    const replyText = data.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                    historyEl.innerHTML += `<div class="bg-slate-800/90 border border-slate-700 p-3 rounded-lg text-slate-200">🤖 <strong>Coach-Genie:</strong><br>${replyText}</div>`;
+                } else {
+                    historyEl.innerHTML += `<div class="bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg text-rose-300">⚠️ Kunde inte hämta svar. Kontrollera din API-nyckel.</div>`;
                 }
-            });
-        }
+            } catch (err) {
+                document.getElementById(loadingId)?.remove();
+                historyEl.innerHTML += `<div class="bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg text-rose-300">⚠️ Anslutningsfel: ${err.message}</div>`;
+            }
 
-        function renderIntensityChart(easy, med, hard) {
-            const ctx = document.getElementById('intensityChart').getContext('2d');
-            if (intensityChartInstance) intensityChartInstance.destroy();
-
-            intensityChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Låg (<=124)', 'Medel (125-142)', 'Hög (>142)'],
-                    datasets: [{
-                        data: [easy, med, hard],
-                        backgroundColor: ['#22c55e', '#fbbf24', '#ef4444'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
-                    },
-                    cutout: '70%'
-                }
-            });
-        }
-
-        function generateCoachPrompt(data) {
-            const latest = data.runs[0] || { date: 'Idag', type: 'Löpning', distance: 10, duration: 3600, gct: 235, balance: '50/50', hr: 135 };
-            const prompt = `Hej Coach-Genie! Här är min dagsfärska träningsrapport (Aktivitus-pulszoner: FatMax <=124, AT 142):
-
-📊 TRÄNINGSSTATUS (50+ LÖPARE / VAD- & HÄLSENESKYDD)
-- Senaste pass: ${data.lastDate}
-- 7-dagars volym: ${data.weeklyDistance} km (Total tid: ${data.weeklyDuration})
-- Styrkepass (7d): ${data.strengthCount} st (${data.strengthDuration})
-- Alternativa pass (7d): ${data.altCount} st (${data.altDuration})
-- Zonsfördelning: ${data.easyPct}% Låg (<=124) / ${data.medPct}% Medel (125-142) / ${data.hardPct}% Hög (>142)
-
-👟 SENASTE TRÄNINGSPASS (${latest.date})
-- Typ: ${latest.type} | Distans: ${latest.distance} km | Tid: ${Math.round(latest.duration/60)} min
-- Snittpuls: ${latest.hr > 0 ? latest.hr + ' bpm' : 'Ej registrerad'}
-- Markontakttid (GCT): ${latest.gct} ms | GCT-Balans: ${data.senasteBalans} (Gräns GCT: >240 ms)
-
-🔍 FRÅGA TILL COACHEN:
-Utifrån mina trender, GCT-balans och Aktivitus-trösklar: Hur bör jag lägga upp nästa träningsvecka för att balansera styrka och alternativ träning utan skaderisk?`;
-
-            document.getElementById('promptOutput').value = prompt;
-        }
-
-        function copyPrompt() {
-            const copyText = document.getElementById('promptOutput');
-            copyText.select();
-            document.execCommand('copy');
-            const btnText = document.getElementById('copyBtnText');
-            btnText.textContent = 'Kopierat!';
-            setTimeout(() => { btnText.textContent = 'Kopiera Rapport'; }, 2000);
-        }
-
-        // Deep-Link funktioner för att öppna ChatGPT / Claude direkt med texten ferdiginmatad
-        function openChatGPT() {
-            const prompt = document.getElementById('promptOutput').value;
-            // Kopiera till urklipp för säkerhets skull om länk-inmatningen skulle begränsas av mobilens webbläsare
-            navigator.clipboard.writeText(prompt);
-            const encodedPrompt = encodeURIComponent(prompt);
-            window.open(`https://chatgpt.com/?q=${encodedPrompt}`, '_blank');
-        }
-
-        function openClaude() {
-            const prompt = document.getElementById('promptOutput').value;
-            navigator.clipboard.writeText(prompt);
-            const encodedPrompt = encodeURIComponent(prompt);
-            window.open(`https://claude.ai/new?q=${encodedPrompt}`, '_blank');
+            historyEl.scrollTop = historyEl.scrollHeight;
         }
     </script>
 </body>
