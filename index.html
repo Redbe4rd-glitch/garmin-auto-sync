@@ -121,13 +121,13 @@
     <div id="status-msg">Hämtar färsk träningsdata från din CSV...</div>
 
     <div class="card">
-        <div class="card-title">Senaste passet (Totalt)</div>
+        <div class="card-title">Senaste passet</div>
         <div id="last-activity" style="font-size: 1.1rem; font-weight: bold;">Laddar...</div>
         <div id="last-activity-sub" style="font-size: 0.85rem; color: var(--subtext); margin-top: 4px;">-</div>
     </div>
 
     <div class="card">
-        <div class="card-title">Hälsa & Belastning (Senaste löppasset)</div>
+        <div class="card-title">Hälsa & Belastning (Skydda Vad/Häl)</div>
         <div class="metric-grid">
             <div class="metric-box">
                 <div style="font-size: 0.8rem; color: var(--subtext);">Snitt Markontakttid</div>
@@ -138,82 +138,8 @@
                 <div id="gct-bal-val" class="metric-val">- %</div>
             </div>
             <div class="metric-box">
-                <div style="font-size: 0.8rem; color: var(--subtext);">Träningsvolym (7d, alla pass)</div>
+                <div style="font-size: 0.8rem; color: var(--subtext);">Träningsvolym (7d)</div>
                 <div id="vol-7d" class="metric-val">- km</div>
             </div>
             <div class="metric-box">
-                <div style="font-size: 0.8rem; color: var(--subtext);">Lågintensivt (80/20)</div>
-                <div id="zone-ratio" class="metric-val">- %</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-title">Coach-Genie Prompt Generator</div>
-        <div style="font-size: 0.85rem; color: var(--subtext);">Klicka nedan för att kopiera en dagsfärsk analysrapport att klistra in i chatten.</div>
-        <textarea id="prompt-output" readonly></textarea>
-        <button onclick="kopieraPrompt()">📋 Kopiera Prompt till Coach-Genie</button>
-    </div>
-
-    <script>
-        const CSV_URL = 'garmin_activities.csv';
-
-        window.onload = function() {
-            Papa.parse(CSV_URL, {
-                download: true,
-                header: true,
-                dynamicTyping: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    if (results.data && results.data.length > 0) {
-                        analyseraData(results.data);
-                        document.getElementById('status-msg').innerText = '✅ Dagsfärsk data inläst (' + results.data.length + ' pass hittades)';
-                        document.getElementById('status-msg').style.color = 'var(--accent-green)';
-                    } else {
-                        document.getElementById('status-msg').innerText = '⚠️ CSV-filen är tom.';
-                    }
-                },
-                error: function(err) {
-                    document.getElementById('status-msg').innerText = '❌ Kunde inte läsa filen: ' + err.message;
-                    document.getElementById('status-msg').style.color = 'var(--accent-alert)';
-                }
-            });
-        };
-
-        function getTypeName(act) {
-            const rawType = act.activityType || act['Activity Type'];
-            if (!rawType) return 'Aktivitet';
-            if (typeof rawType === 'object') {
-                return rawType.typeKey || rawType.name || 'Aktivitet';
-            }
-            return String(rawType);
-        }
-
-        function analyseraData(data) {
-            // 1. Absolut senaste passet (oavsett typ, för att visa överst)
-            const absolutSenaste = data[0];
-            const datumSenaste = absolutSenaste.startTimeLocal || absolutSenaste.Date || 'Okänt datum';
-            const typSenaste = getTypeName(absolutSenaste);
-            const distSenaste = absolutSenaste.distance ? (absolutSenaste.distance / 1000).toFixed(2) : (absolutSenaste.Distance || '0');
-            
-            document.getElementById('last-activity').innerText = `${typSenaste.toUpperCase()} - ${distSenaste} km`;
-            document.getElementById('last-activity-sub').innerText = `Datum: ${datumSenaste}`;
-
-            // 2. Hitta det senaste rena LÖPPASSET för GCT och löpanalys
-            const senasteLop = data.find(p => {
-                const t = getTypeName(p).toLowerCase();
-                return t.includes('run') || t.includes('löp');
-            }) || absolutSenaste; // Fallback till senaste om inget löppass hittas
-
-            const gct = senasteLop.avgGroundContactTime || senasteLop['Avg GCT'] || 245;
-            const gctBal = senasteLop.avgGroundContactBalance || senasteLop['Avg GCT Balance'] || "50.2% L / 49.8% R";
-            
-            const gctEl = document.getElementById('gct-val');
-            gctEl.innerText = typeof gct === 'number' ? Math.round(gct) + ' ms' : gct;
-
-            document.getElementById('gct-bal-val').innerText = typeof gctBal === 'number' ? gctBal.toFixed(1) + '%' : gctBal;
-
-            // 3. Beräkna 7-dagars total volym (räknar alla pass med distans)
-            let totalDist7d = 0;
-            for (let i = 0; i < Math.min(7, data.length); i++) {
-                let d = data[i].
+                <div style="font-size: 0.8rem; color: var(--subtext);">Lågintensivt (80
