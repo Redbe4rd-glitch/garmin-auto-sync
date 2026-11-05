@@ -1,9 +1,12 @@
+
+
+
 <!DOCTYPE html>
 <html lang="sv" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coach-Genie | Snabböppning med Träningsplanering</title>
+    <title>Coach-Genie | Garmin 50+ Tendon & 80/20 Dashboard</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -57,84 +60,64 @@
 
     <main class="max-w-4xl mx-auto px-4 pt-6 space-y-6">
 
-        <!-- Datakällor & Inställningar -->
-        <section class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/60 shadow-lg space-y-3">
+        <!-- Data Ingestion Accordion & Controls -->
+        <section class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/60 shadow-lg space-y-4">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i> GitHub Datakällor
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i> Datakälla & Inställningar
                 </span>
                 <span id="statusBadge" class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-slate-700 text-slate-300 border border-slate-600">
                     Redo
                 </span>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-2">
-                <div>
-                    <label class="text-[10px] text-slate-400">Garmin Historik CSV</label>
+            <!-- GitHub Fetch Row -->
+            <div class="space-y-1.5">
+                <label class="text-[11px] text-slate-400">GitHub Raw CSV URL</label>
+                <div class="flex gap-2">
                     <input type="text" id="csvUrlInput" value="https://raw.githubusercontent.com/Redbe4rd-glitch/garmin-auto-sync/refs/heads/main/garmin_activities.csv" 
-                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-emerald-500">
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400">Planerade Pass CSV</label>
-                    <input type="text" id="plannedCsvUrlInput" value="https://raw.githubusercontent.com/Redbe4rd-glitch/garmin-auto-sync/refs/heads/main/planned_workouts.csv" 
-                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-emerald-500">
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-emerald-500">
+                    <button onclick="fetchData()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shrink-0 transition flex items-center gap-1">
+                        <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Hämta
+                    </button>
                 </div>
             </div>
 
-            <div id="statusLog" class="p-2 rounded-xl text-xs font-mono text-slate-400 flex items-center justify-between bg-slate-900/60 border border-slate-800">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="info" class="w-4 h-4 text-slate-500"></i>
-                    <span id="statusLogText">Klicka på Synka för att ladda historik och träningsplan.</span>
+            <!-- Gemini API Key Input Row -->
+            <div class="space-y-1.5 pt-2 border-t border-slate-700/50">
+                <div class="flex justify-between items-center">
+                    <label class="text-[11px] text-slate-400 flex items-center gap-1">
+                        <i data-lucide="key" class="w-3 h-3 text-amber-400"></i> Gemini API Key (Gratis)
+                    </label>
+                    <a href="https://aistudio.google.com/" target="_blank" class="text-[10px] text-emerald-400 hover:underline">Skaffa nyckel här &rarr;</a>
                 </div>
-                <button onclick="fetchData()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition shrink-0">
-                    Synka data
-                </button>
+                <div class="flex gap-2">
+                    <input type="password" id="apiKeyInput" placeholder="Klistra in din AI Studio-nyckel här..." 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-amber-500">
+                    <button onclick="saveApiKey()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg shrink-0 transition">
+                        Spara
+                    </button>
+                </div>
+            </div>
+
+            <div id="statusLog" class="p-2.5 bg-slate-900/80 rounded-xl text-xs font-mono text-slate-400 flex items-start gap-2 border border-slate-800">
+                <i data-lucide="info" class="w-4 h-4 shrink-0 text-slate-500 mt-0.5"></i>
+                <span id="statusLogText">Klicka på 'Hämta' för att starta analysen.</span>
             </div>
         </section>
 
-        <!-- Direkt Länk-genväg till Gemini Appen -->
-        <section class="bg-gradient-to-br from-slate-800 via-slate-800 to-emerald-950/40 rounded-2xl p-5 border border-emerald-500/40 shadow-xl space-y-4">
-            <div class="flex items-center gap-2.5">
-                <div class="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
-                    <i data-lucide="sparkles" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <h2 class="text-base font-bold text-white leading-tight">Coach-Genie Blixt-Analys</h2>
-                    <p class="text-xs text-slate-400">Kopierar rapport (historik + plan) & öppnar Gemini</p>
-                </div>
+        <!-- Coach-Genie Trend Insights Box -->
+        <section class="bg-gradient-to-r from-slate-800/90 to-slate-900/90 rounded-2xl p-4 border border-slate-700 shadow-md">
+            <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+                <h2 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Coach-Genie Trendanalys (50+ Skydd)</h2>
             </div>
-
-            <div class="space-y-2">
-                <label class="text-xs font-medium text-slate-300">Vad vill du fråga Coach-Genie om idag?</label>
-                <textarea id="customQuestion" rows="2" placeholder="T.ex. Hur utvärderar du veckans pass i förhållande till vad som var planerat?"
-                    class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"></textarea>
+            <div id="trendInsights" class="text-xs text-slate-300 space-y-1.5 font-sans">
+                <p class="text-slate-400 italic">Analyserar träningsmönster och senbelastning...</p>
             </div>
-
-            <!-- Snabbknappar -->
-            <div class="flex flex-wrap gap-2">
-                <button onclick="setPrompt('Jämför mina senaste genomförda pass med min sparade träningsplan och utvärdera skaderisken.')" 
-                    class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700 transition">
-                    ⚖️ Jämför plan vs genomfört
-                </button>
-                <button onclick="setPrompt('Vad bör mitt nästa träningspass vara för att hålla 80/20-balansen och få in tillräckligt med styrka?')" 
-                    class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700 transition">
-                    🏃 Rekommendera nästa pass
-                </button>
-                <button onclick="setPrompt('Ge mig ett skräddarsytt veckoschema med integrerad styrka och FatMax-löpning.')" 
-                    class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700 transition">
-                    📅 Skapa nytt veckoschema
-                </button>
-            </div>
-
-            <!-- Huvudknapp -->
-            <button onclick="openGeminiWithData()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30 transition">
-                <i data-lucide="external-link" class="w-4 h-4"></i>
-                <span>Kopiera Träningsrapport & Öppna Gemini</span>
-            </button>
-            <p class="text-[11px] text-center text-slate-400">Rapporten kopieras automatiskt till urklipp. Klistra bara in i Gemini!</p>
         </section>
 
-        <!-- KPI Cards Grid -->
+        <!-- Expanded KPI Cards Grid -->
         <section class="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
                 <div class="flex justify-between items-start mb-1">
@@ -174,7 +157,7 @@
 
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
                 <div class="flex justify-between items-start mb-1">
-                    <span class="text-[11px] text-slate-400">80/20 Balans</span>
+                    <span class="text-[11px] text-slate-400">80/20 Balans (Test)</span>
                     <i data-lucide="pie-chart" class="w-4 h-4 text-blue-400"></i>
                 </div>
                 <div id="ratioScore" class="text-xl font-bold text-blue-400">-- / --</div>
@@ -183,7 +166,7 @@
 
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
                 <div class="flex justify-between items-start mb-1">
-                    <span class="text-[11px] text-slate-400">GCT & Balans</span>
+                    <span class="text-[11px] text-slate-400">GCT & Balans (Vad/Häl)</span>
                     <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
                 </div>
                 <div id="tendonRiskLevel" class="text-sm font-bold text-emerald-400">OK</div>
@@ -191,15 +174,44 @@
             </div>
         </section>
 
-        <!-- Planerade vs Genomförda Pass Sektion -->
-        <section class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                    <i data-lucide="calendar" class="w-4 h-4 text-emerald-400"></i> Planerad Träning (Från GitHub)
-                </h2>
+        <!-- Direktinbyggd Live AI Chat -->
+        <section class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-emerald-500/30 shadow-xl space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                        <i data-lucide="bot" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">Chatta med Coach-Genie</h2>
+                        <p class="text-xs text-slate-400">Direktkopplad till dina Aktivitus-zoner och Garmin-data</p>
+                    </div>
+                </div>
             </div>
-            <div id="plannedWorkoutsList" class="text-xs text-slate-300 space-y-2">
-                <p class="text-slate-400 italic">Ingen planned_workouts.csv inläst ännu.</p>
+
+            <!-- Chat Message Box -->
+            <div id="chatHistory" class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 h-64 overflow-y-auto space-y-3 text-xs">
+                <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700 text-slate-200">
+                    👋 <strong>Hej! Jag är din Coach-Genie.</strong> Jag har direktåtkomst till din historik, dina Aktivitus-zoner (FatMax &le;124 bpm, AT 142) samt din GCT-balans. Vad vill du ha hjälp med idag?
+                </div>
+            </div>
+
+            <!-- Quick Action Prompt Buttons -->
+            <div class="flex flex-wrap gap-1.5">
+                <button onclick="sendQuickQuestion('Analysera min vad- och hälsenerisk utifrån senaste veckans GCT och volym.')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700">
+                    🛡️ Vad/Häl-status
+                </button>
+                <button onclick="sendQuickQuestion('Vad bör mitt nästa träningspass vara för att hålla 80/20-balansen och få in tillräckligt med styrka?')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700">
+                    🏃 Rekommendera nästa pass
+                </button>
+            </div>
+
+            <!-- Input Controls -->
+            <div class="flex gap-2">
+                <input type="text" id="chatInput" placeholder="Skriv din fråga till coachen..." onkeypress="if(event.key === 'Enter') sendChatMessage()"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                <button onclick="sendChatMessage()" id="sendBtn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1 shrink-0 transition">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka
+                </button>
             </div>
         </section>
 
@@ -234,7 +246,7 @@
         <section class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                    <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Genomförda Pass
+                    <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass
                 </h2>
             </div>
             <div class="overflow-x-auto">
@@ -259,74 +271,82 @@
         let gctChartInstance = null;
         let intensityChartInstance = null;
         let currentDashboardData = null;
-        let rawParsedRuns = [];
-        let plannedWorkouts = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+            }
             fetchData();
         });
 
-        function setPrompt(text) {
-            document.getElementById('customQuestion').value = text;
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                alert('API-nyckel sparad i webbläsaren!');
+            } else {
+                localStorage.removeItem('gemini_api_key');
+                alert('API-nyckel borttagen.');
+            }
         }
 
         async function fetchData() {
             const rawUrl = document.getElementById('csvUrlInput').value.trim();
-            const plannedUrl = document.getElementById('plannedCsvUrlInput').value.trim();
             const logEl = document.getElementById('statusLogText');
             const statusBadge = document.getElementById('statusBadge');
             const refreshIcon = document.getElementById('refreshIcon');
 
             refreshIcon.classList.add('animate-spin');
             statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20";
-            statusBadge.textContent = "Synkar...";
+            statusBadge.textContent = "Försöker...";
 
-            // Hämta historik
-            let csvContent = await fetchWithFallback(rawUrl);
-            
-            // Hämta planerade pass
-            let plannedCsvContent = await fetchWithFallback(plannedUrl);
+            const endpoints = [
+                { name: 'GitHub Direct', url: rawUrl },
+                { name: 'AllOrigins Proxy', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}` },
+                { name: 'JSDelivr CDN', url: rawUrl.replace('raw.githubusercontent.com', 'cdn.jsdelivr.net/gh').replace('/refs/heads/main/', '@main/') }
+            ];
+
+            let csvContent = null;
+            let successMethod = '';
+
+            for (const ep of endpoints) {
+                try {
+                    logEl.textContent = `Försöker hämta via ${ep.name}...`;
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+                    const res = await fetch(ep.url, { cache: 'no-cache', signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (res.ok) {
+                        const text = await res.text();
+                        if (text && text.length > 50 && text.includes(',')) {
+                            csvContent = text;
+                            successMethod = ep.name;
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.log(`${ep.name} misslyckades:`, e);
+                }
+            }
 
             refreshIcon.classList.remove('animate-spin');
 
             if (csvContent) {
-                logEl.textContent = `Data synkad från GitHub!`;
+                logEl.textContent = `Live data hämtad via ${successMethod}!`;
                 statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
                 statusBadge.textContent = "Live Synkad";
                 parseCsvText(csvContent);
             } else {
-                logEl.textContent = "Kunde inte ladda live-historik. Visar exempeldata.";
+                logEl.textContent = "Kunde inte nå GitHub automatiskt. Laddar säkerhetsdata.";
                 statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20";
-                statusBadge.textContent = "Offline";
+                statusBadge.textContent = "Offline / Fallback";
                 loadFallbackData();
             }
-
-            if (plannedCsvContent) {
-                parsePlannedCsv(plannedCsvContent);
-            }
-        }
-
-        async function fetchWithFallback(url) {
-            const endpoints = [
-                url,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-                url.replace('raw.githubusercontent.com', 'cdn.jsdelivr.net/gh').replace('/refs/heads/main/', '@main/')
-            ];
-
-            for (const ep of endpoints) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3500);
-                    const res = await fetch(ep, { cache: 'no-cache', signal: controller.signal });
-                    clearTimeout(timeoutId);
-                    if (res.ok) {
-                        const text = await res.text();
-                        if (text && text.length > 20 && text.includes(',')) return text;
-                    }
-                } catch (e) {}
-            }
-            return null;
         }
 
         function parseCsvText(csvText) {
@@ -334,40 +354,10 @@
                 header: true,
                 skipEmptyLines: true,
                 complete: function(results) {
+                    document.getElementById('statusLogText').textContent = `Analyserade ${results.data.length} rader från CSV.`;
                     processParsedData(results.data);
                 }
             });
-        }
-
-        function parsePlannedCsv(csvText) {
-            Papa.parse(csvText, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    plannedWorkouts = results.data;
-                    renderPlannedWorkouts(results.data);
-                }
-            });
-        }
-
-        function renderPlannedWorkouts(items) {
-            const listEl = document.getElementById('plannedWorkoutsList');
-            if (!items || items.length === 0) {
-                listEl.innerHTML = `<p class="text-slate-400 italic">Inga planerade pass hittades i CSV.</p>`;
-                return;
-            }
-
-            listEl.innerHTML = items.map(item => `
-                <div class="p-2.5 bg-slate-900/80 rounded-xl border border-slate-700/60 flex items-start justify-between">
-                    <div>
-                        <span class="font-bold text-emerald-400">${item.date || 'Kommande'}: ${item.workout_type || 'Pass'}</span>
-                        <p class="text-[11px] text-slate-300 mt-0.5">${item.description || ''}</p>
-                    </div>
-                    <span class="px-2 py-0.5 bg-slate-800 text-[10px] font-mono text-slate-400 rounded border border-slate-700 shrink-0">
-                        ${item.target_hr_zone || 'FatMax'}
-                    </span>
-                </div>
-            `).join('');
         }
 
         function getField(row, possibleKeys) {
@@ -398,7 +388,7 @@
         }
 
         function processParsedData(dataRows) {
-            rawParsedRuns = dataRows.map((r, idx) => {
+            const parsedRuns = dataRows.map((r, idx) => {
                 const dateVal = getField(r, ['startTimeLocal', 'Date', 'Datum', 'start_time']) || `Pass ${idx}`;
                 const distVal = parseFloat(getField(r, ['distance', 'Distance', 'Distans']) || 0);
                 const timeVal = parseFloat(getField(r, ['duration', 'Duration', 'Time', 'Tid']) || 0);
@@ -424,27 +414,42 @@
                 };
             });
 
-            rawParsedRuns.sort((a, b) => new Date(b.date) - new Date(a.date));
-            const recent = rawParsedRuns.slice(0, 7);
+            parsedRuns.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const recent = parsedRuns.slice(0, 7);
 
             const weeklyDist = recent.reduce((acc, c) => acc + c.distance, 0).toFixed(1);
             const strengthPass = recent.filter(r => r.type === 'Styrketräning');
             const altPass = recent.filter(r => r.type === 'Crosstrainer' || r.type === 'Cykling');
-            const latestGct = rawParsedRuns.find(r => r.gct > 0)?.gct || 0;
+
+            let trendsHtml = '';
+            if (strengthPass.length >= 2) {
+                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Styrkebas:</strong> ${strengthPass.length} styrkepass (7d) – god sena/sätes-aktivering.</div>`;
+            } else {
+                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Styrkevarning:</strong> Endast ${strengthPass.length} styrkepass (7d). Rekommenderar &ge; 2 pass/vecka.</div>`;
+            }
+
+            const latestGct = parsedRuns.find(r => r.gct > 0)?.gct || 0;
+            if (latestGct > 240) {
+                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Biomekanik:</strong> GCT över gränsvärdet (${latestGct} ms > 240 ms). Vada/häl belastas hårdare.</div>`;
+            } else if (latestGct > 0) {
+                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Markkontakt:</strong> Bra GCT (${latestGct} ms). Skonsam kadens/stegisättning.</div>`;
+            }
+
+            document.getElementById('trendInsights').innerHTML = trendsHtml || '<div class="text-slate-400">Träningsdata redo för analys.</div>';
 
             currentDashboardData = {
-                totalActivities: rawParsedRuns.length,
-                lastDate: rawParsedRuns[0]?.date ? rawParsedRuns[0].date.substring(0, 10) : 'Idag',
+                totalActivities: parsedRuns.length,
+                lastDate: parsedRuns[0]?.date ? parsedRuns[0].date.substring(0, 10) : 'Idag',
                 weeklyDistance: weeklyDist,
                 strengthCount: strengthPass.length,
                 altCount: altPass.length,
                 avgGct: latestGct || 235,
-                senasteBalans: rawParsedRuns.find(r => r.gct > 0)?.balance || '50/50',
-                runs: rawParsedRuns.slice(0, 8)
+                senasteBalans: parsedRuns.find(r => r.gct > 0)?.balance || '50/50',
+                runs: parsedRuns.slice(0, 8)
             };
 
             renderDashboard(currentDashboardData);
-            renderCharts(rawParsedRuns);
+            renderCharts(parsedRuns);
         }
 
         function loadFallbackData() {
@@ -491,6 +496,7 @@
             const labels = runData.map(r => r.date.substring(5, 10));
             const gctValues = runData.map(r => r.gct);
 
+            // GCT Chart
             const gctx = document.getElementById('gctChart').getContext('2d');
             if (gctChartInstance) gctChartInstance.destroy();
             gctChartInstance = new Chart(gctx, {
@@ -517,6 +523,7 @@
                 }
             });
 
+            // Intensity Distribution Chart
             const easyCount = runs.filter(r => r.zone === 'easy').length;
             const medCount = runs.filter(r => r.zone === 'medium').length;
             const hardCount = runs.filter(r => r.zone === 'hard').length;
@@ -543,52 +550,95 @@
             });
         }
 
-        // Generera fullständig rapport & öppna Gemini
-        function openGeminiWithData() {
-            const question = document.getElementById('customQuestion').value.trim() || 'Analysera min träningsutveckling och ge rekommendation för nästa pass.';
-            
-            const recentRunsSummary = currentDashboardData?.runs ? currentDashboardData.runs.map(r => 
-                `- ${r.date.substring(0,10)}: ${r.type}, ${r.distance.toFixed(1)} km, Puls ${r.hr} bpm, GCT ${r.gct} ms (${r.balance})`
-            ).join('\n') : 'Ingen genomförd historik hämtad';
+        // Live Chat Logic connected to Gemini API
+        function sendQuickQuestion(text) {
+            document.getElementById('chatInput').value = text;
+            sendChatMessage();
+        }
 
-            const plannedSummary = plannedWorkouts.length > 0 ? plannedWorkouts.map(p => 
-                `- ${p.date}: ${p.workout_type} (${p.description}) [Mål: ${p.target_hr_zone}]`
-            ).join('\n') : 'Inga planerade pass inlästa';
+        async function sendChatMessage() {
+    const inputEl = document.getElementById('chatInput');
+    const userMsg = inputEl.value.trim();
+    if (!userMsg) return;
 
-            const fullPrompt = `Du är Coach-Genie, en expertdriven löpcoach för en 50+ löpare med fokus på vad- och hälseneskydd.
+    const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKeyInput').value.trim();
+    if (!apiKey) {
+        alert('Vänligen fyll i din gratis Gemini API-nyckel i fältet högst upp och klicka på Spara först!');
+        return;
+    }
 
-PROFIL & ZONER:
-- FatMax (Aerob gräns): <=124 bpm
-- AnAerob Tröskel (AT): 142 bpm
-- Skadefokus: Förebygga vad- och hälseneproblem (Mål GCT < 240 ms)
+    const historyEl = document.getElementById('chatHistory');
+    
+    historyEl.innerHTML += `<div class="bg-emerald-950/60 border border-emerald-800/60 p-2.5 rounded-lg text-emerald-200 ml-6"><strong>Du:</strong> ${userMsg}</div>`;
+    inputEl.value = '';
+    historyEl.scrollTop = historyEl.scrollHeight;
 
-GENOMFÖRD TRÄNINGSTATUS (SENASTE 7 DAGARNA):
+    const loadingId = 'loading-' + Date.now();
+    historyEl.innerHTML += `<div id="${loadingId}" class="bg-slate-800 p-2.5 rounded-lg text-slate-400 italic font-mono">Coach-Genie tänker...</div>`;
+    historyEl.scrollTop = historyEl.scrollHeight;
+
+    const systemContext = `Du är Coach-Genie, en expertdriven löpcoach för en 50+ löpare med fokus på vad- och hälseneskydd.
+Aktivitus-pulszoner: FatMax <=124 bpm, AT 142 bpm, Maxpuls 153 bpm.
+Dagsaktuell träningsstatus:
 - Totalt pass i databasen: ${currentDashboardData?.totalActivities || 0}
-- Löpvolym 7d: ${currentDashboardData?.weeklyDistance || 0} km
+- Volym senaste 7d: ${currentDashboardData?.weeklyDistance || 0} km
 - Styrkepass (7d): ${currentDashboardData?.strengthCount || 0} st (Mål: >=2/vecka)
 - Alternativa pass (7d): ${currentDashboardData?.altCount || 0} st
-- Senaste GCT: ${currentDashboardData?.avgGct || 0} ms
+- Markontakttid (GCT): ${currentDashboardData?.avgGct || 0} ms (Gräns: >240 ms är varning)
 - GCT-balans: ${currentDashboardData?.senasteBalans || '-'}
 
-SENASTE GENOMFÖRDA PASSEN:
-${recentRunsSummary}
+Svara kortfattat, uppmuntrande, professionellt och med tydligt fokus på skadeförebyggande åtgärder för vad/hälsena.`;
 
-TIDIGARE PLANERADE / REKOMMENDERADE PASS:
-${plannedSummary}
+    // Snabba och ständigt uppdaterade modeller
+    const modelsToTry = [
+        'gemini-3.8-flash',
+        'gemini-2.5-flash'
+    ];
 
-ANVÄNDARENS FRÅGA/ÖNSKEMÅL:
-${question}
+    let success = false;
 
-Svara uppmuntrande, strukturerat och professionellt med direkt fokus på skadeförebyggande åtgärder och nästa steg.`;
+    for (const modelName of modelsToTry) {
+        try {
+            // Sätter en kort timeout på 5 sekunder per modell så den inte står och väntar i onödan
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-            navigator.clipboard.writeText(fullPrompt).then(() => {
-                alert('✅ Träningsrapport kopierad!\n\nGemini öppnas nu. Klistra in (Paste) i chattfältet!');
-                window.open('https://gemini.google.com/app', '_blank');
-            }).catch(err => {
-                alert('Kunde inte kopiera automatiskt, öppnar Gemini ändå.');
-                window.open('https://gemini.google.com/app', '_blank');
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    contents: [
+                        { role: 'user', parts: [{ text: systemContext + "\n\nAnvändarens fråga: " + userMsg }] }
+                    ]
+                })
             });
+
+            clearTimeout(timeoutId);
+            const data = await response.json();
+
+            if (response.ok && data.candidates && data.candidates[0].content.parts[0].text) {
+                document.getElementById(loadingId)?.remove();
+                const replyText = data.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                historyEl.innerHTML += `<div class="bg-slate-800/90 border border-slate-700 p-3 rounded-lg text-slate-200">🤖 <strong>Coach-Genie:</strong><br>${replyText}</div>`;
+                success = true;
+                break;
+            }
+        } catch (err) {
+            console.log(`Modell ${modelName} avbröts eller misslyckades...`);
         }
+    }
+
+    if (!success) {
+        document.getElementById(loadingId)?.remove();
+        historyEl.innerHTML += `<div class="bg-amber-950/60 border border-amber-800 p-2.5 rounded-lg text-amber-300">⚠️ Tillfällig fördröjning hos Google. Testa att skicka igen om ett ögonblick.</div>`;
+    }
+
+    historyEl.scrollTop = historyEl.scrollHeight;
+}
     </script>
 </body>
 </html>
+
