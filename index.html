@@ -482,7 +482,7 @@
             });
         }
 
-        // Live Chat Logic connected to Gemini API
+        // Live Chat Logic connected to Gemini API (gemini-2.0-flash)
         function sendQuickQuestion(text) {
             document.getElementById('chatInput').value = text;
             sendChatMessage();
@@ -522,7 +522,7 @@ Dagsaktuell träningsstatus:
 Svara kortfattat, uppmuntrande, professionellt och med tydligt fokus på skadeförebyggande åtgärder för vad/hälsena.`;
 
             try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
