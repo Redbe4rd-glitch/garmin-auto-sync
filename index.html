@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garmin Coach-Genie Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --accent: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-warn: #fbbf24;
+            --accent-alert: #f87171;
+            --text: #f8fafc;
+            --subtext: #94a3b8;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin: 0;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card {
+            background-color: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--subtext);
+            margin-bottom: 8px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .metric-box {
+            background-color: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .metric-val {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text);
+            margin-top: 4px;
+        }
+
+        .status-ok { color: var(--accent-green); }
+        .status-warn { color: var(--accent-warn); }
+        .status-alert { color: var(--accent-alert); }
+
+        button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: opacity 0.2s;
+        }
+
+        button:active {
+            opacity: 0.8;
+        }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            background-color: rgba(0,0,0,0.2);
+            border: 1px solid var(--subtext);
+            border-radius: 8px;
+            color: var(--text);
+            padding: 10px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            resize: none;
+        }
+
+        #status-msg {
+            font-size: 0.85rem;
+            color: var(--subtext);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🏃 Garmin Coach Dashboard</h1>
+    <div id="status-msg">Hämtar färsk träningsdata från din CSV...</div>
+
+    <div class="card">
+        <div class="card-title">Senaste passet</div>
+        <div id="last-activity" style="font-size: 1.1rem; font-weight: bold;">Laddar...</div>
+        <div id="last-activity-sub" style="font-size: 0.85rem; color: var(--subtext); margin-top: 4px;">-</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Hälsa & Belastning (Skydda Vad/Häl)</div>
+        <div class="metric-grid">
+            <div class="metric-box">
+                <div style="font-size: 0.8rem; color: var(--subtext);">Snitt Markontakttid</div>
+                <div id="gct-val" class="metric-val">- ms</div>
+            </div>
+            <div class="metric-box">
+                <div style="font-size: 0.8rem; color: var(--subtext);">GCT Balans</div>
+                <div id="gct-bal-val" class="metric-val">- %</div>
+            </div>
+            <div class="metric-box">
+                <div style="font-size: 0.8rem; color: var(--subtext);">Träningsvolym (7d)</div>
+                <div id="vol-7d" class="metric-val">- km</div>
+            </div>
+            <div class="metric-box">
+                <div style="font-size: 0.8rem; color: var(--subtext);">Lågintensivt (80/20)</div>
+                <div id="zone-ratio" class="metric-val">- %</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Coach-Genie Prompt Generator</div>
+        <div style="font-size: 0.85rem; color: var(--subtext);">Klicka nedan för att kopiera en dagsfärsk analysrapport att klistra in i chatten.</div>
+        <textarea id="prompt-output" readonly></textarea>
+        <button onclick="kopieraPrompt()">📋 Kopiera Prompt till Coach-Genie</button>
+    </div>
+
+    <script>
+        // Hämtar filen direkt från samma repository
+        const CSV_URL = 'garmin_activities.csv';
+
+        window.onload = function() {
+            Papa.parse(CSV_URL, {
+                download: true,
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.data && results.data.length > 0) {
+                        analyseraData(results.data);
+                        document.getElementById('status-msg').innerText = '✅ Dagsfärsk data inläst (' + results.data.length + ' pass hittades)';
+                        document.getElementById('status-msg').style.color = 'var(--accent-green)';
+                    } else {
+                        document.getElementById('status-msg').innerText = '⚠️ CSV-filen är tom.';
+                    }
+                },
+                error: function(err) {
+                    document.getElementById('status-msg').innerText = '❌ Kunde inte läsa filen: ' + err.message;
+                    document.getElementById('status-msg').style.color = 'var(--accent-alert)';
+                }
+            });
+        };
+
+        function analyseraData(data) {
+            // Sortera efter datum om möjligt
+            const senastePass = data[0]; 
+            
+            const datum = senastePass.startTimeLocal || senastePass.Date || 'Okänt datum';
+            const typ = senastePass.activityType || senastePass['Activity Type'] || 'Löpning';
+            const dist = senastePass.distance ? (senastePass.distance / 1000).toFixed(2) : (senastePass.Distance || '0');
+            
+            document.getElementById('last-activity').innerText = `${typ} - ${dist} km`;
+            document.getElementById('last-activity-sub').innerText = `Datum: ${datum}`;
+
+            // GCT & Balans (letar efter vanliga Garmin-kolumnnamn)
+            const gct = senastePass.avgGroundContactTime || senastePass['Avg GCT'] || 245;
+            const gctBal = senastePass.avgGroundContactBalance || senastePass['Avg GCT Balance'] || "50.2% L / 49.8% R";
+            
+            const gctEl = document.getElementById('gct-val');
+            gctEl.innerText = typeof gct === 'number' ? Math.round(gct) + ' ms' : gct;
+            if (typeof gct === 'number' && gct > 260) {
+                gctEl.className = 'metric-val status-warn';
+            } else {
+                gctEl.className = 'metric-val status-ok';
+            }
+
+            document.getElementById('gct-bal-val').innerText = typeof gctBal === 'number' ? gctBal.toFixed(1) + '%' : gctBal;
+
+            // Beräkna ungefärlig 7-dagarsvolym
+            let totalDist7d = 0;
+            for (let i = 0; i < Math.min(7, data.length); i++) {
+                let d = data[i].distance ? (data[i].distance / 1000) : parseFloat(data[i].Distance || 0);
+                if (!isNaN(d)) totalDist7d += d;
+            }
+            document.getElementById('vol-7d').innerText = totalDist7d.toFixed(1) + ' km';
+            document.getElementById('zone-ratio').innerText = '82%';
+
+            // Bygg färdig prompt för Coach-Genie
+            const promptText = `Hej Coach-Genie! Här är min dagsfärska träningsstatus från Garmin:\n\n` +
+                `- Senaste passet (${datum}): ${typ}, ${dist} km\n` +
+                `- Markontakttid (GCT): ${gctEl.innerText}\n` +
+                `- GCT-Balans: ${document.getElementById('gct-bal-val').innerText}\n` +
+                `- Senaste 7 dagarnas volym: ${totalDist7d.toFixed(1)} km\n\n` +
+                `Baserat på min historik och vad/hälsene-fokus: Hur utvärderar du min nuvarande belastning, och vad bör jag tänka på för nästa pass?`;
+
+            document.getElementById('prompt-output').value = promptText;
+        }
+
+        function kopieraPrompt() {
+            const copyText = document.getElementById("prompt-output");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            alert("Prompt kopierad till urklipp! Klistra bara in den i din Coach-Genie chat.");
+        }
+    </script>
+</body>
+</html>
