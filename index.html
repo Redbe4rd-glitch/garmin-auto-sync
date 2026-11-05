@@ -221,17 +221,17 @@
         <!-- Recent Activities Table -->
         <section class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
             <h2 class="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
-                <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass
+                <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass (Tid, Puls & Belastning)
             </h2>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-300">
                     <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700/50">
                         <tr>
                             <th class="p-2.5">Datum</th>
-                            <th class="p-2.5">Typ</th>
-                            <th class="p-2.5">Distans</th>
-                            <th class="p-2.5">GCT</th>
-                            <th class="p-2.5">GCT Balans</th>
+                            <th class="p-2.5">Typ / Distans</th>
+                            <th class="p-2.5">Tid</th>
+                            <th class="p-2.5">Puls</th>
+                            <th class="p-2.5">Belastning</th>
                         </tr>
                     </thead>
                     <tbody id="activityTableBody" class="divide-y divide-slate-800">
@@ -340,35 +340,37 @@
             });
         }
 
-        // Extraherar snygg aktivitetstyp oavsett om det är ren text eller Garmin JSON-objekt
         function getTypeName(act) {
             const rawType = act.activityType || act['Activity Type'] || act['Typ'] || 'Löpning';
-            
             if (typeof rawType === 'object' && rawType !== null) {
                 return rawType.typeKey || rawType.name || 'Aktivitet';
             }
-            
             let str = String(rawType).trim();
-            // Om det ser ut som en JSON-sträng, försök parsa eller städa den
             if (str.startsWith('{') || str.includes('typeKey')) {
                 if (str.includes('running')) return 'Löpning';
                 if (str.includes('strength')) return 'Styrketräning';
                 if (str.includes('elliptical')) return 'Crosstrainer';
                 if (str.includes('cycling')) return 'Cykling';
                 if (str.includes('walking')) return 'Promenad';
-                // Plocka ut värdet efter typeKey om möjligt
                 const match = str.match(/typeKey["']?\s*:\s*["']([^"']+)/);
                 if (match) return match[1];
             }
-            
-            // Översätt vanliga engelska termer till svenska om önskas
             if (str.toLowerCase() === 'running') return 'Löpning';
             if (str.toLowerCase() === 'strength_training') return 'Styrketräning';
             if (str.toLowerCase() === 'elliptical') return 'Crosstrainer';
             if (str.toLowerCase() === 'cycling') return 'Cykling';
             if (str.toLowerCase() === 'walking') return 'Promenad';
-
             return str;
+        }
+
+        // Formatera sekunder till t.ex. "45 min" eller "1h 12m"
+        function formatDuration(sec) {
+            ifisNaN(sec) || sec <= 0) return '-';
+            const mins = Math.round(sec / 60);
+            if (mins < 60) return mins + ' min';
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return h + 'h ' + (m > 0 ? m + 'm' : '');
         }
 
         function processParsedData(dataRows) {
@@ -380,12 +382,13 @@
             const parsedRuns = dataRows.map((r, idx) => {
                 const dateVal = r['startTimeLocal'] || r['Date'] || r['Datum'] || r['Activity Date'] || `Pass ${dataRows.length - idx}`;
                 const distVal = parseFloat(r['distance'] || r['Distance'] || r['Distans'] || 0);
+                const timeVal = parseFloat(r['duration'] || r['Duration'] || r['Time'] || r['Tid'] || 0);
                 const gctVal = parseInt(r['avgGroundContactTime'] || r['Avg GCT'] || r['Markontakttid'] || r['GCT'] || 0);
                 const balanceVal = r['avgGroundContactBalance'] || r['GCT Balance'] || r['GCT-balans'] || '-';
                 const hrVal = parseInt(r['averageHR'] || r['Avg HR'] || r['Medelpuls'] || 0);
+                const loadVal = parseFloat(r['trainingLoad'] || r['Training Load'] || r['Belastning'] || r['trainingEffect'] || 0);
                 const typeVal = getTypeName(r);
 
-                // Beräkna distans i km (om värdet är i meter över 100)
                 let distKm = isNaN(distVal) ? 0 : distVal;
                 if (distKm > 100) distKm = distKm / 1000;
 
@@ -393,22 +396,21 @@
                     date: dateVal,
                     type: typeVal,
                     distance: distKm,
+                    duration: timeVal,
                     gct: isNaN(gctVal) ? 0 : gctVal,
                     balance: balanceVal,
                     hr: hrVal,
-                    // Zon: om det är löpning/aktivitet med låg puls eller låg intensitet, klassificera som Easy
+                    load: isNaN(loadVal) ? 0 : Math.round(loadVal),
                     zone: hrVal > 0 && hrVal > 150 ? 'Hard' : 'Easy'
                 };
             });
 
-            // Sortera efter datum (nyast först)
             parsedRuns.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             const totalRuns = parsedRuns.length;
             const latestRuns = parsedRuns.slice(0, 7);
             const weeklyDist = latestRuns.reduce((acc, curr) => acc + curr.distance, 0).toFixed(1);
             
-            // Beräkna 80/20 baserat på faktiska pass som har pulsvärden eller fördelning
             const passMedPuls = parsedRuns.filter(r => r.hr > 0);
             let easyPct = 80;
             let hardPct = 20;
@@ -419,8 +421,7 @@
                 hardPct = 100 - easyPct;
             }
 
-            // Hitta senaste riktiga löppasset med GCT för riskanalys
-            const senasteLop = parsedRuns.find(r => r.type.toLowerCase().includes('run') || r.type.toLowerCase().includes('löp') && r.gct > 0) || parsedRuns.find(r => r.gct > 0) || parsedRuns[0];
+            const senasteLop = parsedRuns.find(r => (r.type.toLowerCase().includes('run') || r.type.toLowerCase().includes('löp')) && r.gct > 0) || parsedRuns.find(r => r.gct > 0) || parsedRuns[0];
             const avgGct = senasteLop && senasteLop.gct > 0 ? senasteLop.gct : 235;
 
             const summary = {
@@ -439,10 +440,9 @@
 
         function loadFallbackData() {
             const sampleRuns = [
-                { date: '2026-11-04', type: 'Löpning', distance: 10.2, gct: 232, balance: '50.1% L / 49.9% R', hr: 134, zone: 'Easy' },
-                { date: '2026-11-02', type: 'Styrketräning', distance: 0, gct: 0, balance: '-', hr: 110, zone: 'Easy' },
-                { date: '2026-10-31', type: 'Löpning', distance: 16.0, gct: 241, balance: '51.2% L / 48.8% R', hr: 136, zone: 'Easy' },
-                { date: '2026-10-28', type: 'Löpning', distance: 6.0, gct: 238, balance: '50.2% L / 49.8% R', hr: 126, zone: 'Easy' }
+                { date: '2026-11-04', type: 'Löpning', distance: 10.2, duration: 3100, gct: 232, balance: '50.1% L', hr: 134, load: 72, zone: 'Easy' },
+                { date: '2026-11-02', type: 'Styrketräning', distance: 0, duration: 2700, gct: 0, balance: '-', hr: 110, load: 45, zone: 'Easy' },
+                { date: '2026-10-31', type: 'Löpning', distance: 16.0, duration: 5100, gct: 241, balance: '51.2% L', hr: 136, load: 125, zone: 'Easy' }
             ];
 
             const summary = {
@@ -478,12 +478,18 @@
             data.runs.forEach(run => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-800/40 transition';
+                
+                const typOchDistans = `${run.type}<br><span class="text-[10px] text-emerald-400 font-semibold">${run.distance > 0 ? run.distance.toFixed(1) + ' km' : 'Inget avstånd'}</span>`;
+                const tidPass = formatDuration(run.duration);
+                const pulsText = run.hr > 0 ? run.hr + ' bpm' : '-';
+                const loadText = run.load > 0 ? run.load : '-';
+
                 tr.innerHTML = `
-                    <td class="p-2.5 text-slate-200 font-mono text-[11px]">${run.date.toString().substring(0, 16)}</td>
-                    <td class="p-2.5 font-medium">${run.type}</td>
-                    <td class="p-2.5 font-semibold text-emerald-400">${run.distance > 0 ? run.distance.toFixed(1) + ' km' : '-'}</td>
-                    <td class="p-2.5 ${run.gct > 240 ? 'text-amber-400 font-bold' : ''}">${run.gct > 0 ? run.gct + ' ms' : '-'}</td>
-                    <td class="p-2.5 text-slate-400 text-[11px]">${run.balance && run.balance !== '-' ? run.balance : '-'}</td>
+                    <td class="p-2.5 text-slate-200 font-mono text-[11px]">${run.date.toString().substring(0, 10)}<br><span class="text-[9px] text-slate-500">${run.date.toString().substring(11, 16)}</span></td>
+                    <td class="p-2.5 font-medium leading-tight">${typOchDistans}</td>
+                    <td class="p-2.5 text-slate-300">${tidPass}</td>
+                    <td class="p-2.5 text-slate-300 font-mono">${pulsText}</td>
+                    <td class="p-2.5 text-slate-300 font-mono">${loadText}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -554,7 +560,7 @@
         }
 
         function generateCoachPrompt(data) {
-            const latest = data.runs[0] || { date: 'Idag', type: 'Löpning', distance: 10, gct: 235, balance: '50/50' };
+            const latest = data.runs[0] || { date: 'Idag', type: 'Löpning', distance: 10, duration: 3600, gct: 235, hr: 135 };
             const prompt = `Hej Coach-Genie! Här är min dagsfärska träningsrapport direkt från min Garmin-data via GitHub/Fil-import:
 
 📊 **TRÄNINGSSTATUS (50+ LÖPARE / VAD- & HÄLSENESKYDD)**
@@ -564,12 +570,12 @@
 - Intensitetsfördelning (80/20): ${data.easyPct}% Lågintensiv (Z1/Z2) / ${data.hardPct}% Högintensiv
 
 👟 **SENASTE TRÄNINGSPASS (${latest.date})**
-- Typ: ${latest.type} | Distans: ${latest.distance} km
+- Typ: ${latest.type} | Distans: ${latest.distance} km | Tid: ${Math.round(latest.duration/60)} min
+- Snittpuls: ${latest.hr > 0 ? latest.hr + ' bpm' : 'Ej registrerad'}
 - Markontakttid (GCT): ${latest.gct} ms (Tröskelvärde för risk: >240 ms)
-- GCT-balans: ${latest.balance}
 
 🔍 **FRÅGA TILL COACHEN:**
-Utifrån min senaste markontakttid (${latest.gct} ms) och min nuvarande 80/20-fördelning (${data.easyPct}% lugn träning): Hur bör jag utforma de kommande 3 träningspassen för att bibehålla en säker belastningskurva utan att fresta på mina vad- och hälsenor?`;
+Utifrån mitt senaste pass, min markontakttid (${latest.gct} ms) och min nuvarande 80/20-fördelning (${data.easyPct}% lugn träning): Hur bör jag utforma de kommande 3 träningspassen för att bibehålla en säker belastningskurva utan att fresta på mina vad- och hälsenor?`;
 
             document.getElementById('promptOutput').value = prompt;
         }
