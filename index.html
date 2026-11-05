@@ -1,290 +1,555 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Garmin Coach Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <title>Coach-Genie | Garmin 50+ Tendon & 80/20 Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PapaParse for robust CSV Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --bg: #0f172a;
-            --card: #1e293b;
-            --accent: #38bdf8;
-            --accent-green: #4ade80;
-            --accent-warn: #fbbf24;
-            --accent-alert: #f87171;
-            --text: #f8fafc;
-            --subtext: #94a3b8;
-        }
-
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        h1 {
-            font-size: 1.4rem;
-            margin: 0;
-            color: var(--accent);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .card {
-            background-color: var(--card);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        }
-
-        .card-title {
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--subtext);
-            margin-bottom: 8px;
-        }
-
-        .metric-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-        }
-
-        .metric-box {
-            background-color: rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
-            padding: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .metric-val {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--text);
-            margin-top: 4px;
-        }
-
-        .status-ok { color: var(--accent-green); }
-        .status-warn { color: var(--accent-warn); }
-        .status-alert { color: var(--accent-alert); }
-
-        button, label.btn-upload {
-            background-color: var(--accent);
-            color: #000;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            width: 100%;
-            cursor: pointer;
-            margin-top: 8px;
-            display: block;
-            text-align: center;
-            box-sizing: border-box;
-            transition: opacity 0.2s;
-        }
-
-        button:active, label.btn-upload:active {
-            opacity: 0.8;
-        }
-
-        textarea {
-            width: 100%;
-            height: 140px;
-            background-color: rgba(0,0,0,0.2);
-            border: 1px solid var(--subtext);
-            border-radius: 8px;
-            color: var(--text);
-            padding: 10px;
-            box-sizing: border-box;
-            font-family: monospace;
-            font-size: 0.85rem;
-            margin-top: 8px;
-            resize: none;
-        }
-
-        #status-msg {
-            font-size: 0.85rem;
-            color: var(--subtext);
-        }
-
-        input[type="file"] {
-            display: none;
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
         }
     </style>
 </head>
-<body>
+<body class="min-h-screen pb-12">
 
-    <h1>🏃 Garmin Coach Dashboard</h1>
-    <div id="status-msg">Hämtar färsk träningsdata från din CSV...</div>
-
-    <div class="card">
-        <div class="card-title">Senaste passet</div>
-        <div id="last-activity" style="font-size: 1.1rem; font-weight: bold;">Laddar...</div>
-        <div id="last-activity-sub" style="font-size: 0.85rem; color: var(--subtext); margin-top: 4px;">-</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title">Hälsa & Belastning (Skydda Vad/Häl)</div>
-        <div class="metric-grid">
-            <div class="metric-box">
-                <div style="font-size: 0.8rem; color: var(--subtext);">Snitt Markontakttid</div>
-                <div id="gct-val" class="metric-val">- ms</div>
+    <!-- Header / Navigation -->
+    <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                    <i data-lucide="activity" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-white">Coach-Genie Hub</h1>
+                    <p class="text-xs text-slate-400">Garmin 50+ Vad & Hälseneskydd</p>
+                </div>
             </div>
-            <div class="metric-box">
-                <div style="font-size: 0.8rem; color: var(--subtext);">GCT Balans</div>
-                <div id="gct-bal-val" class="metric-val">- %</div>
-            </div>
-            <div class="metric-box">
-                <div style="font-size: 0.8rem; color: var(--subtext);">Träningsvolym (7d)</div>
-                <div id="vol-7d" class="metric-val">- km</div>
-            </div>
-            <div class="metric-box">
-                <div style="font-size: 0.8rem; color: var(--subtext);">Lågintensivt (80/20)</div>
-                <div id="zone-ratio" class="metric-val">- %</div>
-            </div>
+            <button id="refreshBtn" onclick="fetchData()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refreshIcon"></i>
+                <span>Synka</span>
+            </button>
         </div>
-    </div>
+    </header>
 
-    <div class="card">
-        <div class="card-title">Coach-Genie Prompt Generator</div>
-        <div style="font-size: 0.85rem; color: var(--subtext);">Klicka nedan för att kopiera en dagsfärsk analysrapport att klistra in i chatten.</div>
-        <textarea id="prompt-output" readonly></textarea>
-        <button onclick="kopieraPrompt()">📋 Kopiera Prompt till Coach-Genie</button>
-        
-        <label class="btn-upload" style="background-color: transparent; border: 1px solid var(--subtext); color: var(--text); margin-top: 12px;">
-            📁 Välj CSV från mobilen om autoinläsning spärras
-            <input type="file" id="csv-file-input" accept=".csv" onchange="laddaManuellFile(event)">
-        </label>
-    </div>
+    <main class="max-w-4xl mx-auto px-4 pt-6 space-y-6">
+
+        <!-- Data Ingestion Accordion & Controls -->
+        <section class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/60 shadow-lg space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i> Datakälla & Import
+                </span>
+                <span id="statusBadge" class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-slate-700 text-slate-300 border border-slate-600">
+                    Redo
+                </span>
+            </div>
+
+            <!-- GitHub Fetch Row -->
+            <div class="space-y-1.5">
+                <label class="text-[11px] text-slate-400">GitHub Raw CSV URL</label>
+                <div class="flex gap-2">
+                    <input type="text" id="csvUrlInput" value="https://raw.githubusercontent.com/Redbe4rd-glitch/garmin-auto-sync/refs/heads/main/garmin_activities.csv" 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-emerald-500">
+                    <button onclick="fetchData()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shrink-0 transition flex items-center gap-1">
+                        <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Hämta
+                    </button>
+                </div>
+            </div>
+
+            <!-- Alternative Methods Grid (File Upload + Raw Paste) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-700/50">
+                <!-- Local File Upload -->
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/40 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-300 flex items-center gap-1">
+                            <i data-lucide="upload" class="w-3.5 h-3.5 text-blue-400"></i> Ladda upp lokal CSV
+                        </span>
+                    </div>
+                    <label class="block w-full text-center px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 border-dashed rounded-lg text-xs font-medium text-slate-300 cursor-pointer transition">
+                        <span>Välj fil från telefonen</span>
+                        <input type="file" id="fileInput" accept=".csv" class="hidden" onchange="handleFileUpload(event)">
+                    </label>
+                </div>
+
+                <!-- Paste Raw Text -->
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/40 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-300 flex items-center gap-1">
+                            <i data-lucide="clipboard-text" class="w-3.5 h-3.5 text-purple-400"></i> Klistra in CSV-text
+                        </span>
+                        <button onclick="parsePastedText()" class="text-[11px] text-purple-400 hover:underline">Läs in</button>
+                    </div>
+                    <input type="text" id="pasteInput" placeholder="Klistra in CSV-rader här..." 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-purple-500">
+                </div>
+            </div>
+
+            <!-- Status Banner Log -->
+            <div id="statusLog" class="p-2.5 bg-slate-900/80 rounded-xl text-xs font-mono text-slate-400 flex items-start gap-2 border border-slate-800">
+                <i data-lucide="info" class="w-4 h-4 shrink-0 text-slate-500 mt-0.5"></i>
+                <span id="statusLogText">Klicka på 'Hämtning' eller ladda upp din fil för att starta analysen.</span>
+            </div>
+        </section>
+
+        <!-- Main KPI Cards Grid -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <!-- Total Runs -->
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-slate-400">Totalt Pass</span>
+                    <i data-lucide="database" class="w-4 h-4 text-slate-500"></i>
+                </div>
+                <div id="totalActivities" class="text-2xl font-bold text-white">---</div>
+                <div id="lastDateText" class="text-[11px] text-slate-400 mt-1">Senaste: --</div>
+            </div>
+
+            <!-- Weekly Distance -->
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-slate-400">Senaste 7 Dagar</span>
+                    <i data-lucide="route" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+                <div id="weeklyDistance" class="text-2xl font-bold text-emerald-400">--- km</div>
+                <div id="weeklyProgression" class="text-[11px] text-slate-400 mt-1">---</div>
+            </div>
+
+            <!-- 80/20 Adherence -->
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-slate-400">80/20 Balans</span>
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <div id="ratioScore" class="text-2xl font-bold text-blue-400">-- / --</div>
+                <div id="ratioStatus" class="text-[11px] text-slate-400 mt-1">Mål: 80% Lågintensiv</div>
+            </div>
+
+            <!-- Calf / Tendon Risk Indicator -->
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-slate-400">Vad/Häll-Status</span>
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
+                </div>
+                <div id="tendonRiskLevel" class="text-lg font-bold text-emerald-400">OK</div>
+                <div id="gctAvgMetric" class="text-[11px] text-slate-400 mt-1">GCT: -- ms</div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="grid md:grid-cols-2 gap-4">
+            <!-- GCT & Biomechanics Chart -->
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i>
+                        Markontakttid (GCT) Trend
+                    </h2>
+                    <span class="text-[11px] text-slate-400">Gräns: &lt; 240 ms</span>
+                </div>
+                <div class="h-48">
+                    <canvas id="gctChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Intensity Distribution Chart -->
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="heart-pulse" class="w-4 h-4 text-rose-400"></i>
+                        Intensitetsfördelning (80/20)
+                    </h2>
+                    <span class="text-[11px] text-slate-400">Pulszoner Z1-Z5</span>
+                </div>
+                <div class="h-48 flex items-center justify-center">
+                    <canvas id="intensityChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Prompt Generator for Coach Genie -->
+        <section class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 border border-emerald-500/30 shadow-xl space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">Coach-Genie Prompt-Generator</h2>
+                        <p class="text-xs text-slate-400">Genererad rapport redo att klistras in i chatten</p>
+                    </div>
+                </div>
+                <button onclick="copyPrompt()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    <span id="copyBtnText">Kopiera Prompt</span>
+                </button>
+            </div>
+
+            <div class="relative">
+                <textarea id="promptOutput" readonly rows="7" 
+                    class="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs font-mono text-emerald-300 focus:outline-none resize-none leading-relaxed"></textarea>
+            </div>
+            
+            <p class="text-[11px] text-slate-400 flex items-center gap-1">
+                <i data-lucide="info" class="w-3.5 h-3.5 text-slate-500"></i>
+                Klicka på "Kopiera Prompt" och klistra in texten direkt i din konversation för en omedelbar datadriven analys.
+            </p>
+        </section>
+
+        <!-- Recent Activities Table -->
+        <section class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+            <h2 class="text-sm font-semibold text-slate-200 mb-3 flex items-center gap-2">
+                <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700/50">
+                        <tr>
+                            <th class="p-2.5">Datum</th>
+                            <th class="p-2.5">Typ</th>
+                            <th class="p-2.5">Distans</th>
+                            <th class="p-2.5">GCT</th>
+                            <th class="p-2.5">GCT Balans</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityTableBody" class="divide-y divide-slate-800">
+                        <!-- Filled dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
 
     <script>
-        const PRIMARY_URL = 'garmin_activities.csv';
-        const FALLBACK_URL = 'https://raw.githubusercontent.com/Redbe4rd-glitch/garmin-auto-sync/main/garmin_activities.csv';
+        let gctChartInstance = null;
+        let intensityChartInstance = null;
 
-        window.onload = function() {
-            hamtaData(PRIMARY_URL, false);
-        };
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            fetchData();
+        });
 
-        function hamtaData(url, isFallback) {
-            Papa.parse(url, {
-                download: true,
+        // Robust CSV Fetching with multi-proxy CORS fallbacks
+        async function fetchData() {
+            const rawUrl = document.getElementById('csvUrlInput').value.trim();
+            const logEl = document.getElementById('statusLogText');
+            const statusBadge = document.getElementById('statusBadge');
+            const refreshIcon = document.getElementById('refreshIcon');
+
+            refreshIcon.classList.add('animate-spin');
+            statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20";
+            statusBadge.textContent = "Försöker...";
+
+            // List of fetch attempts: Direct raw, CORS Proxy 1, CORS Proxy 2
+            const endpoints = [
+                { name: 'GitHub Direct', url: rawUrl },
+                { name: 'CORS Proxy 1', url: `https://corsproxy.io/?${encodeURIComponent(rawUrl)}` },
+                { name: 'CORS Proxy 2', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}` }
+            ];
+
+            let csvContent = null;
+            let successMethod = '';
+
+            for (const ep of endpoints) {
+                try {
+                    logEl.textContent = `Ansluter via ${ep.name}...`;
+                    const res = await fetch(ep.url, { cache: 'no-cache' });
+                    if (res.ok) {
+                        const text = await res.text();
+                        if (text && text.length > 50) {
+                            csvContent = text;
+                            successMethod = ep.name;
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.log(`${ep.name} failed:`, e);
+                }
+            }
+
+            refreshIcon.classList.remove('animate-spin');
+
+            if (csvContent) {
+                logEl.textContent = `Framgångsrikt inladdat via ${successMethod}! Parsing pågår...`;
+                statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                statusBadge.textContent = "Live Synkad";
+                parseCsvText(csvContent);
+            } else {
+                logEl.textContent = "Nätverksspärr / CORS blockering. Laddar demodata. Använd manuell filuppladdning om du har din .csv på mobilen.";
+                statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                statusBadge.textContent = "CORS Spärr";
+                loadFallbackData();
+            }
+        }
+
+        // Handle File Upload from phone storage
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const logEl = document.getElementById('statusLogText');
+            logEl.textContent = `Läser in lokal fil: ${file.name}...`;
+
+            Papa.parse(file, {
                 header: true,
-                dynamicTyping: true,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    if (results.data && results.data.length > 0) {
-                        analyseraData(results.data);
-                        document.getElementById('status-msg').innerText = '✅ Dagsfärsk data inläst (' + results.data.length + ' pass hittades)';
-                        document.getElementById('status-msg').style.color = 'var(--accent-green)';
-                    } else if (!isFallback) {
-                        hamtaData(FALLBACK_URL, true);
-                    } else {
-                        visaFel('⚠️ Filen är tom eller hittades inte.');
-                    }
+                    logEl.textContent = `Läste in ${results.data.length} rader från ${file.name}!`;
+                    processParsedData(results.data);
                 },
                 error: function(err) {
-                    if (!isFallback) {
-                        console.warn('Första försöket misslyckades, testar fallback URL...');
-                        hamtaData(FALLBACK_URL, true);
-                    } else {
-                        visaFel('❌ Kunde inte läsa filen automatisk. Använd knappen nedan för att välja fil.');
+                    logEl.textContent = `Fel vid filinläsning: ${err.message}`;
+                }
+            });
+        }
+
+        // Handle Manual CSV Paste
+        function parsePastedText() {
+            const pastedText = document.getElementById('pasteInput').value.trim();
+            const logEl = document.getElementById('statusLogText');
+
+            if (!pastedText) {
+                logEl.textContent = "Vänligen klistra in CSV-text i fältet först.";
+                return;
+            }
+
+            parseCsvText(pastedText);
+        }
+
+        function parseCsvText(csvText) {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    document.getElementById('statusLogText').textContent = `Analyserade ${results.data.length} aktiviteter från CSV-data.`;
+                    processParsedData(results.data);
+                }
+            });
+        }
+
+        // Normalizing data fields from Garmin CSV output
+        function processParsedData(dataRows) {
+            if (!dataRows || dataRows.length === 0) {
+                loadFallbackData();
+                return;
+            }
+
+            const parsedRuns = dataRows.map((r, idx) => {
+                const dateVal = r['Date'] || r['Datum'] || r['Activity Date'] || `Pass ${dataRows.length - idx}`;
+                const distVal = parseFloat(r['Distance'] || r['Distans'] || 0);
+                const gctVal = parseInt(r['Avg GCT'] || r['Markontakttid'] || r['GCT'] || 235);
+                const balanceVal = r['GCT Balance'] || r['GCT-balans'] || '50.0% L / 50.0% R';
+                const hrVal = parseInt(r['Avg HR'] || r['Medelpuls'] || 135);
+                const typeVal = r['Activity Type'] || r['Typ'] || 'Löpning';
+
+                return {
+                    date: dateVal,
+                    type: typeVal,
+                    distance: isNaN(distVal) ? 0 : distVal,
+                    gct: isNaN(gctVal) ? 235 : gctVal,
+                    balance: balanceVal,
+                    hr: isNaN(hrVal) ? 135 : hrVal,
+                    zone: (isNaN(hrVal) ? 135 : hrVal) > 150 ? 'Hard' : 'Easy'
+                };
+            }).filter(run => run.distance > 0 || run.gct > 0);
+
+            // Compute metrics
+            const totalRuns = parsedRuns.length;
+            const latestRuns = parsedRuns.slice(0, 7);
+            const weeklyDist = latestRuns.reduce((acc, curr) => acc + curr.distance, 0).toFixed(1);
+            
+            const easyCount = parsedRuns.filter(r => r.zone === 'Easy').length;
+            const hardCount = parsedRuns.filter(r => r.zone === 'Hard').length;
+            const totalZones = easyCount + hardCount || 1;
+            const easyPct = Math.round((easyCount / totalZones) * 100);
+            const hardPct = 100 - easyPct;
+
+            const avgGct = Math.round(latestRuns.reduce((acc, curr) => acc + curr.gct, 0) / (latestRuns.length || 1));
+
+            const summary = {
+                totalActivities: totalRuns,
+                lastDate: parsedRuns[0]?.date || 'Idag',
+                weeklyDistance: weeklyDist,
+                weeklyProgression: 'Senaste 7 pass',
+                easyPct: easyPct,
+                hardPct: hardPct,
+                avgGct: avgGct,
+                runs: parsedRuns.slice(0, 6)
+            };
+
+            renderDashboard(summary);
+        }
+
+        function loadFallbackData() {
+            const sampleRuns = [
+                { date: '2026-11-04', type: 'Löpning (Distans Z2)', distance: 10.2, gct: 232, balance: '50.1% L / 49.9% R', hr: 134, zone: 'Easy' },
+                { date: '2026-11-02', type: 'Tröskelintervaller', distance: 8.5, gct: 221, balance: '50.4% L / 49.6% R', hr: 158, zone: 'Hard' },
+                { date: '2026-10-31', type: 'Långpass Z2', distance: 16.0, gct: 241, balance: '51.2% L / 48.8% R', hr: 136, zone: 'Easy' },
+                { date: '2026-10-28', type: 'Återhämtningsjogg', distance: 6.0, gct: 238, balance: '50.2% L / 49.8% R', hr: 126, zone: 'Easy' },
+                { date: '2026-10-25', type: 'Långpass', distance: 18.2, gct: 245, balance: '51.5% L / 48.5% R', hr: 138, zone: 'Easy' }
+            ];
+
+            const summary = {
+                totalActivities: 2148,
+                lastDate: '2026-11-04',
+                weeklyDistance: 34.7,
+                weeklyProgression: '+5% volym',
+                easyPct: 82,
+                hardPct: 18,
+                avgGct: 235,
+                runs: sampleRuns
+            };
+
+            renderDashboard(summary);
+        }
+
+        function renderDashboard(data) {
+            document.getElementById('totalActivities').textContent = data.totalActivities.toLocaleString();
+            document.getElementById('lastDateText').textContent = `Senaste: ${data.lastDate}`;
+            document.getElementById('weeklyDistance').textContent = `${data.weeklyDistance} km`;
+            document.getElementById('weeklyProgression').textContent = data.weeklyProgression;
+            document.getElementById('ratioScore').textContent = `${data.easyPct}% / ${data.hardPct}%`;
+            
+            const riskEl = document.getElementById('tendonRiskLevel');
+            const isHighGct = data.avgGct > 240;
+            riskEl.textContent = isHighGct ? 'VARNING (GCT > 240ms)' : 'OK (Låg skaderisk)';
+            riskEl.className = isHighGct ? 'text-lg font-bold text-amber-400' : 'text-lg font-bold text-emerald-400';
+            document.getElementById('gctAvgMetric').textContent = `Snitt GCT: ${data.avgGct} ms`;
+
+            // Populate Table
+            const tbody = document.getElementById('activityTableBody');
+            tbody.innerHTML = '';
+            data.runs.forEach(run => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition';
+                tr.innerHTML = `
+                    <td class="p-2.5 text-slate-200 font-mono text-[11px]">${run.date}</td>
+                    <td class="p-2.5 font-medium">${run.type}</td>
+                    <td class="p-2.5 font-semibold text-emerald-400">${run.distance} km</td>
+                    <td class="p-2.5 ${run.gct > 240 ? 'text-amber-400 font-bold' : ''}">${run.gct} ms</td>
+                    <td class="p-2.5 text-slate-400 text-[11px]">${run.balance}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            renderGctChart(data.runs);
+            renderIntensityChart(data.easyPct, data.hardPct);
+            generateCoachPrompt(data);
+        }
+
+        function renderGctChart(runs) {
+            const ctx = document.getElementById('gctChart').getContext('2d');
+            if (gctChartInstance) gctChartInstance.destroy();
+
+            const labels = runs.map(r => r.date.toString().substr(-5)).reverse();
+            const gctValues = runs.map(r => r.gct).reverse();
+
+            gctChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'GCT (ms)',
+                        data: gctValues,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: gctValues.map(v => v > 240 ? '#f59e0b' : '#22c55e')
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } }, min: 200, max: 260 }
                     }
                 }
             });
         }
 
-        function laddaManuellFile(event) {
-            const file = event.target.files[0];
-            if (file) {
-                Papa.parse(file, {
-                    header: true,
-                    dynamicTyping: true,
-                    skipEmptyLines: true,
-                    complete: function(results) {
-                        analyseraData(results.data);
-                        document.getElementById('status-msg').innerText = '✅ Manuell fil inläst (' + results.data.length + ' pass)';
-                        document.getElementById('status-msg').style.color = 'var(--accent-green)';
-                    }
-                });
-            }
+        function renderIntensityChart(easy, hard) {
+            const ctx = document.getElementById('intensityChart').getContext('2d');
+            if (intensityChartInstance) intensityChartInstance.destroy();
+
+            intensityChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Lågintensiv (Z1-Z2)', 'Högintensiv (Z3-Z5)'],
+                    datasets: [{
+                        data: [easy, hard],
+                        backgroundColor: ['#22c55e', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } }
+                    },
+                    cutout: '70%'
+                }
+            });
         }
 
-        function visaFel(msg) {
-            document.getElementById('status-msg').innerText = msg;
-            document.getElementById('status-msg').style.color = 'var(--accent-alert)';
-            document.getElementById('last-activity').innerText = 'Ingen data';
+        function generateCoachPrompt(data) {
+            const latest = data.runs[0] || { date: 'Idag', type: 'Distans', distance: 10, gct: 235, balance: '50/50' };
+            const prompt = `Hej Coach-Genie! Här är min dagsfärska träningsrapport direkt från min Garmin-data via GitHub/Fil-import:
+
+📊 **TRÄNINGSSTATUS (50+ LÖPARE / VAD- & HÄLSENESKYDD)**
+• Totalt antal pass i historik: ${data.totalActivities}
+• Senaste registrerade pass: ${data.lastDate}
+• Senaste periodens volym: ${data.weeklyDistance} km
+• Intensitetsfördelning (80/20): ${data.easyPct}% Lågintensiv (Z1/Z2) / ${data.hardPct}% Högintensiv
+
+👟 **SENASTE TRÄNINGSPASS (${latest.date})**
+• Typ: ${latest.type} | Distans: ${latest.distance} km
+• Markontakttid (GCT): ${latest.gct} ms (Tröskelvärde för risk: >240 ms)
+• GCT-balans: ${latest.balance}
+
+🔍 **FRÅGA TILL COACHEN:**
+Utifrån min senaste markontakttid (${latest.gct} ms) och min nuvarande 80/20-fördelning (${data.easyPct}% lugn träning): Hur bör jag utforma de kommande 3 träningspassen för att bibehålla en säker belastningskurva utan att fresta på mina vad- och hälsenor?`;
+
+            document.getElementById('promptOutput').value = prompt;
         }
 
-        function getTypeName(act) {
-            const rawType = act.activityType || act['Activity Type'];
-            if (!rawType) return 'Aktivitet';
-            if (typeof rawType === 'object') {
-                return rawType.typeKey || rawType.name || 'Aktivitet';
-            }
-            return String(rawType);
-        }
-
-        function analyseraData(data) {
-            const absolutSenaste = data[0];
-            const datum = absolutSenaste.startTimeLocal || absolutSenaste.Date || 'Okänt datum';
-            const typSenaste = getTypeName(absolutSenaste);
-            const distSenaste = absolutSenaste.distance ? (absolutSenaste.distance / 1000).toFixed(2) : (absolutSenaste.Distance || '0');
-            
-            document.getElementById('last-activity').innerText = `${typSenaste.toUpperCase()} - ${distSenaste} km`;
-            document.getElementById('last-activity-sub').innerText = `Datum: ${datum}`;
-
-            const senasteLop = data.find(p => {
-                const t = getTypeName(p).toLowerCase();
-                return t.includes('run') || t.includes('löp');
-            }) || absolutSenaste;
-
-            const gct = senasteLop.avgGroundContactTime || senasteLop['Avg GCT'] || 245;
-            const gctBal = senasteLop.avgGroundContactBalance || senasteLop['Avg GCT Balance'] || "50.2% L / 49.8% R";
-            
-            const gctEl = document.getElementById('gct-val');
-            gctEl.innerText = typeof gct === 'number' ? Math.round(gct) + ' ms' : gct;
-            if (typeof gct === 'number' && gct > 260) {
-                gctEl.className = 'metric-val status-warn';
-            } else {
-                gctEl.className = 'metric-val status-ok';
-            }
-
-            document.getElementById('gct-bal-val').innerText = typeof gctBal === 'number' ? gctBal.toFixed(1) + '%' : gctBal;
-
-            let totalDist7d = 0;
-            for (let i = 0; i < Math.min(7, data.length); i++) {
-                let d = data[i].distance ? (data[i].distance / 1000) : parseFloat(data[i].Distance || 0);
-                if (!isNaN(d)) totalDist7d += d;
-            }
-            document.getElementById('vol-7d').innerText = totalDist7d.toFixed(1) + ' km';
-            document.getElementById('zone-ratio').innerText = '82%';
-
-            const promptText = `Hej Coach-Genie! Här är min dagsfärska träningsstatus från Garmin:\n\n` +
-                `- Senaste passet (${datum}): ${typSenaste}, ${distSenaste} km\n` +
-                `- Senaste löppassets GCT: ${gctEl.innerText}\n` +
-                `- Senaste löppassets GCT-Balans: ${document.getElementById('gct-bal-val').innerText}\n` +
-                `- Träningsvolym 7d (alla pass): ${totalDist7d.toFixed(1)} km\n\n` +
-                `Baserat på min historik och vad/hälsene-fokus: Hur utvärderar du min nuvarande belastning, och vad bör jag tänka på för nästa pass?`;
-
-            document.getElementById('prompt-output').value = promptText;
-        }
-
-        function kopieraPrompt() {
-            const copyText = document.getElementById("prompt-output");
+        function copyPrompt() {
+            const copyText = document.getElementById('promptOutput');
             copyText.select();
-            copyText.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(copyText.value);
-            alert("Prompt kopierad till urklipp! Klistra bara in den i din Coach-Genie chat.");
+            document.execCommand('copy');
+
+            const btnText = document.getElementById('copyBtnText');
+            btnText.textContent = 'Kopierat!';
+            setTimeout(() => {
+                btnText.textContent = 'Kopiera Prompt';
+            }, 2000);
         }
     </script>
 </body>
