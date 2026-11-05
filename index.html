@@ -86,7 +86,7 @@
             </div>
         </section>
 
-        <!-- Coach-Genie Trend Insights Box (Positiva & Negativa Trender) -->
+        <!-- Coach-Genie Trend Insights Box -->
         <section class="bg-gradient-to-r from-slate-800/90 to-slate-900/90 rounded-2xl p-4 border border-slate-700 shadow-md">
             <div class="flex items-center gap-2 mb-2">
                 <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
@@ -109,7 +109,7 @@
                 <div id="lastDateText" class="text-[10px] text-slate-400 mt-0.5">Senaste: --</div>
             </div>
 
-            <!-- 2. Senaste 7 Dagar (Distans + Tid) -->
+            <!-- 2. Senaste 7 Dagar -->
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
                 <div class="flex justify-between items-start mb-1">
                     <span class="text-[11px] text-slate-400">Senaste 7 Dagar</span>
@@ -136,7 +136,7 @@
                     <i data-lucide="bike" class="w-4 h-4 text-blue-400"></i>
                 </div>
                 <div id="altCount7d" class="text-2xl font-bold text-blue-400">-- st</div>
-                <div id="altDurationSub" class="text-[10px] text-slate-400 mt-0.5">Crosstrainer/Cykel: -- min</div>
+                <div id="altDurationSub" class="text-[10px] text-slate-400 mt-0.5">Tid: -- min</div>
             </div>
 
             <!-- 5. 80/20 Balans -->
@@ -149,14 +149,14 @@
                 <div class="text-[10px] text-slate-400 mt-0.5">Mål: &le; 124 bpm (FatMax)</div>
             </div>
 
-            <!-- 6. Vad/Häl-Status -->
+            <!-- 6. GCT & GCT-Balans (Vad/Häl-Status) -->
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
                 <div class="flex justify-between items-start mb-1">
-                    <span class="text-[11px] text-slate-400">Vad/Häl-Status</span>
+                    <span class="text-[11px] text-slate-400">GCT & Balans (Vad/Häl)</span>
                     <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
                 </div>
-                <div id="tendonRiskLevel" class="text-base font-bold text-emerald-400">OK</div>
-                <div id="gctAvgMetric" class="text-[10px] text-slate-400 mt-0.5">GCT: -- ms</div>
+                <div id="tendonRiskLevel" class="text-sm font-bold text-emerald-400">OK</div>
+                <div id="gctBalanceSub" class="text-[10px] text-slate-400 mt-0.5">Balans: --</div>
             </div>
         </section>
 
@@ -233,7 +233,7 @@
                             <th class="p-2.5">Typ / Distans</th>
                             <th class="p-2.5">Tid</th>
                             <th class="p-2.5">Puls</th>
-                            <th class="p-2.5">Belastning</th>
+                            <th class="p-2.5">GCT / Balans</th>
                         </tr>
                     </thead>
                     <tbody id="activityTableBody" class="divide-y divide-slate-800">
@@ -364,14 +364,20 @@
             if (typeof raw === 'object') return raw.typeKey || raw.name || 'Löpning';
             
             let str = String(raw).trim();
-            if (str.includes('running')) return 'Löpning';
-            if (str.includes('strength')) return 'Styrketräning';
-            if (str.includes('elliptical')) return 'Crosstrainer';
-            if (str.includes('cycling')) return 'Cykling';
-            if (str.includes('walking')) return 'Promenad';
+            if (str.includes('running') || str.includes('löp')) return 'Löpning';
+            if (str.includes('strength') || str.includes('styrka')) return 'Styrketräning';
+            if (str.includes('elliptical') || str.includes('crosstrainer')) return 'Crosstrainer';
+            if (str.includes('cycling') || str.includes('cykel')) return 'Cykling';
+            if (str.includes('walking') || str.includes('promenad')) return 'Promenad';
             
             const match = str.match(/typeKey["']?\s*:\s*["']([^"']+)/);
-            if (match) return match[1];
+            if (match) {
+                const val = match[1];
+                if (val.includes('strength')) return 'Styrketräning';
+                if (val.includes('running')) return 'Löpning';
+                if (val.includes('elliptical')) return 'Crosstrainer';
+                return val;
+            }
             
             return str;
         }
@@ -411,7 +417,6 @@
                 let distKm = isNaN(distVal) ? 0 : distVal;
                 if (distKm > 100) distKm = distKm / 1000;
 
-                // Försök parsa datum för att beräkna om passet är inom senaste 7 dagarna
                 let passDate = new Date(dateVal);
                 let isLast7Days = false;
                 if (!isNaN(passDate.getTime())) {
@@ -419,7 +424,7 @@
                     const diffDays = (now - passDate) / (1000 * 60 * 60 * 24);
                     isLast7Days = diffDays >= 0 && diffDays <= 7;
                 } else if (idx < 7) {
-                    isLast7Days = true; // Fallback på ordning om datumformatet spökar
+                    isLast7Days = true; 
                 }
 
                 return {
@@ -438,17 +443,16 @@
 
             parsedRuns.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            // Beräkna 7-dagars metrics
             const recentPass = parsedRuns.filter(r => r.isLast7Days);
             const weeklyDist = recentPass.reduce((acc, curr) => acc + curr.distance, 0).toFixed(1);
             const weeklyDurationSec = recentPass.reduce((acc, curr) => acc + curr.duration, 0);
 
-            // Styrka senaste 7 dagarna
+            // Styrka senaste 7 dagarna (nu matchar den korrekt)
             const strengthPass = recentPass.filter(r => r.type.toLowerCase().includes('styrka') || r.type.toLowerCase().includes('strength'));
             const strengthCount = strengthPass.length;
             const strengthDuration = strengthPass.reduce((acc, curr) => acc + curr.duration, 0);
 
-            // Alternativ träning senaste 7 dagarna (crosstrainer, cykel, promenad)
+            // Alternativ träning senaste 7 dagarna
             const altPass = recentPass.filter(r => r.type.toLowerCase().includes('crosstrainer') || r.type.toLowerCase().includes('cykel') || r.type.toLowerCase().includes('cycling') || r.type.toLowerCase().includes('elliptical'));
             const altCount = altPass.length;
             const altDuration = altPass.reduce((acc, curr) => acc + curr.duration, 0);
@@ -468,23 +472,24 @@
 
             const senasteLop = parsedRuns.find(r => r.gct > 0) || parsedRuns[0];
             const avgGct = senasteLop && senasteLop.gct > 0 ? senasteLop.gct : 235;
+            const senasteBalans = senasteLop && senasteLop.balance && senasteLop.balance !== '-' ? senasteLop.balance : '50.0% / 50.0%';
 
-            // Trendanalys (Coach-Genie logik)
+            // Trendanalys med vad/häl-fokus
             let trendsHtml = '';
             if (strengthCount >= 2) {
-                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Positiv trend:</strong> God styrkeinfrastruktur (${strengthCount} pass senaste 7d) för vad- och hälseneskydd.</div>`;
+                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Positiv trend:</strong> God styrkeinfrastruktur (${strengthCount} st) för vad- och hälseneskydd.</div>`;
             } else {
-                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Negativ trend:</strong> Lågt antal styrkepass (${strengthCount} st) senaste 7 dagarna. Prioritera 2 pass för vad/säte!</div>`;
+                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Riskfaktor:</strong> Få styrkepass (${strengthCount} st) senaste 7 dagarna. Rekommenderar 2 pass för vad/säte!</div>`;
             }
 
             if (easyPct >= 80) {
                 trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>80/20-balans:</strong> Stark bas (${easyPct}% under FatMax 124 bpm). Skonsamt för senorna.</div>`;
             } else {
-                trendsHtml += `<div class="text-rose-400 flex items-center gap-1.5">🔴 <strong>Belastningsvarning:</strong> Hög andel intensiva pass (${100 - easyPct}%). Risk för överbelastning i vader.</div>`;
+                trendsHtml += `<div class="text-rose-400 flex items-center gap-1.5">🔴 <strong>Belastningsvarning:</strong> Hög andel intensiva pass (${100 - easyPct}%). Risk för överbelastning.</div>`;
             }
 
             if (avgGct > 240) {
-                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Biomekanik:</strong> Förhöjd GCT (${avgGct} ms > 240 ms). Var uppmärksam på trötthet i steget.</div>`;
+                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Biomekanik:</strong> Förhöjd GCT (${avgGct} ms > 240 ms). Trötta vader riskeras.</div>`;
             } else {
                 trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Biomekanik:</strong> Bra markontakttid (${avgGct} ms - inom säkert intervall).</div>`;
             }
@@ -504,6 +509,7 @@
                 medPct: medPct,
                 hardPct: hardPct,
                 avgGct: avgGct,
+                senasteBalans: senasteBalans,
                 runs: parsedRuns.slice(0, 8)
             };
 
@@ -514,8 +520,7 @@
             const sampleRuns = [
                 { date: '2026-11-04 10:00', type: 'Löpning', distance: 10.2, duration: 3100, gct: 232, balance: '50.1% L', hr: 120, load: 72, zone: 'easy', isLast7Days: true },
                 { date: '2026-11-02 18:00', type: 'Styrketräning', distance: 0, duration: 2700, gct: 0, balance: '-', hr: 110, load: 45, zone: 'easy', isLast7Days: true },
-                { date: '2026-11-01 12:00', type: 'Crosstrainer', distance: 0, duration: 2400, gct: 0, balance: '-', hr: 115, load: 40, zone: 'easy', isLast7Days: true },
-                { date: '2026-10-30 17:00', type: 'Intervaller', distance: 8.0, duration: 2400, gct: 228, balance: '50.0%', hr: 146, load: 95, zone: 'hard', isLast7Days: true }
+                { date: '2026-11-01 12:00', type: 'Crosstrainer', distance: 0, duration: 2400, gct: 0, balance: '-', hr: 115, load: 40, zone: 'easy', isLast7Days: true }
             ];
             processParsedData(sampleRuns);
         }
@@ -524,15 +529,12 @@
             document.getElementById('totalActivities').textContent = data.totalActivities.toLocaleString();
             document.getElementById('lastDateText').textContent = `Senaste: ${data.lastDate}`;
             
-            // Senaste 7 dagarna kort med summerad tid
             document.getElementById('weeklyDistance').textContent = `${data.weeklyDistance} km`;
             document.getElementById('weeklyDurationSub').textContent = `Total tid: ${data.weeklyDuration}`;
 
-            // Styrka kort
             document.getElementById('strengthCount7d').textContent = `${data.strengthCount} st`;
             document.getElementById('strengthDurationSub').textContent = `Tid: ${data.strengthDuration}`;
 
-            // Alternativ träning kort
             document.getElementById('altCount7d').textContent = `${data.altCount} st`;
             document.getElementById('altDurationSub').textContent = `Tid: ${data.altDuration}`;
 
@@ -541,8 +543,8 @@
             const riskEl = document.getElementById('tendonRiskLevel');
             const isHighGct = data.avgGct > 240;
             riskEl.textContent = isHighGct ? 'VARNING (> 240ms)' : 'OK (Låg skaderisk)';
-            riskEl.className = isHighGct ? 'text-base font-bold text-amber-400' : 'text-base font-bold text-emerald-400';
-            document.getElementById('gctAvgMetric').textContent = `Senaste GCT: ${data.avgGct} ms`;
+            riskEl.className = isHighGct ? 'text-sm font-bold text-amber-400' : 'text-sm font-bold text-emerald-400';
+            document.getElementById('gctBalanceSub').textContent = `Balans: ${data.senasteBalans}`;
 
             const tbody = document.getElementById('activityTableBody');
             tbody.innerHTML = '';
@@ -561,14 +563,14 @@
                 const typOchDistans = `${run.type}<br><span class="text-[10px] text-emerald-400 font-semibold">${run.distance > 0 ? run.distance.toFixed(1) + ' km' : '-'}</span>`;
                 const tidPass = formatDuration(run.duration);
                 const pulsText = run.hr > 0 ? run.hr + ' bpm' : '-';
-                const loadText = run.load > 0 ? run.load : '-';
+                const gctBalText = run.gct > 0 ? `${run.gct} ms<br><span class="text-[9px] text-slate-400">${run.balance}</span>` : '-';
 
                 tr.innerHTML = `
                     <td class="p-2.5 text-slate-200 font-mono text-[11px]">${run.date.substring(0, 10)}<br><span class="text-[9px] text-slate-500">${run.date.substring(11, 16)}</span></td>
                     <td class="p-2.5 font-medium leading-tight">${typOchDistans}</td>
                     <td class="p-2.5 text-slate-300">${tidPass}</td>
                     <td class="p-2.5 text-slate-300 font-mono">${pulsText}</td>
-                    <td class="p-2.5 text-slate-300 font-mono">${loadText}</td>
+                    <td class="p-2.5 text-slate-300 font-mono">${gctBalText}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -639,7 +641,7 @@
         }
 
         function generateCoachPrompt(data) {
-            const latest = data.runs[0] || { date: 'Idag', type: 'Löpning', distance: 10, duration: 3600, gct: 235, hr: 135 };
+            const latest = data.runs[0] || { date: 'Idag', type: 'Löpning', distance: 10, duration: 3600, gct: 235, balance: '50/50', hr: 135 };
             const prompt = `Hej Coach-Genie! Här är min dagsfärska träningsrapport (med mina Aktivitus-pulszoner: FatMax <=124, AT 142):
 
 📊 **TRÄNINGSSTATUS (50+ LÖPARE / VAD- & HÄLSENESKYDD)**
@@ -653,10 +655,10 @@
 👟 **SENASTE TRÄNINGSPASS (${latest.date})**
 - Typ: ${latest.type} | Distans: ${latest.distance} km | Tid: ${Math.round(latest.duration/60)} min
 - Snittpuls: ${latest.hr > 0 ? latest.hr + ' bpm' : 'Ej registrerad'}
-- Markontakttid (GCT): ${latest.gct} ms (Tröskelvärde för risk: >240 ms)
+- Markontakttid (GCT): ${latest.gct} ms | GCT-Balans: ${data.senasteBalans} (Riskgräns GCT: >240 ms)
 
 🔍 **FRÅGA TILL COACHEN:**
-Utifrån mina trender, mitt senaste pass och mina Aktivitus-trösklar: Hur bör jag lägga upp nästa träningsvecka för att säkerställa tillräcklig återhämtning och styrka för mina vader och hälsenor?`;
+Utifrån mina trender, GCT-balans och Aktivitus-trösklar: Hur bör jag lägga upp nästa träningsvecka för att balansera styrka, alternativ träning och löpning utan att överbelasta vader och hälsenor?`;
 
             document.getElementById('promptOutput').value = prompt;
         }
