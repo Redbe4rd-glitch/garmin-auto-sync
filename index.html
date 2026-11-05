@@ -586,22 +586,26 @@ Dagsaktuell träningsstatus:
 
 Svara kortfattat, uppmuntrande, professionellt och med tydligt fokus på skadeförebyggande åtgärder för vad/hälsena.`;
 
-    // Vi inkluderar gemini-pro och 1.5-flash som stabila alternativ
+    // Snabba och ständigt uppdaterade modeller
     const modelsToTry = [
-        'gemini-1.5-flash',
-        'gemini-pro',
-        'gemini-3.8-flash'
+        'gemini-3.8-flash',
+        'gemini-2.5-flash'
     ];
 
     let success = false;
 
     for (const modelName of modelsToTry) {
         try {
+            // Sätter en kort timeout på 5 sekunder per modell så den inte står och väntar i onödan
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
             
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
                 body: JSON.stringify({
                     contents: [
                         { role: 'user', parts: [{ text: systemContext + "\n\nAnvändarens fråga: " + userMsg }] }
@@ -609,6 +613,7 @@ Svara kortfattat, uppmuntrande, professionellt och med tydligt fokus på skadef�
                 })
             });
 
+            clearTimeout(timeoutId);
             const data = await response.json();
 
             if (response.ok && data.candidates && data.candidates[0].content.parts[0].text) {
@@ -619,13 +624,13 @@ Svara kortfattat, uppmuntrande, professionellt och med tydligt fokus på skadef�
                 break;
             }
         } catch (err) {
-            console.log(`Modell ${modelName} upptagen, testar nästa...`);
+            console.log(`Modell ${modelName} avbröts eller misslyckades...`);
         }
     }
 
     if (!success) {
         document.getElementById(loadingId)?.remove();
-        historyEl.innerHTML += `<div class="bg-amber-950/60 border border-amber-800 p-2.5 rounded-lg text-amber-300">⚠️ Det är mycket trafik på gratisservrarna just nu. Vänta 10 sekunder och tryck på skicka igen!</div>`;
+        historyEl.innerHTML += `<div class="bg-amber-950/60 border border-amber-800 p-2.5 rounded-lg text-amber-300">⚠️ Tillfällig fördröjning hos Google. Testa att skicka igen om ett ögonblick.</div>`;
     }
 
     historyEl.scrollTop = historyEl.scrollHeight;
