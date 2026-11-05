@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="sv" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coach-Genie | Snabböppning till Gemini</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PapaParse for robust CSV Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- Header / Navigation -->
+    <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-3">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                    <i data-lucide="activity" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-white">Coach-Genie Hub</h1>
+                    <p class="text-xs text-slate-400">Garmin 50+ Vad & Hälseneskydd</p>
+                </div>
+            </div>
+            <button id="refreshBtn" onclick="fetchData()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refreshIcon"></i>
+                <span>Synka</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 pt-6 space-y-6">
+
+        <!-- Datakälla & Inställningar -->
+        <section class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/60 shadow-lg space-y-3">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-400"></i> Garmin Datakälla
+                </span>
+                <span id="statusBadge" class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-slate-700 text-slate-300 border border-slate-600">
+                    Redo
+                </span>
+            </div>
+
+            <div class="space-y-1.5">
+                <div class="flex gap-2">
+                    <input type="text" id="csvUrlInput" value="https://raw.githubusercontent.com/Redbe4rd-glitch/garmin-auto-sync/refs/heads/main/garmin_activities.csv" 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none focus:border-emerald-500">
+                    <button onclick="fetchData()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shrink-0 transition flex items-center gap-1">
+                        <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Hämta
+                    </button>
+                </div>
+            </div>
+
+            <div id="statusLog" class="p-2 rounded-xl text-xs font-mono text-slate-400 flex items-center gap-2 bg-slate-900/60 border border-slate-800">
+                <i data-lucide="info" class="w-4 h-4 text-slate-500"></i>
+                <span id="statusLogText">Synka din data för att generera Coach-rapporter.</span>
+            </div>
+        </section>
+
+        <!-- Direkt Länk-genväg till Gemini Appen -->
+        <section class="bg-gradient-to-br from-slate-800 via-slate-800 to-emerald-950/40 rounded-2xl p-5 border border-emerald-500/40 shadow-xl space-y-4">
+            <div class="flex items-center gap-2.5">
+                <div class="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+                    <i data-lucide="sparkles" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-white leading-tight">Coach-Genie Blixt-Analys</h2>
+                    <p class="text-xs text-slate-400">Kopierar rapport & öppnar Gemini direkt utan API-strul</p>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-medium text-slate-300">Vad vill du fråga Coach-Genie om idag?</label>
+                <textarea id="customQuestion" rows="2" placeholder="T.ex. Hur ser min vadskaderisk ut för helgens långpass och vilket tempo rekommenderas?"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"></textarea>
+            </div>
+
+            <!-- Snabbknappar -->
+            <div class="flex flex-wrap gap-2">
+                <button onclick="setPrompt('Analysera min vad- och hälsenerisk utifrån senaste veckans GCT och belastning.')" 
+                    class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700 transition">
+                    🛡️ Vad/Häl-analys
+                </button>
+                <button onclick="setPrompt('Vad bör mitt nästa träningspass vara för att hålla 80/20-balansen och få in tillräckligt med styrka?')" 
+                    class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700 transition">
+                    🏃 Rekommendera nästa pass
+                </button>
+                <button onclick="setPrompt('Ge mig ett skräddarsytt veckoschema med integrerad styrka och FatMax-löpning.')" 
+                    class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] border border-slate-700 transition">
+                    📅 Skapa veckoschema
+                </button>
+            </div>
+
+            <!-- Huvudknapp -->
+            <button onclick="openGeminiWithData()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30 transition">
+                <i data-lucide="external-link" class="w-4 h-4"></i>
+                <span>Kopiera Träningsrapport & Öppna Gemini</span>
+            </button>
+            <p class="text-[11px] text-center text-slate-400">Appen kopierar automatiskt din Garmin-data. Klistra bara in (Paste) i Gemini!</p>
+        </section>
+
+        <!-- KPI Cards Grid -->
+        <section class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">Totalt Pass</span>
+                    <i data-lucide="database" class="w-4 h-4 text-slate-500"></i>
+                </div>
+                <div id="totalActivities" class="text-2xl font-bold text-white">---</div>
+                <div id="lastDateText" class="text-[10px] text-slate-400 mt-0.5">Senaste: --</div>
+            </div>
+
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">Senaste 7 Dagar</span>
+                    <i data-lucide="route" class="w-4 h-4 text-emerald-400"></i>
+                </div>
+                <div id="weeklyDistance" class="text-2xl font-bold text-emerald-400">--- km</div>
+                <div id="weeklyDurationSub" class="text-[10px] text-slate-400 mt-0.5">Tid: -- min</div>
+            </div>
+
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">Styrka (7d)</span>
+                    <i data-lucide="dumbbell" class="w-4 h-4 text-purple-400"></i>
+                </div>
+                <div id="strengthCount7d" class="text-2xl font-bold text-purple-400">-- st</div>
+                <div id="strengthDurationSub" class="text-[10px] text-slate-400 mt-0.5">Tid: -- min</div>
+            </div>
+
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">Alternativt (7d)</span>
+                    <i data-lucide="bike" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <div id="altCount7d" class="text-2xl font-bold text-blue-400">-- st</div>
+                <div id="altDurationSub" class="text-[10px] text-slate-400 mt-0.5">Tid: -- min</div>
+            </div>
+
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">80/20 Balans</span>
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <div id="ratioScore" class="text-xl font-bold text-blue-400">-- / --</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">Mål: &le; 124 bpm (FatMax)</div>
+            </div>
+
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">GCT & Balans</span>
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
+                </div>
+                <div id="tendonRiskLevel" class="text-sm font-bold text-emerald-400">OK</div>
+                <div id="gctBalanceSub" class="text-[10px] text-slate-400 mt-0.5">Balans: --</div>
+            </div>
+        </section>
+
+        <!-- Charts & Table Sections -->
+        <section class="grid md:grid-cols-2 gap-4">
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i> Markontakttid (GCT)
+                    </h2>
+                    <span class="text-[11px] text-slate-400">Gräns: &lt; 240 ms</span>
+                </div>
+                <div class="h-48">
+                    <canvas id="gctChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                        <i data-lucide="heart-pulse" class="w-4 h-4 text-rose-400"></i> Intensitetsfördelning
+                    </h2>
+                    <span class="text-[11px] text-slate-400">FatMax &le; 124 | AT 142</span>
+                </div>
+                <div class="h-48 flex items-center justify-center">
+                    <canvas id="intensityChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Table -->
+        <section class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass
+                </h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300 border-collapse">
+                    <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700/50">
+                        <tr>
+                            <th class="p-2.5">Datum</th>
+                            <th class="p-2.5">Typ / Distans</th>
+                            <th class="p-2.5">Tid</th>
+                            <th class="p-2.5">Puls</th>
+                            <th class="p-2.5">GCT / Balans</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityTableBody" class="divide-y divide-slate-800"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let gctChartInstance = null;
+        let intensityChartInstance = null;
+        let currentDashboardData = null;
+        let rawParsedRuns = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            fetchData();
+        });
+
+        function setPrompt(text) {
+            document.getElementById('customQuestion').value = text;
+        }
+
+        async function fetchData() {
+            const rawUrl = document.getElementById('csvUrlInput').value.trim();
+            const logEl = document.getElementById('statusLogText');
+            const statusBadge = document.getElementById('statusBadge');
+            const refreshIcon = document.getElementById('refreshIcon');
+
+            refreshIcon.classList.add('animate-spin');
+            statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20";
+            statusBadge.textContent = "Försöker...";
+
+            const endpoints = [
+                { name: 'GitHub Direct', url: rawUrl },
+                { name: 'AllOrigins Proxy', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}` },
+                { name: 'JSDelivr CDN', url: rawUrl.replace('raw.githubusercontent.com', 'cdn.jsdelivr.net/gh').replace('/refs/heads/main/', '@main/') }
+            ];
+
+            let csvContent = null;
+            let successMethod = '';
+
+            for (const ep of endpoints) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+                    const res = await fetch(ep.url, { cache: 'no-cache', signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (res.ok) {
+                        const text = await res.text();
+                        if (text && text.length > 50 && text.includes(',')) {
+                            csvContent = text;
+                            successMethod = ep.name;
+                            break;
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            refreshIcon.classList.remove('animate-spin');
+
+            if (csvContent) {
+                logEl.textContent = `Data hämtad via ${successMethod}!`;
+                statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                statusBadge.textContent = "Live Synkad";
+                parseCsvText(csvContent);
+            } else {
+                logEl.textContent = "Offline. Laddar exempeldata.";
+                statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                statusBadge.textContent = "Offline";
+                loadFallbackData();
+            }
+        }
+
+        function parseCsvText(csvText) {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processParsedData(results.data);
+                }
+            });
+        }
+
+        function getField(row, possibleKeys) {
+            for (const key of possibleKeys) {
+                if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
+                const foundKey = Object.keys(row).find(k => k.toLowerCase() === key.toLowerCase());
+                if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') return row[foundKey];
+            }
+            return null;
+        }
+
+        function getTypeName(act) {
+            const raw = getField(act, ['activityType', 'Activity Type', 'Typ', 'activityName', 'Activity Name']);
+            if (!raw) return 'Löpning';
+            let str = String(raw).toLowerCase();
+            if (str.includes('running') || str.includes('löp')) return 'Löpning';
+            if (str.includes('strength') || str.includes('styrka')) return 'Styrketräning';
+            if (str.includes('elliptical') || str.includes('crosstrainer')) return 'Crosstrainer';
+            if (str.includes('cycling') || str.includes('cykel')) return 'Cykling';
+            return 'Övrigt';
+        }
+
+        function formatDuration(sec) {
+            if (isNaN(sec) || sec <= 0) return '-';
+            const mins = Math.round(sec / 60);
+            if (mins < 60) return mins + ' min';
+            return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
+        }
+
+        function processParsedData(dataRows) {
+            rawParsedRuns = dataRows.map((r, idx) => {
+                const dateVal = getField(r, ['startTimeLocal', 'Date', 'Datum', 'start_time']) || `Pass ${idx}`;
+                const distVal = parseFloat(getField(r, ['distance', 'Distance', 'Distans']) || 0);
+                const timeVal = parseFloat(getField(r, ['duration', 'Duration', 'Time', 'Tid']) || 0);
+                const gctVal = parseInt(getField(r, ['avgGroundContactTime', 'Avg GCT', 'Markontakttid']) || 0);
+                const balanceVal = getField(r, ['avgGroundContactBalance', 'GCT Balance', 'GCT-balans']) || '-';
+                const hrVal = parseInt(getField(r, ['averageHR', 'Avg HR', 'Medelpuls']) || 0);
+                const typeVal = getTypeName(r);
+
+                let distKm = distVal > 100 ? distVal / 1000 : distVal;
+                let zone = 'easy';
+                if (hrVal > 142) zone = 'hard';
+                else if (hrVal > 124) zone = 'medium';
+
+                return {
+                    date: String(dateVal),
+                    type: typeVal,
+                    distance: isNaN(distKm) ? 0 : distKm,
+                    duration: isNaN(timeVal) ? 0 : timeVal,
+                    gct: isNaN(gctVal) ? 0 : gctVal,
+                    balance: String(balanceVal),
+                    hr: hrVal,
+                    zone: zone
+                };
+            });
+
+            rawParsedRuns.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const recent = rawParsedRuns.slice(0, 7);
+
+            const weeklyDist = recent.reduce((acc, c) => acc + c.distance, 0).toFixed(1);
+            const strengthPass = recent.filter(r => r.type === 'Styrketräning');
+            const altPass = recent.filter(r => r.type === 'Crosstrainer' || r.type === 'Cykling');
+            const latestGct = rawParsedRuns.find(r => r.gct > 0)?.gct || 0;
+
+            currentDashboardData = {
+                totalActivities: rawParsedRuns.length,
+                lastDate: rawParsedRuns[0]?.date ? rawParsedRuns[0].date.substring(0, 10) : 'Idag',
+                weeklyDistance: weeklyDist,
+                strengthCount: strengthPass.length,
+                altCount: altPass.length,
+                avgGct: latestGct || 235,
+                senasteBalans: rawParsedRuns.find(r => r.gct > 0)?.balance || '50/50',
+                runs: rawParsedRuns.slice(0, 8)
+            };
+
+            renderDashboard(currentDashboardData);
+            renderCharts(rawParsedRuns);
+        }
+
+        function loadFallbackData() {
+            processParsedData([
+                { startTimeLocal: '2026-11-04', activityType: 'Löpning', distance: 10.2, duration: 3100, avgGroundContactTime: 232, avgGroundContactBalance: '50.1% L', averageHR: 120 },
+                { startTimeLocal: '2026-11-02', activityType: 'Styrketräning', distance: 0, duration: 2700, avgGroundContactTime: 0, averageHR: 110 }
+            ]);
+        }
+
+        function renderDashboard(data) {
+            document.getElementById('totalActivities').textContent = data.totalActivities;
+            document.getElementById('lastDateText').textContent = `Senaste: ${data.lastDate}`;
+            document.getElementById('weeklyDistance').textContent = `${data.weeklyDistance} km`;
+            document.getElementById('strengthCount7d').textContent = `${data.strengthCount} st`;
+            document.getElementById('altCount7d').textContent = `${data.altCount} st`;
+            
+            const riskEl = document.getElementById('tendonRiskLevel');
+            riskEl.textContent = data.avgGct > 240 ? 'VARNING (> 240ms)' : 'OK (Låg skaderisk)';
+            document.getElementById('gctBalanceSub').textContent = `Balans: ${data.senasteBalans}`;
+
+            const tbody = document.getElementById('activityTableBody');
+            tbody.innerHTML = '';
+            data.runs.forEach(run => {
+                let badgeColor = 'bg-slate-700 text-slate-300';
+                if (run.type === 'Löpning') badgeColor = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                else if (run.type === 'Styrketräning') badgeColor = 'bg-purple-500/20 text-purple-400 border border-purple-500/30';
+                else if (run.type === 'Crosstrainer' || run.type === 'Cykling') badgeColor = 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
+
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-800/60';
+                tr.innerHTML = `
+                    <td class="p-2.5 font-mono text-[11px]">${run.date.substring(0, 10)}</td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 rounded-md text-[10px] font-medium ${badgeColor}">${run.type}</span> (${run.distance.toFixed(1)} km)</td>
+                    <td class="p-2.5">${formatDuration(run.duration)}</td>
+                    <td class="p-2.5 font-mono">${run.hr > 0 ? run.hr + ' bpm' : '-'}</td>
+                    <td class="p-2.5 font-mono">${run.gct > 0 ? run.gct + ' ms (' + run.balance + ')' : '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderCharts(runs) {
+            const runData = runs.filter(r => r.gct > 0).slice(0, 10).reverse();
+            const labels = runData.map(r => r.date.substring(5, 10));
+            const gctValues = runData.map(r => r.gct);
+
+            const gctx = document.getElementById('gctChart').getContext('2d');
+            if (gctChartInstance) gctChartInstance.destroy();
+            gctChartInstance = new Chart(gctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'GCT (ms)',
+                        data: gctValues,
+                        borderColor: '#34d399',
+                        backgroundColor: 'rgba(52, 211, 153, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                    }
+                }
+            });
+
+            const easyCount = runs.filter(r => r.zone === 'easy').length;
+            const medCount = runs.filter(r => r.zone === 'medium').length;
+            const hardCount = runs.filter(r => r.zone === 'hard').length;
+
+            const ictx = document.getElementById('intensityChart').getContext('2d');
+            if (intensityChartInstance) intensityChartInstance.destroy();
+            intensityChartInstance = new Chart(ictx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['FatMax (Lätt)', 'Mellan', 'Hård (>AT)'],
+                    datasets: [{
+                        data: [easyCount, medCount, hardCount],
+                        backgroundColor: ['#34d399', '#38bdf8', '#f87171'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 12 } }
+                    }
+                }
+            });
+        }
+
+        // Generera rapport & öppna Gemini i mobilen
+        function openGeminiWithData() {
+            const question = document.getElementById('customQuestion').value.trim() || 'Analysera min vad- och hälsenerisk samt ge rekommendation för nästa pass.';
+            
+            const recentRunsSummary = currentDashboardData?.runs ? currentDashboardData.runs.map(r => 
+                `- ${r.date.substring(0,10)}: ${r.type}, ${r.distance.toFixed(1)} km, Puls ${r.hr} bpm, GCT ${r.gct} ms (${r.balance})`
+            ).join('\n') : 'Ingen historik hämtad';
+
+            const fullPrompt = `Du är Coach-Genie, en expertdriven löpcoach för en 50+ löpare med fokus på vad- och hälseneskydd.
+
+PROFIL & ZONER:
+- FatMax (Aerob gräns): <=124 bpm
+- AnAerob Tröskel (AT): 142 bpm
+- Skadefokus: Förebygga vad- och hälseneproblem (Mål GCT < 240 ms)
+
+DAGSAKTUELL TRÄNINGSSTATUS (SENASTE 7 DAGARNA):
+- Totalt pass i databasen: ${currentDashboardData?.totalActivities || 0}
+- Löpvolym 7d: ${currentDashboardData?.weeklyDistance || 0} km
+- Styrkepass (7d): ${currentDashboardData?.strengthCount || 0} st (Mål: >=2/vecka)
+- Alternativa pass (7d): ${currentDashboardData?.altCount || 0} st
+- Senaste GCT: ${currentDashboardData?.avgGct || 0} ms
+- GCT-balans: ${currentDashboardData?.senasteBalans || '-'}
+
+SENASTE PASSEN:
+${recentRunsSummary}
+
+ANVÄNDARENS FRÅGA/ÖNSKEMÅL:
+${question}
+
+Svara uppmuntrande, strukturerat och professionellt med direkt fokus på skadeförebyggande åtgärder och nästa steg.`;
+
+            // Kopiera texten till mobilens clipboard
+            navigator.clipboard.writeText(fullPrompt).then(() => {
+                alert('✅ Träningsrapport kopierad!\n\nGemini öppnas nu. Klistra in (Paste) i chattfältet!');
+                window.open('https://gemini.google.com/app', '_blank');
+            }).catch(err => {
+                alert('Kunde inte kopiera automatiskt, öppnar Gemini ändå.');
+                window.open('https://gemini.google.com/app', '_blank');
+            });
+        }
+    </script>
+</body>
+</html>
