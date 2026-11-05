@@ -489,27 +489,27 @@
         }
 
         async function sendChatMessage() {
-            const inputEl = document.getElementById('chatInput');
-            const userMsg = inputEl.value.trim();
-            if (!userMsg) return;
+    const inputEl = document.getElementById('chatInput');
+    const userMsg = inputEl.value.trim();
+    if (!userMsg) return;
 
-            const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKeyInput').value.trim();
-            if (!apiKey) {
-                alert('Vänligen fyll i din gratis Gemini API-nyckel i fältet högst upp och klicka på Spara först!');
-                return;
-            }
+    const apiKey = localStorage.getItem('gemini_api_key') || document.getElementById('apiKeyInput').value.trim();
+    if (!apiKey) {
+        alert('Vänligen fyll i din gratis Gemini API-nyckel i fältet högst upp och klicka på Spara först!');
+        return;
+    }
 
-            const historyEl = document.getElementById('chatHistory');
-            
-            historyEl.innerHTML += `<div class="bg-emerald-950/60 border border-emerald-800/60 p-2.5 rounded-lg text-emerald-200 ml-6"><strong>Du:</strong> ${userMsg}</div>`;
-            inputEl.value = '';
-            historyEl.scrollTop = historyEl.scrollHeight;
+    const historyEl = document.getElementById('chatHistory');
+    
+    historyEl.innerHTML += `<div class="bg-emerald-950/60 border border-emerald-800/60 p-2.5 rounded-lg text-emerald-200 ml-6"><strong>Du:</strong> ${userMsg}</div>`;
+    inputEl.value = '';
+    historyEl.scrollTop = historyEl.scrollHeight;
 
-            const loadingId = 'loading-' + Date.now();
-            historyEl.innerHTML += `<div id="${loadingId}" class="bg-slate-800 p-2.5 rounded-lg text-slate-400 italic font-mono">Coach-Genie tänker...</div>`;
-            historyEl.scrollTop = historyEl.scrollHeight;
+    const loadingId = 'loading-' + Date.now();
+    historyEl.innerHTML += `<div id="${loadingId}" class="bg-slate-800 p-2.5 rounded-lg text-slate-400 italic font-mono">Coach-Genie tänker...</div>`;
+    historyEl.scrollTop = historyEl.scrollHeight;
 
-            const systemContext = `Du är Coach-Genie, en expertdriven löpcoach för en 50+ löpare med fokus på vad- och hälseneskydd.
+    const systemContext = `Du är Coach-Genie, en expertdriven löpcoach för en 50+ löpare med fokus på vad- och hälseneskydd.
 Aktivitus-pulszoner: FatMax <=124 bpm, AT 142 bpm, Maxpuls 153 bpm.
 Dagsaktuell träningsstatus:
 - Totalt pass i databasen: ${currentDashboardData?.totalActivities || 0}
@@ -521,36 +521,50 @@ Dagsaktuell träningsstatus:
 
 Svara kortfattat, uppmuntrande, professionellt och med tydligt fokus på skadeförebyggande åtgärder för vad/hälsena.`;
 
-            try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [
-                            { role: 'user', parts: [{ text: systemContext + "\n\nAnvändarens fråga: " + userMsg }] }
-                        ]
-                    })
-                });
+    // Lista på tillgängliga modeller att prova i ordning
+    const modelsToTry = [
+        'gemini-3.8-flash',
+        'gemini-2.5-flash',
+        'gemini-flash-latest'
+    ];
 
-                const data = await response.json();
-                document.getElementById(loadingId).remove();
+    let success = false;
 
-                if (response.ok && data.candidates && data.candidates[0].content.parts[0].text) {
-                    const replyText = data.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
-                    historyEl.innerHTML += `<div class="bg-slate-800/90 border border-slate-700 p-3 rounded-lg text-slate-200">🤖 <strong>Coach-Genie:</strong><br>${replyText}</div>`;
-                } else {
-                    const errorMsg = data.error ? data.error.message : 'Okänt svar från servern';
-                    historyEl.innerHTML += `<div class="bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg text-rose-300">⚠️ API-fel: ${errorMsg}</div>`;
-                }
-            } catch (err) {
+    for (const modelName of modelsToTry) {
+        try {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [
+                        { role: 'user', parts: [{ text: systemContext + "\n\nAnvändarens fråga: " + userMsg }] }
+                    ]
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.candidates && data.candidates[0].content.parts[0].text) {
                 document.getElementById(loadingId)?.remove();
-                historyEl.innerHTML += `<div class="bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg text-rose-300">⚠️ Anslutningsfel: ${err.message}</div>`;
+                const replyText = data.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                historyEl.innerHTML += `<div class="bg-slate-800/90 border border-slate-700 p-3 rounded-lg text-slate-200">🤖 <strong>Coach-Genie:</strong><br>${replyText}</div>`;
+                success = true;
+                break; // Avbryt loopen om vi fick svar!
             }
-
-            historyEl.scrollTop = historyEl.scrollHeight;
+        } catch (err) {
+            console.log(`Modell ${modelName} misslyckades, provar nästa...`);
         }
+    }
+
+    if (!success) {
+        document.getElementById(loadingId)?.remove();
+        historyEl.innerHTML += `<div class="bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg text-rose-300">⚠️ Hög belastning på Googles servrar just nu. Prova igen om ett ögonblick.</div>`;
+    }
+
+    historyEl.scrollTop = historyEl.scrollHeight;
+}
     </script>
 </body>
 </html>
