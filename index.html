@@ -263,7 +263,6 @@
             statusBadge.className = "px-2 py-0.5 text-[11px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20";
             statusBadge.textContent = "Försöker...";
 
-            // List of fetch attempts: Direct raw, CORS Proxy 1, CORS Proxy 2
             const endpoints = [
                 { name: 'GitHub Direct', url: rawUrl },
                 { name: 'CORS Proxy 1', url: `https://corsproxy.io/?${encodeURIComponent(rawUrl)}` },
@@ -305,7 +304,6 @@
             }
         }
 
-        // Handle File Upload from phone storage
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -326,7 +324,6 @@
             });
         }
 
-        // Handle Manual CSV Paste
         function parsePastedText() {
             const pastedText = document.getElementById('pasteInput').value.trim();
             const logEl = document.getElementById('statusLogText');
@@ -350,6 +347,14 @@
             });
         }
 
+        function getTypeName(act) {
+            const rawType = act.activityType || act['Activity Type'] || act['Typ'] || 'Löpning';
+            if (typeof rawType === 'object') {
+                return rawType.typeKey || rawType.name || 'Löpning';
+            }
+            return String(rawType);
+        }
+
         // Normalizing data fields from Garmin CSV output
         function processParsedData(dataRows) {
             if (!dataRows || dataRows.length === 0) {
@@ -358,23 +363,26 @@
             }
 
             const parsedRuns = dataRows.map((r, idx) => {
-                const dateVal = r['Date'] || r['Datum'] || r['Activity Date'] || `Pass ${dataRows.length - idx}`;
-                const distVal = parseFloat(r['Distance'] || r['Distans'] || 0);
-                const gctVal = parseInt(r['Avg GCT'] || r['Markontakttid'] || r['GCT'] || 235);
-                const balanceVal = r['GCT Balance'] || r['GCT-balans'] || '50.0% L / 50.0% R';
-                const hrVal = parseInt(r['Avg HR'] || r['Medelpuls'] || 135);
-                const typeVal = r['Activity Type'] || r['Typ'] || 'Löpning';
+                const dateVal = r['startTimeLocal'] || r['Date'] || r['Datum'] || r['Activity Date'] || `Pass ${dataRows.length - idx}`;
+                const distVal = parseFloat(r['distance'] || r['Distance'] || r['Distans'] || 0);
+                const gctVal = parseInt(r['avgGroundContactTime'] || r['Avg GCT'] || r['Markontakttid'] || r['GCT'] || 235);
+                const balanceVal = r['avgGroundContactBalance'] || r['GCT Balance'] || r['GCT-balans'] || '50.0% L / 50.0% R';
+                const hrVal = parseInt(r['averageHR'] || r['Avg HR'] || r['Medelpuls'] || 135);
+                const typeVal = getTypeName(r);
 
                 return {
                     date: dateVal,
                     type: typeVal,
-                    distance: isNaN(distVal) ? 0 : distVal,
+                    distance: isNaN(distVal) ? 0 : distVal / (distVal > 100 ? 1000 : 1), // Hantera både meter och km
                     gct: isNaN(gctVal) ? 235 : gctVal,
                     balance: balanceVal,
                     hr: isNaN(hrVal) ? 135 : hrVal,
                     zone: (isNaN(hrVal) ? 135 : hrVal) > 150 ? 'Hard' : 'Easy'
                 };
-            }).filter(run => run.distance > 0 || run.gct > 0);
+            });
+
+            // Sortera kronologiskt eller efter datum om möjligt (nyast först)
+            parsedRuns.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             // Compute metrics
             const totalRuns = parsedRuns.length;
@@ -385,9 +393,11 @@
             const hardCount = parsedRuns.filter(r => r.zone === 'Hard').length;
             const totalZones = easyCount + hardCount || 1;
             const easyPct = Math.round((easyCount / totalZones) * 100);
-            const hardPct = 100 - easyPct;
+            const hardPct = 100 - easyPct; // Fixat minus-tecken här
 
-            const avgGct = Math.round(latestRuns.reduce((acc, curr) => acc + curr.gct, 0) / (latestRuns.length || 1));
+            // Hitta senaste löppasset för GCT-snitt
+            const senasteLop = parsedRuns.find(r => r.type.toLowerCase().includes('run') || r.type.toLowerCase().includes('löp')) || parsedRuns[0];
+            const avgGct = senasteLop ? senasteLop.gct : 235;
 
             const summary = {
                 totalActivities: totalRuns,
@@ -405,11 +415,11 @@
 
         function loadFallbackData() {
             const sampleRuns = [
-                { date: '2026-11-04', type: 'Löpning (Distans Z2)', distance: 10.2, gct: 232, balance: '50.1% L / 49.9% R', hr: 134, zone: 'Easy' },
-                { date: '2026-11-02', type: 'Tröskelintervaller', distance: 8.5, gct: 221, balance: '50.4% L / 49.6% R', hr: 158, zone: 'Hard' },
-                { date: '2026-10-31', type: 'Långpass Z2', distance: 16.0, gct: 241, balance: '51.2% L / 48.8% R', hr: 136, zone: 'Easy' },
-                { date: '2026-10-28', type: 'Återhämtningsjogg', distance: 6.0, gct: 238, balance: '50.2% L / 49.8% R', hr: 126, zone: 'Easy' },
-                { date: '2026-10-25', type: 'Långpass', distance: 18.2, gct: 245, balance: '51.5% L / 48.5% R', hr: 138, zone: 'Easy' }
+                { date: '2026-11-04', type: 'running', distance: 10.2, gct: 232, balance: '50.1% L / 49.9% R', hr: 134, zone: 'Easy' },
+                { date: '2026-11-02', type: 'strength_training', distance: 0, gct: 221, balance: '50.4% L / 49.6% R', hr: 158, zone: 'Hard' },
+                { date: '2026-10-31', type: 'running', distance: 16.0, gct: 241, balance: '51.2% L / 48.8% R', hr: 136, zone: 'Easy' },
+                { date: '2026-10-28', type: 'running', distance: 6.0, gct: 238, balance: '50.2% L / 49.8% R', hr: 126, zone: 'Easy' },
+                { date: '2026-10-25', type: 'running', distance: 18.2, gct: 245, balance: '51.5% L / 48.5% R', hr: 138, zone: 'Easy' }
             ];
 
             const summary = {
@@ -448,9 +458,9 @@
                 tr.innerHTML = `
                     <td class="p-2.5 text-slate-200 font-mono text-[11px]">${run.date}</td>
                     <td class="p-2.5 font-medium">${run.type}</td>
-                    <td class="p-2.5 font-semibold text-emerald-400">${run.distance} km</td>
-                    <td class="p-2.5 ${run.gct > 240 ? 'text-amber-400 font-bold' : ''}">${run.gct} ms</td>
-                    <td class="p-2.5 text-slate-400 text-[11px]">${run.balance}</td>
+                    <td class="p-2.5 font-semibold text-emerald-400">${run.distance > 0 ? run.distance.toFixed(1) + ' km' : '-'}</td>
+                    <td class="p-2.5 ${run.gct > 240 ? 'text-amber-400 font-bold' : ''}">${run.gct ? run.gct + ' ms' : '-'}</td>
+                    <td class="p-2.5 text-slate-400 text-[11px]">${run.balance || '-'}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -464,8 +474,10 @@
             const ctx = document.getElementById('gctChart').getContext('2d');
             if (gctChartInstance) gctChartInstance.destroy();
 
-            const labels = runs.map(r => r.date.toString().substr(-5)).reverse();
-            const gctValues = runs.map(r => r.gct).reverse();
+            // Filtrera bara pass med GCT
+            const validRuns = runs.filter(r => r.gct > 0);
+            const labels = validRuns.map(r => r.date.toString().substr(-5)).reverse();
+            const gctValues = validRuns.map(r => r.gct).reverse();
 
             gctChartInstance = new Chart(ctx, {
                 type: 'line',
@@ -524,15 +536,15 @@
             const prompt = `Hej Coach-Genie! Här är min dagsfärska träningsrapport direkt från min Garmin-data via GitHub/Fil-import:
 
 📊 **TRÄNINGSSTATUS (50+ LÖPARE / VAD- & HÄLSENESKYDD)**
-• Totalt antal pass i historik: ${data.totalActivities}
-• Senaste registrerade pass: ${data.lastDate}
-• Senaste periodens volym: ${data.weeklyDistance} km
-• Intensitetsfördelning (80/20): ${data.easyPct}% Lågintensiv (Z1/Z2) / ${data.hardPct}% Högintensiv
+- Totalt antal pass i historik: ${data.totalActivities}
+- Senaste registrerade pass: ${data.lastDate}
+- Senaste periodens volym: ${data.weeklyDistance} km
+- Intensitetsfördelning (80/20): ${data.easyPct}% Lågintensiv (Z1/Z2) / ${data.hardPct}% Högintensiv
 
 👟 **SENASTE TRÄNINGSPASS (${latest.date})**
-• Typ: ${latest.type} | Distans: ${latest.distance} km
-• Markontakttid (GCT): ${latest.gct} ms (Tröskelvärde för risk: >240 ms)
-• GCT-balans: ${latest.balance}
+- Typ: ${latest.type} | Distans: ${latest.distance} km
+- Markontakttid (GCT): ${latest.gct} ms (Tröskelvärde för risk: >240 ms)
+- GCT-balans: ${latest.balance}
 
 🔍 **FRÅGA TILL COACHEN:**
 Utifrån min senaste markontakttid (${latest.gct} ms) och min nuvarande 80/20-fördelning (${data.easyPct}% lugn träning): Hur bör jag utforma de kommande 3 träningspassen för att bibehålla en säker belastningskurva utan att fresta på mina vad- och hälsenor?`;
