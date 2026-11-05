@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Garmin Coach-Genie Dashboard</title>
+    <title>Garmin Coach Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <style>
         :root {
@@ -121,13 +121,13 @@
     <div id="status-msg">Hämtar färsk träningsdata från din CSV...</div>
 
     <div class="card">
-        <div class="card-title">Senaste passet</div>
+        <div class="card-title">Senaste passet (Totalt)</div>
         <div id="last-activity" style="font-size: 1.1rem; font-weight: bold;">Laddar...</div>
         <div id="last-activity-sub" style="font-size: 0.85rem; color: var(--subtext); margin-top: 4px;">-</div>
     </div>
 
     <div class="card">
-        <div class="card-title">Hälsa & Belastning (Skydda Vad/Häl)</div>
+        <div class="card-title">Hälsa & Belastning (Senaste löppasset)</div>
         <div class="metric-grid">
             <div class="metric-box">
                 <div style="font-size: 0.8rem; color: var(--subtext);">Snitt Markontakttid</div>
@@ -138,7 +138,7 @@
                 <div id="gct-bal-val" class="metric-val">- %</div>
             </div>
             <div class="metric-box">
-                <div style="font-size: 0.8rem; color: var(--subtext);">Träningsvolym (7d)</div>
+                <div style="font-size: 0.8rem; color: var(--subtext);">Träningsvolym (7d, alla pass)</div>
                 <div id="vol-7d" class="metric-val">- km</div>
             </div>
             <div class="metric-box">
@@ -156,7 +156,6 @@
     </div>
 
     <script>
-        // Hämtar filen direkt från samma repository
         const CSV_URL = 'garmin_activities.csv';
 
         window.onload = function() {
@@ -181,58 +180,40 @@
             });
         };
 
-        function analyseraData(data) {
-            // Sortera efter datum om möjligt
-            const senastePass = data[0]; 
-            
-            const datum = senastePass.startTimeLocal || senastePass.Date || 'Okänt datum';
-            const typ = senastePass.activityType || senastePass['Activity Type'] || 'Löpning';
-            const dist = senastePass.distance ? (senastePass.distance / 1000).toFixed(2) : (senastePass.Distance || '0');
-            
-            document.getElementById('last-activity').innerText = `${typ} - ${dist} km`;
-            document.getElementById('last-activity-sub').innerText = `Datum: ${datum}`;
+        function getTypeName(act) {
+            const rawType = act.activityType || act['Activity Type'];
+            if (!rawType) return 'Aktivitet';
+            if (typeof rawType === 'object') {
+                return rawType.typeKey || rawType.name || 'Aktivitet';
+            }
+            return String(rawType);
+        }
 
-            // GCT & Balans (letar efter vanliga Garmin-kolumnnamn)
-            const gct = senastePass.avgGroundContactTime || senastePass['Avg GCT'] || 245;
-            const gctBal = senastePass.avgGroundContactBalance || senastePass['Avg GCT Balance'] || "50.2% L / 49.8% R";
+        function analyseraData(data) {
+            // 1. Absolut senaste passet (oavsett typ, för att visa överst)
+            const absolutSenaste = data[0];
+            const datumSenaste = absolutSenaste.startTimeLocal || absolutSenaste.Date || 'Okänt datum';
+            const typSenaste = getTypeName(absolutSenaste);
+            const distSenaste = absolutSenaste.distance ? (absolutSenaste.distance / 1000).toFixed(2) : (absolutSenaste.Distance || '0');
+            
+            document.getElementById('last-activity').innerText = `${typSenaste.toUpperCase()} - ${distSenaste} km`;
+            document.getElementById('last-activity-sub').innerText = `Datum: ${datumSenaste}`;
+
+            // 2. Hitta det senaste rena LÖPPASSET för GCT och löpanalys
+            const senasteLop = data.find(p => {
+                const t = getTypeName(p).toLowerCase();
+                return t.includes('run') || t.includes('löp');
+            }) || absolutSenaste; // Fallback till senaste om inget löppass hittas
+
+            const gct = senasteLop.avgGroundContactTime || senasteLop['Avg GCT'] || 245;
+            const gctBal = senasteLop.avgGroundContactBalance || senasteLop['Avg GCT Balance'] || "50.2% L / 49.8% R";
             
             const gctEl = document.getElementById('gct-val');
             gctEl.innerText = typeof gct === 'number' ? Math.round(gct) + ' ms' : gct;
-            if (typeof gct === 'number' && gct > 260) {
-                gctEl.className = 'metric-val status-warn';
-            } else {
-                gctEl.className = 'metric-val status-ok';
-            }
 
             document.getElementById('gct-bal-val').innerText = typeof gctBal === 'number' ? gctBal.toFixed(1) + '%' : gctBal;
 
-            // Beräkna ungefärlig 7-dagarsvolym
+            // 3. Beräkna 7-dagars total volym (räknar alla pass med distans)
             let totalDist7d = 0;
             for (let i = 0; i < Math.min(7, data.length); i++) {
-                let d = data[i].distance ? (data[i].distance / 1000) : parseFloat(data[i].Distance || 0);
-                if (!isNaN(d)) totalDist7d += d;
-            }
-            document.getElementById('vol-7d').innerText = totalDist7d.toFixed(1) + ' km';
-            document.getElementById('zone-ratio').innerText = '82%';
-
-            // Bygg färdig prompt för Coach-Genie
-            const promptText = `Hej Coach-Genie! Här är min dagsfärska träningsstatus från Garmin:\n\n` +
-                `- Senaste passet (${datum}): ${typ}, ${dist} km\n` +
-                `- Markontakttid (GCT): ${gctEl.innerText}\n` +
-                `- GCT-Balans: ${document.getElementById('gct-bal-val').innerText}\n` +
-                `- Senaste 7 dagarnas volym: ${totalDist7d.toFixed(1)} km\n\n` +
-                `Baserat på min historik och vad/hälsene-fokus: Hur utvärderar du min nuvarande belastning, och vad bör jag tänka på för nästa pass?`;
-
-            document.getElementById('prompt-output').value = promptText;
-        }
-
-        function kopieraPrompt() {
-            const copyText = document.getElementById("prompt-output");
-            copyText.select();
-            copyText.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(copyText.value);
-            alert("Prompt kopierad till urklipp! Klistra bara in den i din Coach-Genie chat.");
-        }
-    </script>
-</body>
-</html>
+                let d = data[i].
