@@ -80,74 +80,83 @@
                 </div>
             </div>
 
-            <!-- Alternative Methods Grid (File Upload + Raw Paste) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-700/50">
-                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/40 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-medium text-slate-300 flex items-center gap-1">
-                            <i data-lucide="upload" class="w-3.5 h-3.5 text-blue-400"></i> Ladda upp lokal CSV
-                        </span>
-                    </div>
-                    <label class="block w-full text-center px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 border-dashed rounded-lg text-xs font-medium text-slate-300 cursor-pointer transition">
-                        <span>Välj fil från telefonen</span>
-                        <input type="file" id="fileInput" accept=".csv" class="hidden" onchange="handleFileUpload(event)">
-                    </label>
-                </div>
-
-                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700/40 space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-medium text-slate-300 flex items-center gap-1">
-                            <i data-lucide="clipboard-text" class="w-3.5 h-3.5 text-purple-400"></i> Klistra in CSV-text
-                        </span>
-                        <button onclick="parsePastedText()" class="text-[11px] text-purple-400 hover:underline">Läs in</button>
-                    </div>
-                    <input type="text" id="pasteInput" placeholder="Klistra in CSV-rader här..." 
-                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-purple-500">
-                </div>
-            </div>
-
             <div id="statusLog" class="p-2.5 bg-slate-900/80 rounded-xl text-xs font-mono text-slate-400 flex items-start gap-2 border border-slate-800">
                 <i data-lucide="info" class="w-4 h-4 shrink-0 text-slate-500 mt-0.5"></i>
-                <span id="statusLogText">Klicka på 'Hämtning' eller ladda upp din fil för att starta analysen.</span>
+                <span id="statusLogText">Klicka på 'Hämta' för att starta analysen.</span>
             </div>
         </section>
 
-        <!-- Main KPI Cards Grid -->
-        <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <!-- Coach-Genie Trend Insights Box (Positiva & Negativa Trender) -->
+        <section class="bg-gradient-to-r from-slate-800/90 to-slate-900/90 rounded-2xl p-4 border border-slate-700 shadow-md">
+            <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+                <h2 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Coach-Genie Trendanalys (50+ Skydd)</h2>
+            </div>
+            <div id="trendInsights" class="text-xs text-slate-300 space-y-1.5 font-sans">
+                <p class="text-slate-400 italic">Analyserar träningsmönster och senbelastning...</p>
+            </div>
+        </section>
+
+        <!-- Expanded KPI Cards Grid (6 Cards) -->
+        <section class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <!-- 1. Totalt Pass -->
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs text-slate-400">Totalt Pass</span>
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">Totalt Pass</span>
                     <i data-lucide="database" class="w-4 h-4 text-slate-500"></i>
                 </div>
                 <div id="totalActivities" class="text-2xl font-bold text-white">---</div>
-                <div id="lastDateText" class="text-[11px] text-slate-400 mt-1">Senaste: --</div>
+                <div id="lastDateText" class="text-[10px] text-slate-400 mt-0.5">Senaste: --</div>
             </div>
 
+            <!-- 2. Senaste 7 Dagar (Distans + Tid) -->
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs text-slate-400">Senaste 7 Dagar</span>
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">Senaste 7 Dagar</span>
                     <i data-lucide="route" class="w-4 h-4 text-emerald-400"></i>
                 </div>
                 <div id="weeklyDistance" class="text-2xl font-bold text-emerald-400">--- km</div>
-                <div id="weeklyProgression" class="text-[11px] text-slate-400 mt-1">---</div>
+                <div id="weeklyDurationSub" class="text-[10px] text-slate-400 mt-0.5">Tid: -- min</div>
             </div>
 
+            <!-- 3. Styrkepass (7d) -->
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs text-slate-400">80/20 Balans (Test)</span>
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">Styrka (7d)</span>
+                    <i data-lucide="dumbbell" class="w-4 h-4 text-purple-400"></i>
+                </div>
+                <div id="strengthCount7d" class="text-2xl font-bold text-purple-400">-- st</div>
+                <div id="strengthDurationSub" class="text-[10px] text-slate-400 mt-0.5">Tid: -- min</div>
+            </div>
+
+            <!-- 4. Alternativ Träning (7d) -->
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">Alternativt (7d)</span>
+                    <i data-lucide="bike" class="w-4 h-4 text-blue-400"></i>
+                </div>
+                <div id="altCount7d" class="text-2xl font-bold text-blue-400">-- st</div>
+                <div id="altDurationSub" class="text-[10px] text-slate-400 mt-0.5">Crosstrainer/Cykel: -- min</div>
+            </div>
+
+            <!-- 5. 80/20 Balans -->
+            <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">80/20 Balans (Test)</span>
                     <i data-lucide="pie-chart" class="w-4 h-4 text-blue-400"></i>
                 </div>
-                <div id="ratioScore" class="text-2xl font-bold text-blue-400">-- / --</div>
-                <div id="ratioStatus" class="text-[11px] text-slate-400 mt-1">Mål: &le; 124 bpm (Z1-Z2)</div>
+                <div id="ratioScore" class="text-xl font-bold text-blue-400">-- / --</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">Mål: &le; 124 bpm (FatMax)</div>
             </div>
 
+            <!-- 6. Vad/Häl-Status -->
             <div class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs text-slate-400">Vad/Häll-Status</span>
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-[11px] text-slate-400">Vad/Häl-Status</span>
                     <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
                 </div>
-                <div id="tendonRiskLevel" class="text-lg font-bold text-emerald-400">OK</div>
-                <div id="gctAvgMetric" class="text-[11px] text-slate-400 mt-1">GCT: -- ms</div>
+                <div id="tendonRiskLevel" class="text-base font-bold text-emerald-400">OK</div>
+                <div id="gctAvgMetric" class="text-[10px] text-slate-400 mt-0.5">GCT: -- ms</div>
             </div>
         </section>
 
@@ -208,7 +217,7 @@
         <section class="bg-slate-800/60 rounded-2xl p-4 border border-slate-700/50">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                    <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass (Aktivitus Zonschema)
+                    <i data-lucide="list" class="w-4 h-4 text-slate-400"></i> Senaste Träningspass
                 </h2>
                 <div class="flex items-center gap-3 text-[10px] text-slate-400">
                     <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Låg (&le;124)</span>
@@ -378,9 +387,9 @@
 
         function getAktivitusZone(hr) {
             if (!hr || hr <= 0) return 'unknown';
-            if (hr <= 124) return 'easy';   // <= 124 bpm
-            if (hr <= 142) return 'medium'; // 125 - 142 bpm
-            return 'hard';                  // > 142 bpm
+            if (hr <= 124) return 'easy';   
+            if (hr <= 142) return 'medium'; 
+            return 'hard';                  
         }
 
         function processParsedData(dataRows) {
@@ -402,29 +411,50 @@
                 let distKm = isNaN(distVal) ? 0 : distVal;
                 if (distKm > 100) distKm = distKm / 1000;
 
+                // Försök parsa datum för att beräkna om passet är inom senaste 7 dagarna
+                let passDate = new Date(dateVal);
+                let isLast7Days = false;
+                if (!isNaN(passDate.getTime())) {
+                    const now = new Date();
+                    const diffDays = (now - passDate) / (1000 * 60 * 60 * 24);
+                    isLast7Days = diffDays >= 0 && diffDays <= 7;
+                } else if (idx < 7) {
+                    isLast7Days = true; // Fallback på ordning om datumformatet spökar
+                }
+
                 return {
                     date: String(dateVal),
                     type: typeVal,
                     distance: distKm,
-                    duration: timeVal,
+                    duration: isNaN(timeVal) ? 0 : timeVal,
                     gct: isNaN(gctVal) ? 0 : gctVal,
                     balance: String(balanceVal),
                     hr: hrVal,
                     load: isNaN(loadVal) ? 0 : Math.round(loadVal),
-                    zone: getAktivitusZone(hrVal)
+                    zone: getAktivitusZone(hrVal),
+                    isLast7Days: isLast7Days
                 };
             });
 
             parsedRuns.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            const totalRuns = parsedRuns.length;
-            const latestRuns = parsedRuns.slice(0, 7);
-            const weeklyDist = latestRuns.reduce((acc, curr) => acc + curr.distance, 0).toFixed(1);
-            
+            // Beräkna 7-dagars metrics
+            const recentPass = parsedRuns.filter(r => r.isLast7Days);
+            const weeklyDist = recentPass.reduce((acc, curr) => acc + curr.distance, 0).toFixed(1);
+            const weeklyDurationSec = recentPass.reduce((acc, curr) => acc + curr.duration, 0);
+
+            // Styrka senaste 7 dagarna
+            const strengthPass = recentPass.filter(r => r.type.toLowerCase().includes('styrka') || r.type.toLowerCase().includes('strength'));
+            const strengthCount = strengthPass.length;
+            const strengthDuration = strengthPass.reduce((acc, curr) => acc + curr.duration, 0);
+
+            // Alternativ träning senaste 7 dagarna (crosstrainer, cykel, promenad)
+            const altPass = recentPass.filter(r => r.type.toLowerCase().includes('crosstrainer') || r.type.toLowerCase().includes('cykel') || r.type.toLowerCase().includes('cycling') || r.type.toLowerCase().includes('elliptical'));
+            const altCount = altPass.length;
+            const altDuration = altPass.reduce((acc, curr) => acc + curr.duration, 0);
+
             const passMedPuls = parsedRuns.filter(r => r.hr > 0);
-            let easyPct = 80;
-            let medPct = 15;
-            let hardPct = 5;
+            let easyPct = 80, medPct = 15, hardPct = 5;
 
             if (passMedPuls.length > 0) {
                 const easyCount = passMedPuls.filter(r => r.zone === 'easy').length;
@@ -439,11 +469,37 @@
             const senasteLop = parsedRuns.find(r => r.gct > 0) || parsedRuns[0];
             const avgGct = senasteLop && senasteLop.gct > 0 ? senasteLop.gct : 235;
 
+            // Trendanalys (Coach-Genie logik)
+            let trendsHtml = '';
+            if (strengthCount >= 2) {
+                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Positiv trend:</strong> God styrkeinfrastruktur (${strengthCount} pass senaste 7d) för vad- och hälseneskydd.</div>`;
+            } else {
+                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Negativ trend:</strong> Lågt antal styrkepass (${strengthCount} st) senaste 7 dagarna. Prioritera 2 pass för vad/säte!</div>`;
+            }
+
+            if (easyPct >= 80) {
+                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>80/20-balans:</strong> Stark bas (${easyPct}% under FatMax 124 bpm). Skonsamt för senorna.</div>`;
+            } else {
+                trendsHtml += `<div class="text-rose-400 flex items-center gap-1.5">🔴 <strong>Belastningsvarning:</strong> Hög andel intensiva pass (${100 - easyPct}%). Risk för överbelastning i vader.</div>`;
+            }
+
+            if (avgGct > 240) {
+                trendsHtml += `<div class="text-amber-400 flex items-center gap-1.5">⚠️ <strong>Biomekanik:</strong> Förhöjd GCT (${avgGct} ms > 240 ms). Var uppmärksam på trötthet i steget.</div>`;
+            } else {
+                trendsHtml += `<div class="text-emerald-400 flex items-center gap-1.5">✅ <strong>Biomekanik:</strong> Bra markontakttid (${avgGct} ms - inom säkert intervall).</div>`;
+            }
+
+            document.getElementById('trendInsights').innerHTML = trendsHtml;
+
             const summary = {
-                totalActivities: totalRuns,
+                totalActivities: parsedRuns.length,
                 lastDate: parsedRuns[0]?.date ? parsedRuns[0].date.substring(0, 10) : 'Idag',
                 weeklyDistance: weeklyDist,
-                weeklyProgression: 'Senaste 7 pass',
+                weeklyDuration: formatDuration(weeklyDurationSec),
+                strengthCount: strengthCount,
+                strengthDuration: formatDuration(strengthDuration),
+                altCount: altCount,
+                altDuration: formatDuration(altDuration),
                 easyPct: easyPct,
                 medPct: medPct,
                 hardPct: hardPct,
@@ -456,9 +512,10 @@
 
         function loadFallbackData() {
             const sampleRuns = [
-                { date: '2026-11-04 10:00', type: 'Löpning', distance: 10.2, duration: 3100, gct: 232, balance: '50.1% L', hr: 120, load: 72, zone: 'easy' },
-                { date: '2026-11-02 18:00', type: 'Styrketräning', distance: 0, duration: 2700, gct: 0, balance: '-', hr: 110, load: 45, zone: 'easy' },
-                { date: '2026-10-30 17:00', type: 'Intervaller', distance: 8.0, duration: 2400, gct: 228, balance: '50.0%', hr: 146, load: 95, zone: 'hard' }
+                { date: '2026-11-04 10:00', type: 'Löpning', distance: 10.2, duration: 3100, gct: 232, balance: '50.1% L', hr: 120, load: 72, zone: 'easy', isLast7Days: true },
+                { date: '2026-11-02 18:00', type: 'Styrketräning', distance: 0, duration: 2700, gct: 0, balance: '-', hr: 110, load: 45, zone: 'easy', isLast7Days: true },
+                { date: '2026-11-01 12:00', type: 'Crosstrainer', distance: 0, duration: 2400, gct: 0, balance: '-', hr: 115, load: 40, zone: 'easy', isLast7Days: true },
+                { date: '2026-10-30 17:00', type: 'Intervaller', distance: 8.0, duration: 2400, gct: 228, balance: '50.0%', hr: 146, load: 95, zone: 'hard', isLast7Days: true }
             ];
             processParsedData(sampleRuns);
         }
@@ -466,14 +523,25 @@
         function renderDashboard(data) {
             document.getElementById('totalActivities').textContent = data.totalActivities.toLocaleString();
             document.getElementById('lastDateText').textContent = `Senaste: ${data.lastDate}`;
+            
+            // Senaste 7 dagarna kort med summerad tid
             document.getElementById('weeklyDistance').textContent = `${data.weeklyDistance} km`;
-            document.getElementById('weeklyProgression').textContent = data.weeklyProgression;
+            document.getElementById('weeklyDurationSub').textContent = `Total tid: ${data.weeklyDuration}`;
+
+            // Styrka kort
+            document.getElementById('strengthCount7d').textContent = `${data.strengthCount} st`;
+            document.getElementById('strengthDurationSub').textContent = `Tid: ${data.strengthDuration}`;
+
+            // Alternativ träning kort
+            document.getElementById('altCount7d').textContent = `${data.altCount} st`;
+            document.getElementById('altDurationSub').textContent = `Tid: ${data.altDuration}`;
+
             document.getElementById('ratioScore').textContent = `${data.easyPct}% Låg`;
             
             const riskEl = document.getElementById('tendonRiskLevel');
             const isHighGct = data.avgGct > 240;
             riskEl.textContent = isHighGct ? 'VARNING (> 240ms)' : 'OK (Låg skaderisk)';
-            riskEl.className = isHighGct ? 'text-lg font-bold text-amber-400' : 'text-lg font-bold text-emerald-400';
+            riskEl.className = isHighGct ? 'text-base font-bold text-amber-400' : 'text-base font-bold text-emerald-400';
             document.getElementById('gctAvgMetric').textContent = `Senaste GCT: ${data.avgGct} ms`;
 
             const tbody = document.getElementById('activityTableBody');
@@ -482,12 +550,11 @@
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-800/40 transition border-b border-slate-800/60';
                 
-                // Bestäm färg på den vänstra indikator-kanten baserat på puls
-                let borderStyle = 'border-left: 4px solid #64748b'; // Grå som standard
+                let borderStyle = 'border-left: 4px solid #64748b'; 
                 if (run.hr > 0) {
-                    if (run.zone === 'easy') borderStyle = 'border-left: 4px solid #22c55e';      // Grön (<=124)
-                    else if (run.zone === 'medium') borderStyle = 'border-left: 4px solid #fbbf24'; // Gul (125-142)
-                    else borderStyle = 'border-left: 4px solid #ef4444';                             // Röd (>142)
+                    if (run.zone === 'easy') borderStyle = 'border-left: 4px solid #22c55e';      
+                    else if (run.zone === 'medium') borderStyle = 'border-left: 4px solid #fbbf24'; 
+                    else borderStyle = 'border-left: 4px solid #ef4444';                             
                 }
                 tr.style = borderStyle;
 
@@ -578,7 +645,9 @@
 📊 **TRÄNINGSSTATUS (50+ LÖPARE / VAD- & HÄLSENESKYDD)**
 - Totalt antal pass i historik: ${data.totalActivities}
 - Senaste registrerade pass: ${data.lastDate}
-- Senaste periodens volym: ${data.weeklyDistance} km
+- Senaste 7 dagarnas volym: ${data.weeklyDistance} km (Total tid: ${data.weeklyDuration})
+- Styrkepass senaste 7d: ${data.strengthCount} st (${data.strengthDuration})
+- Alternativa pass senaste 7d: ${data.altCount} st (${data.altDuration})
 - Zonsfördelning: ${data.easyPct}% Låg (<=124) / ${data.medPct}% Medel (125-142) / ${data.hardPct}% Hög (>142)
 
 👟 **SENASTE TRÄNINGSPASS (${latest.date})**
@@ -587,7 +656,7 @@
 - Markontakttid (GCT): ${latest.gct} ms (Tröskelvärde för risk: >240 ms)
 
 🔍 **FRÅGA TILL COACHEN:**
-Utifrån mitt senaste pass, markontakttid (${latest.gct} ms) och mina Aktivitus-trösklar: Hur bör jag lägga upp nästa pass för att bygga aerob bas (under 124 bpm) utan att överbelasta vader/hälsenor?`;
+Utifrån mina trender, mitt senaste pass och mina Aktivitus-trösklar: Hur bör jag lägga upp nästa träningsvecka för att säkerställa tillräcklig återhämtning och styrka för mina vader och hälsenor?`;
 
             document.getElementById('promptOutput').value = prompt;
         }
