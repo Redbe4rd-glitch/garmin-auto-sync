@@ -28,20 +28,15 @@ def main():
 
     try:
         with urllib.request.urlopen(token_req) as token_response:
-            raw_response = token_response.read().decode("utf-8")
+            raw_response = token_response.read().decode("utf-8").strip()
             print(f"Token-svar status: {token_response.status}")
-            print(f"Token-svar body: {raw_response}")
             
-            if not raw_response.strip():
+            if not raw_response:
                 print("Fel: Tomt svar från token-endpointen.")
                 exit(1)
                 
-            token_data = json.loads(raw_response)
-            access_token = token_data.get("access_token")
-
-        if not access_token:
-            print(f"Fel: Ingen access_token hittades. Svar: {token_data}")
-            exit(1)
+            # Token returneras direkt som en sträng
+            access_token = raw_response
 
         print("Autentisering lyckades! Hämtar aktiviteter...")
 
