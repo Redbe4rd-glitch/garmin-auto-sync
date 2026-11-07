@@ -33,5 +33,5 @@ jobs:
           git config --global user.name "Garmin Bot"
           git config --global user.email "bot@users.noreply.github.com"
           git status
-          git add garmin_activities.csv
-          git diff --staged --quiet || (git commit -m "Automated Garmin sync update" && git push)
+          git add -A
+          git diff --cached --quiet || (git commit -m "Automated Garmin sync update [skip ci]" && git push)
