@@ -12,6 +12,25 @@ def get_activity_id(act):
     raw_id = act.get("activityId") or act.get("startTimeLocal")
     return str(raw_id) if raw_id is not None else None
 
+def fetch_activity_splits(access_token, activity_id):
+    """Hämtar detaljerade kilometer-varv (laps/splits) för en specifik aktivitet."""
+    splits_url = f"https://personal.connectapi.garmin.com/activity-service/activity/{activity_id}/splits"
+    req = urllib.request.Request(
+        splits_url,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json"
+        }
+    )
+    try:
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            # Returnerar listan med lap/split-summeringar om den finns
+            return data.get("lapDTOs", data.get("splitSummaries", []))
+    except Exception:
+        # Om det misslyckas för en enskild aktivitet returnerar vi en tom lista
+        return []
+
 def main():
     if not API_KEY:
         print("Fel: GARMIN_API_KEY saknas i miljövariablerna.")
@@ -70,6 +89,16 @@ def main():
                 break
             start += limit
 
+        # 2. Hämta även detaljerade laps/splits för varje aktivitet
+        print("Hämtar detaljerade kilometer-varv (laps) för varje aktivitet...")
+        for act in all_activities:
+            act_id = act.get("activityId")
+            if act_id:
+                laps = fetch_activity_splits(access_token, act_id)
+                if laps:
+                    # Sparar ner i kolumnen 'laps' som JSON-sträng
+                    act["laps"] = json.dumps(laps, ensure_ascii=False)
+
         # Map för att lagra alla unika pass (ID som sträng)
         raw_combined = {}
 
@@ -79,7 +108,7 @@ def main():
             if act_id:
                 raw_combined[act_id] = act
 
-        # 2. Läs in och slå ihop med befintlig CSV-fil (om den finns)
+        # 3. Läs in och slå ihop med befintlig CSV-fil (om den finns)
         if os.path.exists(FILENAME):
             print(f"Läser in befintlig historik från {FILENAME} för att förhindra dubbletter...")
             with open(FILENAME, mode="r", encoding="utf-8") as f:
@@ -100,13 +129,13 @@ def main():
             print("Inga aktiviteter hittades.")
             return
 
-        # 3. Bygg gemensam kolumnlista från alla unika nycklar
+        # 4. Bygg gemensam kolumnlista från alla unika nycklar
         fieldnames = set()
         for act in raw_combined.values():
             fieldnames.update(act.keys())
         fieldnames = sorted(list(fieldnames))
 
-        # 4. Spara rensad data tillbaka till CSV
+        # 5. Spara rensad data tillbaka till CSV
         with open(FILENAME, mode="w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(fieldnames)
@@ -126,7 +155,7 @@ def main():
                     row.append(val)
                 writer.writerow(row)
                 
-        print(f"Klart! Totalt {len(raw_combined)} unika aktiviteter sparades till {FILENAME}.")
+        print(f"Klart! Totalt {len(raw_combined)} unika aktiviteter sparades till {FILENAME} inklusive kilometer-data.")
 
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8")
