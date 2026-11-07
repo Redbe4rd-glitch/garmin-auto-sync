@@ -482,11 +482,11 @@
 
         function formatBalance(bal) {
             if (!bal) return '50/50';
-            const match = bal.match(/([\d.]+)/);
+            const match = String(bal).match(/([\d.]+)/);
             if (match) {
                 const val = parseFloat(match[0]);
                 const other = (100 - val).toFixed(1);
-                const side = bal.includes('R') ? 'R' : 'L';
+                const side = String(bal).includes('R') ? 'R' : 'L';
                 return `${val.toFixed(1)}% ${side} / ${other}% ${side === 'L' ? 'R' : 'L'}`;
             }
             return bal;
@@ -530,14 +530,14 @@
                 </div>
             `;
 
-            // Split Summaries
+            // Split Summaries (Fas- & Intervallfördelning)
             const splitCard = document.getElementById('splitSummariesCard');
             const splitContent = document.getElementById('splitSummariesContent');
             const rawSplitVal = act.raw['splitSummaries'];
 
             if (rawSplitVal && String(rawSplitVal).trim().startsWith('[')) {
                 try {
-                    const cleanJsonStr = rawSplitVal.replace(/'/g, '"');
+                    const cleanJsonStr = String(rawSplitVal).replace(/'/g, '"');
                     const splits = JSON.parse(cleanJsonStr);
                     let html = '';
 
@@ -562,8 +562,8 @@
                                     <div><span class="text-slate-400">Tid:</span> <span class="font-semibold text-white">${durationStr}</span></div>
                                     <div><span class="text-slate-400">Hastighet:</span> <span class="font-semibold text-white">${speedKmh} km/h</span></div>
                                     <div><span class="text-slate-400">Kadens:</span> <span class="font-semibold text-white">${cad} spm</span></div>
-                                    <div><span class="text-slate-400">GCT:</span> <span class="font-semibold text-amber-400">${gctSplit} ms</span></div>
-                                    <div><span class="text-slate-400">GCT Balans:</span> <span class="font-semibold text-purple-400">${balLeft}%V / ${balRight}%H</span></div>
+                                    <div><span class="text-slate-400">GCT:</span> <span class="font-semibold text-amber-400">${gctSplit !== '-' ? gctSplit + ' ms' : '-'}</span></div>
+                                    <div><span class="text-slate-400">GCT Balans:</span> <span class="font-semibold text-purple-400">${balLeft !== '-' ? balLeft + '%V / ' + balRight + '%H' : '-'}</span></div>
                                 </div>
                             </div>
                         `;
@@ -578,66 +578,15 @@
                 splitCard.classList.add('hidden');
             }
 
-            // Kilometertabell (Letar efter riktiga laps/lapDTOs, exkluderar splitSummaries)
-    const kmCard = document.getElementById('kmTableCard');
-    const kmBody = document.getElementById('kmTableBody');
-    
-    const lapKey = Object.keys(act.raw).find(k => {
-        const lower = k.toLowerCase();
-        return (lower.includes('lap') || lower === 'laps' || lower === 'lapdtos') && 
-               !lower.includes('split') && 
-               !lower.includes('summary');
-    });
+            // Kilometertabell (Hämtar laps direkt från 'laps' eller 'lapDTOs')
+            const kmCard = document.getElementById('kmTableCard');
+            const kmBody = document.getElementById('kmTableBody');
+            
+            const rawLapVal = act.raw['laps'] || act.raw['lapDTOs'];
+            let lapsParsed = false;
 
-    let lapsParsed = false;
-    if (lapKey && act.raw[lapKey]) {
-        const valStr = String(act.raw[lapKey]).trim();
-        if (valStr.startsWith('[')) {
-            try {
-                const laps = JSON.parse(valStr.replace(/'/g, '"'));
-                if (Array.isArray(laps) && laps.length > 0) {
-                    let kmHtml = '';
-                    let accumulatedSec = 0;
-
-                    laps.forEach((l, idx) => {
-                        const lapTime = Number(l.duration || l.time || l.elapsedDuration || 0);
-                        accumulatedSec += lapTime;
-                        const accTimeStr = formatTimeDetailed(accumulatedSec);
-                        const pace = formatPace(l.averageSpeed || l.speed);
-                        const minPace = formatPace(l.minSpeed || l.maxSpeed);
-                        const maxPace = formatPace(l.maxSpeed || l.minSpeed);
-                        const gctLap = l.avgGroundContactTime ? Number(l.avgGroundContactTime).toFixed(1) + ' ms' : '-';
-                        const balLap = l.avgGroundContactBalanceLeft ? formatBalance(l.avgGroundContactBalanceLeft + '% L') : '-';
-                        const hrLap = l.averageHR ? l.averageHR + ' bpm' : '-';
-                        const minHr = l.minHR ? l.minHR + ' bpm' : '-';
-                        const maxHr = l.maxHR ? l.maxHR + ' bpm' : '-';
-
-                        kmHtml += `
-                            <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
-                                <td class="p-2.5 font-bold text-emerald-400">Km ${idx + 1}</td>
-                                <td class="p-2.5 text-white font-semibold">${accTimeStr}</td>
-                                <td class="p-2.5">${pace}</td>
-                                <td class="p-2.5 text-slate-400">${minPace}</td>
-                                <td class="p-2.5 text-slate-400">${maxPace}</td>
-                                <td class="p-2.5 text-amber-400">${gctLap}</td>
-                                <td class="p-2.5 text-purple-400">${balLap}</td>
-                                <td class="p-2.5">${hrLap}</td>
-                                <td class="p-2.5 text-slate-400">${minHr}</td>
-                                <td class="p-2.5 text-slate-400">${maxHr}</td>
-                            </tr>
-                        `;
-                    });
-                    kmBody.innerHTML = kmHtml;
-                    kmCard.classList.remove('hidden');
-                    lapsParsed = true;
-                }
-            } catch(e) {
-                console.error("Kunde inte parsa lap-data", e);
-            }
-        }
-    }
-            if (lapKey && act.raw[lapKey]) {
-                const valStr = String(act.raw[lapKey]).trim();
+            if (rawLapVal) {
+                const valStr = String(rawLapVal).trim();
                 if (valStr.startsWith('[')) {
                     try {
                         const laps = JSON.parse(valStr.replace(/'/g, '"'));
@@ -650,7 +599,7 @@
                                 accumulatedSec += lapTime;
                                 const accTimeStr = formatTimeDetailed(accumulatedSec);
                                 const pace = formatPace(l.averageSpeed || l.speed);
-                                const minPace = formatPace(l.minSpeed || l.maxSpeed); // Vissa skript inverterar
+                                const minPace = formatPace(l.minSpeed || l.maxSpeed);
                                 const maxPace = formatPace(l.maxSpeed || l.minSpeed);
                                 const gctLap = l.avgGroundContactTime ? Number(l.avgGroundContactTime).toFixed(1) + ' ms' : '-';
                                 const balLap = l.avgGroundContactBalanceLeft ? formatBalance(l.avgGroundContactBalanceLeft + '% L') : '-';
@@ -683,9 +632,8 @@
                 }
             }
 
-            // Om passet saknar lap-data i CSV:n skapar vi en snygg informativ rad i tabellen eller döljer den
+            // Om passet saknar lap-data i CSV:n skapar vi en snygg informativ rad i tabellen
             if (!lapsParsed) {
-                // Om du vill visa en testrad eller dölja tills riktig data finns:
                 kmBody.innerHTML = `
                     <tr>
                         <td colspan="10" class="p-4 text-center text-slate-500 italic">
