@@ -501,6 +501,17 @@
             }
         }
 
+        // Hjälpfunktion för att hämta mätvärde ur JSON-objekt oavsett namnvariant
+        function getProp(obj, keys) {
+            if (!obj) return null;
+            for (let k of keys) {
+                if (obj[k] !== undefined && obj[k] !== null && obj[k] !== '') {
+                    return obj[k];
+                }
+            }
+            return null;
+        }
+
         function showActivityDetail(index) {
             const act = allActivities[index];
             if (!act) return;
@@ -533,7 +544,7 @@
             // Split Summaries (Fas- & Intervallfördelning)
             const splitCard = document.getElementById('splitSummariesCard');
             const splitContent = document.getElementById('splitSummariesContent');
-            const rawSplitVal = act.raw['splitSummaries'];
+            const rawSplitVal = getProp(act.raw, ['splitSummaries', 'splitsummaries']);
 
             if (rawSplitVal && String(rawSplitVal).trim().startsWith('[')) {
                 try {
@@ -546,10 +557,15 @@
                         const distMeters = s.distance ? Number(s.distance).toFixed(0) : 0;
                         const durationStr = formatTimeDetailed(s.duration);
                         const speedKmh = s.averageSpeed ? (Number(s.averageSpeed) * 3.6).toFixed(1) : 0;
-                        const cad = s.avgStepFrequency ? Math.round(Number(s.avgStepFrequency)) : '-';
-                        const gctSplit = s.avgGroundContactTime ? Number(s.avgGroundContactTime).toFixed(1) : '-';
-                        const balLeft = s.avgGroundContactBalanceLeft ? Number(s.avgGroundContactBalanceLeft).toFixed(1) : '-';
-                        const balRight = balLeft !== '-' ? (100 - parseFloat(balLeft)).toFixed(1) : '-';
+                        const cad = getProp(s, ['avgStepFrequency', 'averageRunningCadenceInStepsPerMinute', 'avgCadence']) || '-';
+                        
+                        // Letar efter GCT i alla kända Garmin-fält
+                        const gctRaw = getProp(s, ['avgGroundContactTime', 'avgGCT', 'groundContactTime', 'avgGroundContactTimeMs']);
+                        const gctSplit = gctRaw ? Number(gctRaw).toFixed(1) : '-';
+                        
+                        const balLeft = getProp(s, ['avgGroundContactBalanceLeft', 'avgBalanceLeft', 'groundContactBalanceLeft']);
+                        const balLeftStr = balLeft ? Number(balLeft).toFixed(1) : '-';
+                        const balRightStr = balLeftStr !== '-' ? (100 - parseFloat(balLeftStr)).toFixed(1) : '-';
 
                         html += `
                             <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 space-y-2">
@@ -561,9 +577,9 @@
                                     <div><span class="text-slate-400">Distans:</span> <span class="font-semibold text-white">${distMeters} m</span></div>
                                     <div><span class="text-slate-400">Tid:</span> <span class="font-semibold text-white">${durationStr}</span></div>
                                     <div><span class="text-slate-400">Hastighet:</span> <span class="font-semibold text-white">${speedKmh} km/h</span></div>
-                                    <div><span class="text-slate-400">Kadens:</span> <span class="font-semibold text-white">${cad} spm</span></div>
+                                    <div><span class="text-slate-400">Kadens:</span> <span class="font-semibold text-white">${Math.round(cad)} spm</span></div>
                                     <div><span class="text-slate-400">GCT:</span> <span class="font-semibold text-amber-400">${gctSplit !== '-' ? gctSplit + ' ms' : '-'}</span></div>
-                                    <div><span class="text-slate-400">GCT Balans:</span> <span class="font-semibold text-purple-400">${balLeft !== '-' ? balLeft + '%V / ' + balRight + '%H' : '-'}</span></div>
+                                    <div><span class="text-slate-400">GCT Balans:</span> <span class="font-semibold text-purple-400">${balLeftStr !== '-' ? balLeftStr + '%V / ' + balRightStr + '%H' : '-'}</span></div>
                                 </div>
                             </div>
                         `;
@@ -578,11 +594,18 @@
                 splitCard.classList.add('hidden');
             }
 
-            // Kilometertabell (Hämtar laps direkt från 'laps' eller 'lapDTOs')
+            // Kilometertabell (Söker brett i alla relevanta fält för varv/laps)
             const kmCard = document.getElementById('kmTableCard');
             const kmBody = document.getElementById('kmTableBody');
             
-            const rawLapVal = act.raw['laps'] || act.raw['lapDTOs'];
+            // Sök dynamiskt efter alla fält som kan innehålla lap-arrayen
+            const lapKey = Object.keys(act.raw).find(k => {
+                const lower = k.toLowerCase();
+                return (lower === 'laps' || lower === 'lapdtos' || lower.includes('lap')) && 
+                       !lower.includes('split') && !lower.includes('summary');
+            });
+
+            const rawLapVal = lapKey ? act.raw[lapKey] : null;
             let lapsParsed = false;
 
             if (rawLapVal) {
@@ -595,17 +618,28 @@
                             let accumulatedSec = 0;
 
                             laps.forEach((l, idx) => {
-                                const lapTime = Number(l.duration || l.time || l.elapsedDuration || 0);
+                                const lapTime = Number(getProp(l, ['duration', 'time', 'elapsedDuration']) || 0);
                                 accumulatedSec += lapTime;
                                 const accTimeStr = formatTimeDetailed(accumulatedSec);
-                                const pace = formatPace(l.averageSpeed || l.speed);
-                                const minPace = formatPace(l.minSpeed || l.maxSpeed);
-                                const maxPace = formatPace(l.maxSpeed || l.minSpeed);
-                                const gctLap = l.avgGroundContactTime ? Number(l.avgGroundContactTime).toFixed(1) + ' ms' : '-';
-                                const balLap = l.avgGroundContactBalanceLeft ? formatBalance(l.avgGroundContactBalanceLeft + '% L') : '-';
-                                const hrLap = l.averageHR ? l.averageHR + ' bpm' : '-';
-                                const minHr = l.minHR ? l.minHR + ' bpm' : '-';
-                                const maxHr = l.maxHR ? l.maxHR + ' bpm' : '-';
+                                const speedVal = getProp(l, ['averageSpeed', 'speed', 'avgSpeed']);
+                                const pace = formatPace(speedVal);
+                                const minPace = formatPace(getProp(l, ['minSpeed', 'lowestSpeed', 'maxSpeed']));
+                                const maxPace = formatPace(getProp(l, ['maxSpeed', 'highestSpeed', 'minSpeed']));
+                                
+                                const gctRaw = getProp(l, ['avgGroundContactTime', 'avgGCT', 'groundContactTime']);
+                                const gctLap = gctRaw ? Number(gctRaw).toFixed(1) + ' ms' : '-';
+                                
+                                const balRaw = getProp(l, ['avgGroundContactBalanceLeft', 'avgBalanceLeft']);
+                                const balLap = balRaw ? formatBalance(balRaw + '% L') : '-';
+                                
+                                const hrRaw = getProp(l, ['averageHR', 'avgHR', 'averageHeartRate']);
+                                const hrLap = hrRaw ? Math.round(hrRaw) + ' bpm' : '-';
+                                
+                                const minHrRaw = getProp(l, ['minHR', 'minHeartRate']);
+                                const minHr = minHrRaw ? Math.round(minHrRaw) + ' bpm' : '-';
+                                
+                                const maxHrRaw = getProp(l, ['maxHR', 'maxHeartRate']);
+                                const maxHr = maxHrRaw ? Math.round(maxHrRaw) + ' bpm' : '-';
 
                                 kmHtml += `
                                     <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
@@ -632,7 +666,6 @@
                 }
             }
 
-            // Om passet saknar lap-data i CSV:n skapar vi en snygg informativ rad i tabellen
             if (!lapsParsed) {
                 kmBody.innerHTML = `
                     <tr>
