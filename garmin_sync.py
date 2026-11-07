@@ -12,11 +12,11 @@ def get_activity_id(act):
     raw_id = act.get("activityId") or act.get("startTimeLocal")
     return str(raw_id) if raw_id is not None else None
 
-def fetch_activity_splits(access_token, activity_id):
-    """Hämtar detaljerade kilometer-varv (laps/splits) för en specifik aktivitet."""
-    splits_url = f"https://personal.connectapi.garmin.com/activity-service/activity/{activity_id}/splits"
+def fetch_activity_details(access_token, activity_id):
+    """Hämtar detaljerad information inklusive laps/splits för en specifik aktivitet."""
+    details_url = f"https://personal.connectapi.garmin.com/activity-service/activity/{activity_id}"
     req = urllib.request.Request(
-        splits_url,
+        details_url,
         headers={
             "Authorization": f"Bearer {access_token}",
             "Accept": "application/json"
@@ -24,12 +24,9 @@ def fetch_activity_splits(access_token, activity_id):
     )
     try:
         with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read().decode("utf-8"))
-            # Returnerar listan med lap/split-summeringar om den finns
-            return data.get("lapDTOs", data.get("splitSummaries", []))
+            return json.loads(response.read().decode("utf-8"))
     except Exception:
-        # Om det misslyckas för en enskild aktivitet returnerar vi en tom lista
-        return []
+        return {}
 
 def main():
     if not API_KEY:
@@ -58,7 +55,7 @@ def main():
 
         print("Autentisering lyckades! Hämtar all aktivitetsdata med paginering...")
 
-        # 1. Hämta alla aktiviteter från API:et
+        # 1. Hämta alla aktiviteter från API:et (översikt)
         all_activities = []
         start = 0
         limit = 100
@@ -89,20 +86,24 @@ def main():
                 break
             start += limit
 
-        # 2. Hämta även detaljerade laps/splits för varje aktivitet
-        print("Hämtar detaljerade kilometer-varv (laps) för varje aktivitet...")
+        # 2. Hämta detaljerad data (inklusive laps/splits) för varje aktivitet
+        print("Hämtar detaljerade varv och splits per aktivitet...")
         for act in all_activities:
             act_id = act.get("activityId")
             if act_id:
-                laps = fetch_activity_splits(access_token, act_id)
-                if laps:
-                    # Sparar ner i kolumnen 'laps' som JSON-sträng
-                    act["laps"] = json.dumps(laps, ensure_ascii=False)
+                details = fetch_activity_details(access_token, act_id)
+                if details:
+                    # Slå ihop detaljerna med aktivitetsdatat
+                    act.update(details)
+                    # Säkerställ att laps/lapSummaries finns som strängifierad JSON i egna fält
+                    if "lapDTOs" in details:
+                        act["laps"] = json.dumps(details["lapDTOs"], ensure_ascii=False)
+                    elif "splits" in details:
+                        act["laps"] = json.dumps(details["splits"], ensure_ascii=False)
 
         # Map för att lagra alla unika pass (ID som sträng)
         raw_combined = {}
 
-        # Lägg till färska aktiviteter från API:et
         for act in all_activities:
             act_id = get_activity_id(act)
             if act_id:
@@ -116,7 +117,6 @@ def main():
                 for row in reader:
                     act_id = get_activity_id(row)
                     if act_id and act_id not in raw_combined:
-                        # Bevara äldre pass som inte kom med i nya API-batchar
                         restored = {}
                         for k, v in row.items():
                             try:
@@ -155,7 +155,7 @@ def main():
                     row.append(val)
                 writer.writerow(row)
                 
-        print(f"Klart! Totalt {len(raw_combined)} unika aktiviteter sparades till {FILENAME} inklusive kilometer-data.")
+        print(f"Klart! Totalt {len(raw_combined)} unika aktiviteter sparades till {FILENAME} med komplett lap-data.")
 
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8")
