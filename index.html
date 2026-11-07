@@ -330,7 +330,7 @@
             <div id="detailCardsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
             <!-- Eget Kort för Split Summaries (Intervaller / Uppdelningar) -->
-            <div id="splitSummariesCard" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+            <div id="splitSummariesCard" class="hidden bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i> Split Summaries (Fas- & Intervallfördelning)
                 </h3>
@@ -444,7 +444,6 @@
             return bal;
         }
 
-        // Översätt splitType till snygga svenska namn
         function translateSplitType(type) {
             switch(type) {
                 case 'RWD_RUN': return 'Löpning';
@@ -483,55 +482,50 @@
                 </div>
             `;
 
-            // Split Summaries / Intervaller Parsning
-            const splitContent = document.getElementById('splitContent') || document.getElementById('splitSummariesContent');
+            // Hantera splitSummaries direkt från CSV-objektet
             const splitCard = document.getElementById('splitSummariesCard');
-            
-            // Leta efter fält i rådata som kan innehålla split-data (t.ex. splitSummaries eller liknande)
-            const splitKey = Object.keys(act.raw).find(k => k.toLowerCase().includes('split') || k.toLowerCase().includes('lap'));
-            
-            if (splitKey && act.raw[splitKey]) {
-                try {
-                    let rawVal = act.raw[splitKey];
-                    // Om det är en strängifierad JSON-array (likt ditt exempel)
-                    if (typeof rawVal === 'string' && rawVal.trim().startsWith('[')) {
-                        const splits = JSON.parse(rawVal.replace(/'/g, '"'));
-                        let html = '';
-                        
-                        splits.forEach(s => {
-                            const name = translateSplitType(s.splitType);
-                            const distMeters = s.distance ? (s.distance).toFixed(0) : 0;
-                            const durationSec = s.duration ? (s.duration).toFixed(1) : 0;
-                            const speedKmh = s.averageSpeed ? (s.averageSpeed * 3.6).toFixed(1) : 0;
-                            const cad = s.avgStepFrequency ? Math.round(s.avgStepFrequency) : '-';
-                            const gctSplit = s.avgGroundContactTime ? s.avgGroundContactTime.toFixed(1) : '-';
-                            const balLeft = s.avgGroundContactBalanceLeft ? s.avgGroundContactBalanceLeft.toFixed(1) : '-';
-                            const balRight = (100 - parseFloat(balLeft)).toFixed(1);
+            const splitContent = document.getElementById('splitSummariesContent');
+            const rawSplitVal = act.raw['splitSummaries'];
 
-                            html += `
-                                <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 space-y-2">
-                                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                                        <span class="font-bold text-emerald-400 text-sm">${name}</span>
-                                        <span class="text-[11px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded">${s.noOfSplits || 1} st</span>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2 text-xs">
-                                        <div><span class="text-slate-400">Distans:</span> <span class="font-semibold text-white">${distMeters} m</span></div>
-                                        <div><span class="text-slate-400">Tid:</span> <span class="font-semibold text-white">${durationSec} s</span></div>
-                                        <div><span class="text-slate-400">Hastighet:</span> <span class="font-semibold text-white">${speedKmh} km/h</span></div>
-                                        <div><span class="text-slate-400">Kadens:</span> <span class="font-semibold text-white">${cad} spm</span></div>
-                                        <div><span class="text-slate-400">GCT:</span> <span class="font-semibold text-amber-400">${gctSplit} ms</span></div>
-                                        <div><span class="text-slate-400">GCT Balans:</span> <span class="font-semibold text-purple-400">${balLeft}%V / ${balRight}%H</span></div>
-                                    </div>
+            if (rawSplitVal && String(rawSplitVal).trim().startsWith('[')) {
+                try {
+                    // Ersäkta enkla citattecken mot dubbla om nödvändigt för JSON-parsern
+                    const cleanJsonStr = rawSplitVal.replace(/'/g, '"');
+                    const splits = JSON.parse(cleanJsonStr);
+                    let html = '';
+
+                    splits.forEach(s => {
+                        const name = translateSplitType(s.splitType);
+                        const distMeters = s.distance ? Number(s.distance).toFixed(0) : 0;
+                        const durationSec = s.duration ? Number(s.duration).toFixed(1) : 0;
+                        const speedKmh = s.averageSpeed ? (Number(s.averageSpeed) * 3.6).toFixed(1) : 0;
+                        const cad = s.avgStepFrequency ? Math.round(Number(s.avgStepFrequency)) : '-';
+                        const gctSplit = s.avgGroundContactTime ? Number(s.avgGroundContactTime).toFixed(1) : '-';
+                        const balLeft = s.avgGroundContactBalanceLeft ? Number(s.avgGroundContactBalanceLeft).toFixed(1) : '-';
+                        const balRight = balLeft !== '-' ? (100 - parseFloat(balLeft)).toFixed(1) : '-';
+
+                        html += `
+                            <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                                    <span class="font-bold text-emerald-400 text-sm">${name}</span>
+                                    <span class="text-[11px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded">${s.noOfSplits || 1} st</span>
                                 </div>
-                            `;
-                        });
-                        splitContent.innerHTML = html;
-                        splitCard.classList.remove('hidden');
-                    } else {
-                        splitCard.classList.add('hidden');
-                    }
+                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div><span class="text-slate-400">Distans:</span> <span class="font-semibold text-white">${distMeters} m</span></div>
+                                    <div><span class="text-slate-400">Tid:</span> <span class="font-semibold text-white">${durationSec} s</span></div>
+                                    <div><span class="text-slate-400">Hastighet:</span> <span class="font-semibold text-white">${speedKmh} km/h</span></div>
+                                    <div><span class="text-slate-400">Kadens:</span> <span class="font-semibold text-white">${cad} spm</span></div>
+                                    <div><span class="text-slate-400">GCT:</span> <span class="font-semibold text-amber-400">${gctSplit} ms</span></div>
+                                    <div><span class="text-slate-400">GCT Balans:</span> <span class="font-semibold text-purple-400">${balLeft}%V / ${balRight}%H</span></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    splitContent.innerHTML = html;
+                    splitCard.classList.remove('hidden');
                 } catch(e) {
-                    console.error("Kunde inte parsa split-data", e);
+                    console.error("Kunde inte parsa splitSummaries JSON:", e);
                     splitCard.classList.add('hidden');
                 }
             } else {
@@ -888,7 +882,7 @@
             document.getElementById('statusText').textContent = "Offline (Exempeldata med test-splits)";
             processData([
                 { 
-                    startTimeLocal: '2026-11-06', 
+                    startTimeLocal: '2026-11-07', 
                     activityName: 'Morgonjogg med gång & vila', 
                     activityType: 'Löpning', 
                     distance: 4173, 
