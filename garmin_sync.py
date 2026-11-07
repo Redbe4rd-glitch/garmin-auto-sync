@@ -21,7 +21,8 @@ def fetch_activity_details(access_token, activity_id):
     try:
         with urllib.request.urlopen(req) as response:
             return json.loads(response.read().decode("utf-8"))
-    except Exception:
+    except Exception as e:
+        print(f"Fel vid hämtning av pass {activity_id}: {e}")
         return {}
 
 def main():
@@ -59,15 +60,26 @@ def main():
 
     all_activities.sort(key=lambda x: str(x.get("startTimeLocal", "")), reverse=True)
 
-    print(f"Hämtar lapDTOs för de {MAX_DETAILED_ACTIVITIES} senaste passen...")
+    print(f"Hämtar detaljer för de {MAX_DETAILED_ACTIVITIES} senaste passen...")
     for act in all_activities[:MAX_DETAILED_ACTIVITIES]:
         act_id = act.get("activityId")
         if act_id:
             details = fetch_activity_details(access_token, act_id)
             if details:
-                # Extrahera lapDTOs direkt och lägg som egen nyckel
-                if "lapDTOs" in details:
-                    act["lapDTOs"] = json.dumps(details["lapDTOs"], ensure_ascii=False)
+                # 1. Slå ihop all grunddata
+                act.update(details)
+                
+                # 2. Sök efter alla tänkbara nycklar för laps/splits som Garmin kan använda
+                possible_laps = (
+                    details.get("lapDTOs") or 
+                    details.get("laps") or 
+                    details.get("splits") or 
+                    details.get("activityLapDTOs")
+                )
+                if possible_laps:
+                    act["lapDTOs"] = json.dumps(possible_laps, ensure_ascii=False)
+                    act["laps"] = json.dumps(possible_laps, ensure_ascii=False)
+                
                 if "splitSummaries" in details:
                     act["splitSummaries"] = json.dumps(details["splitSummaries"], ensure_ascii=False)
 
@@ -81,8 +93,8 @@ def main():
                 if act_id and act_id in raw_combined:
                     if not raw_combined[act_id].get("lapDTOs") and row.get("lapDTOs"):
                         raw_combined[act_id]["lapDTOs"] = row.get("lapDTOs")
-                    if not raw_combined[act_id].get("splitSummaries") and row.get("splitSummaries"):
-                        raw_combined[act_id]["splitSummaries"] = row.get("splitSummaries")
+                    if not raw_combined[act_id].get("laps") and row.get("laps"):
+                        raw_combined[act_id]["laps"] = row.get("laps")
                 elif act_id:
                     restored = {}
                     for k, v in row.items():
@@ -106,7 +118,7 @@ def main():
                 row.append(val)
             writer.writerow(row)
 
-    print(f"Klart! Sparat {len(raw_combined)} aktiviteter.")
+    print(f"Klart! Sparade {len(raw_combined)} aktiviteter.")
 
 if __name__ == "__main__":
     main()
