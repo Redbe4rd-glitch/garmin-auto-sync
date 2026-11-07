@@ -578,16 +578,64 @@
                 splitCard.classList.add('hidden');
             }
 
-            // Kilometertabell (Letar i alla fält som innehåller lap, split eller interval)
-            const kmCard = document.getElementById('kmTableCard');
-            const kmBody = document.getElementById('kmTableBody');
-            
-            const lapKey = Object.keys(act.raw).find(k => {
-                const lower = k.toLowerCase();
-                return lower.includes('lap') || lower.includes('split') || lower.includes('interval');
-            });
+            // Kilometertabell (Letar efter riktiga laps/lapDTOs, exkluderar splitSummaries)
+    const kmCard = document.getElementById('kmTableCard');
+    const kmBody = document.getElementById('kmTableBody');
+    
+    const lapKey = Object.keys(act.raw).find(k => {
+        const lower = k.toLowerCase();
+        return (lower.includes('lap') || lower === 'laps' || lower === 'lapdtos') && 
+               !lower.includes('split') && 
+               !lower.includes('summary');
+    });
 
-            let lapsParsed = false;
+    let lapsParsed = false;
+    if (lapKey && act.raw[lapKey]) {
+        const valStr = String(act.raw[lapKey]).trim();
+        if (valStr.startsWith('[')) {
+            try {
+                const laps = JSON.parse(valStr.replace(/'/g, '"'));
+                if (Array.isArray(laps) && laps.length > 0) {
+                    let kmHtml = '';
+                    let accumulatedSec = 0;
+
+                    laps.forEach((l, idx) => {
+                        const lapTime = Number(l.duration || l.time || l.elapsedDuration || 0);
+                        accumulatedSec += lapTime;
+                        const accTimeStr = formatTimeDetailed(accumulatedSec);
+                        const pace = formatPace(l.averageSpeed || l.speed);
+                        const minPace = formatPace(l.minSpeed || l.maxSpeed);
+                        const maxPace = formatPace(l.maxSpeed || l.minSpeed);
+                        const gctLap = l.avgGroundContactTime ? Number(l.avgGroundContactTime).toFixed(1) + ' ms' : '-';
+                        const balLap = l.avgGroundContactBalanceLeft ? formatBalance(l.avgGroundContactBalanceLeft + '% L') : '-';
+                        const hrLap = l.averageHR ? l.averageHR + ' bpm' : '-';
+                        const minHr = l.minHR ? l.minHR + ' bpm' : '-';
+                        const maxHr = l.maxHR ? l.maxHR + ' bpm' : '-';
+
+                        kmHtml += `
+                            <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
+                                <td class="p-2.5 font-bold text-emerald-400">Km ${idx + 1}</td>
+                                <td class="p-2.5 text-white font-semibold">${accTimeStr}</td>
+                                <td class="p-2.5">${pace}</td>
+                                <td class="p-2.5 text-slate-400">${minPace}</td>
+                                <td class="p-2.5 text-slate-400">${maxPace}</td>
+                                <td class="p-2.5 text-amber-400">${gctLap}</td>
+                                <td class="p-2.5 text-purple-400">${balLap}</td>
+                                <td class="p-2.5">${hrLap}</td>
+                                <td class="p-2.5 text-slate-400">${minHr}</td>
+                                <td class="p-2.5 text-slate-400">${maxHr}</td>
+                            </tr>
+                        `;
+                    });
+                    kmBody.innerHTML = kmHtml;
+                    kmCard.classList.remove('hidden');
+                    lapsParsed = true;
+                }
+            } catch(e) {
+                console.error("Kunde inte parsa lap-data", e);
+            }
+        }
+    }
             if (lapKey && act.raw[lapKey]) {
                 const valStr = String(act.raw[lapKey]).trim();
                 if (valStr.startsWith('[')) {
