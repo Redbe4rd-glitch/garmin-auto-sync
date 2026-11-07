@@ -82,7 +82,7 @@
 
     <main class="max-w-6xl mx-auto px-4 pt-6">
 
-        <!-- GLOBAL TIME HORIZON FILTER (För detaljflikar) -->
+        <!-- GLOBAL TIME HORIZON FILTER -->
         <div id="timeFilterBar" class="hidden mb-6 flex justify-between items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
             <span class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                 <i data-lucide="calendar" class="w-4 h-4 text-emerald-400"></i> Tidshorisont:
@@ -95,7 +95,7 @@
             </div>
         </div>
 
-        <!-- ==================== TAB 1: ÖVERSIKT (STARTSIDA) ==================== -->
+        <!-- ==================== TAB 1: ÖVERSIKT ==================== -->
         <section id="sec-overview" class="space-y-6">
             <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 flex justify-between items-center">
                 <div class="text-xs text-slate-300">
@@ -107,7 +107,7 @@
                 </div>
             </div>
 
-            <!-- Klickbara KPI-Kort -->
+            <!-- KPI-Kort -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div onclick="switchTab('activities')" class="bg-slate-800/80 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 rounded-2xl p-5 cursor-pointer transition shadow-lg group">
                     <div class="flex justify-between items-center mb-3">
@@ -166,7 +166,7 @@
                 </div>
             </div>
 
-            <!-- Snabböversiktstabell (Klickbara rader) -->
+            <!-- Tabell -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -321,21 +321,29 @@
                     <i data-lucide="arrow-left" class="w-4 h-4"></i> Tillbaka
                 </button>
                 <div class="text-right">
-                    <h2 id="detailHeaderTitle" class="text-lg font-bold text-white">Passdetaljer</h2>
+                    <h2 id="detailHeaderTitle" class="text-lg font-bold text-white">--</h2>
                     <p id="detailHeaderSub" class="text-xs text-slate-400">--</p>
                 </div>
             </div>
 
             <!-- Visuella Nyckeltalskort för Passet -->
-            <div id="detailCardsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <!-- Dynamiskt genererade kort -->
+            <div id="detailCardsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+
+            <!-- Eget Kort för Split Summaries -->
+            <div id="splitSummariesCard" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i> Split Summaries (Intervaller / Lap-data)
+                </h3>
+                <div id="splitSummariesContent" class="text-xs text-slate-300">
+                    <!-- Fylls dynamiskt -->
+                </div>
             </div>
 
-            <!-- Fullständig Tabell över ALLA CSV-Värden -->
+            <!-- Fullständig Tabell över ALLA CSV-Värden (avrundade) -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="table" class="w-4 h-4 text-emerald-400"></i> Alla Mätvärden från CSV
+                        <i data-lucide="table" class="w-4 h-4 text-emerald-400"></i> Alla Mätvärden från CSV (Avrundade)
                     </h3>
                     <span class="text-xs text-slate-400" id="detailRawCount">0 fält</span>
                 </div>
@@ -408,14 +416,48 @@
             switchTab(previousTab || 'overview');
         }
 
+        // Hjälpfunktion för att snygga till och avrunda siffror med > 2 decimaler
+        function formatVal(val) {
+            if (val === undefined || val === null || val === '') return '<span class="text-slate-600">-</span>';
+            const str = String(val).trim();
+            const num = Number(str);
+            if (!isNaN(num) && str !== '') {
+                // Om det är ett decimaltal med fler än 2 decimaler, avrunda till 2
+                if (str.includes('.')) {
+                    const parts = str.split('.');
+                    if (parts[1] && parts[1].length > 2) {
+                        return num.toFixed(2);
+                    }
+                }
+                return num;
+            }
+            return str;
+        }
+
+        // Formatera GCT-balans till 1 decimal om möjligt
+        function formatBalance(bal) {
+            if (!bal) return '50/50';
+            // Exempel: "50.1234% L" -> plocka ut siffror och avrunda till 1 decimal
+            const match = bal.match(/([\d.]+)/);
+            if (match) {
+                const val = parseFloat(match[0]);
+                const other = (100 - val).toFixed(1);
+                const side = bal.includes('R') ? 'R' : 'L';
+                return `${val.toFixed(1)}% ${side} / ${other}% ${side === 'L' ? 'R' : 'L'}`;
+            }
+            return bal;
+        }
+
         function showActivityDetail(index) {
             const act = allActivities[index];
             if (!act) return;
 
-            document.getElementById('detailHeaderTitle').textContent = `${act.type} – ${act.date}`;
-            document.getElementById('detailHeaderSub').textContent = `Distans: ${act.distance.toFixed(2)} km | Tid: ${Math.round(act.duration/60)} min`;
+            // Använd activityName som rubrik om det finns, annars Typ + Datum
+            const activityName = act.raw.activityName || act.raw.Name || act.raw.title || `${act.type} – ${act.date}`;
+            document.getElementById('detailHeaderTitle').textContent = activityName;
+            document.getElementById('detailHeaderSub').textContent = `Datum: ${act.date} | Distans: ${act.distance.toFixed(2)} km | Tid: ${Math.round(act.duration/60)} min`;
 
-            // Generera Visuella Kort
+            // Visuella Kort
             const cardsGrid = document.getElementById('detailCardsGrid');
             cardsGrid.innerHTML = `
                 <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-4">
@@ -432,22 +474,42 @@
                 </div>
                 <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-4">
                     <span class="text-[10px] text-slate-400 uppercase tracking-wider">GCT-Balans</span>
-                    <div class="text-xl font-bold text-purple-400 mt-1">${act.balance || 'N/A'}</div>
+                    <div class="text-xl font-bold text-purple-400 mt-1">${formatBalance(act.balance)}</div>
                 </div>
             `;
 
-            // Fyll tabellen med ALLA CSV-fält för detta pass
+            // Split Summaries / Lap-data kort
+            const splitCard = document.getElementById('splitSummariesCard');
+            const splitContent = document.getElementById('splitSummariesContent');
+            const splitDataKey = Object.keys(act.raw).find(k => k.toLowerCase().includes('split') || k.toLowerCase().includes('lap') || k.toLowerCase().includes('interval'));
+            
+            if (splitDataKey && act.raw[splitDataKey]) {
+                splitCard.classList.remove('hidden');
+                splitContent.textContent = act.raw[splitDataKey];
+            } else {
+                // Kolla om det finns vanliga split-fält eller visa meddelande
+                splitCard.classList.remove('hidden');
+                splitContent.innerHTML = '<span class="text-slate-400 italic">Inga separata split-summaries registrerade i denna CSV-rad (eller fältet saknas).</span>';
+            }
+
+            // Tabell med ALLA CSV-fält (avrundade)
             const rawBody = document.getElementById('detailRawTableBody');
             rawBody.innerHTML = '';
             const rawKeys = Object.keys(act.raw || {});
             document.getElementById('detailRawCount').textContent = `${rawKeys.length} mätfält`;
 
             rawKeys.forEach(k => {
-                const val = act.raw[k];
+                let val = act.raw[k];
+                if (k.toLowerCase().includes('balance')) {
+                    val = formatBalance(val);
+                } else {
+                    val = formatVal(val);
+                }
+
                 rawBody.innerHTML += `
                     <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
                         <td class="p-2.5 text-slate-400 font-semibold">${k}</td>
-                        <td class="p-2.5 text-slate-200">${val !== undefined && val !== '' ? val : '<span class="text-slate-600">-</span>'}</td>
+                        <td class="p-2.5 text-slate-200">${val}</td>
                     </tr>
                 `;
             });
@@ -576,7 +638,7 @@
                     balance: balance,
                     hr: hr,
                     cadence: cadence,
-                    raw: r // Spara ALL rådata från CSV-filen
+                    raw: r
                 };
             });
 
@@ -619,16 +681,17 @@
             document.getElementById('kpi-volume-sub').textContent = `${recent7d.length} pass senaste 7 dagarna`;
             document.getElementById('kpi-fatmax').textContent = `${fatMaxPct}%`;
             document.getElementById('kpi-gct').textContent = latestGct ? `${latestGct.gct} ms` : '235 ms';
-            document.getElementById('kpi-gct-sub').textContent = `Balans: ${latestGct ? latestGct.balance : '50/50'}`;
+            document.getElementById('kpi-gct-sub').textContent = `Balans: ${latestGct ? formatBalance(latestGct.balance) : '50/50'}`;
             document.getElementById('kpi-strength').textContent = `${strength7d} st`;
 
             const tbody = document.getElementById('overviewTableBody');
             tbody.innerHTML = '';
             allActivities.slice(0, 5).forEach((a, idx) => {
+                const name = a.raw.activityName || a.raw.Name || a.type;
                 tbody.innerHTML += `
                     <tr onclick="showActivityDetail(${idx})" class="border-b border-slate-800 clickable-row">
                         <td class="p-2.5 font-mono text-[11px]">${a.date}</td>
-                        <td class="p-2.5 font-medium">${a.type}</td>
+                        <td class="p-2.5 font-medium">${name}</td>
                         <td class="p-2.5">${a.distance.toFixed(1)} km</td>
                         <td class="p-2.5">${Math.round(a.duration/60)} min</td>
                         <td class="p-2.5 font-mono">${a.hr > 0 ? a.hr + ' bpm' : '-'}</td>
@@ -645,6 +708,7 @@
             tbody.innerHTML = '';
             data.forEach((a) => {
                 const actIndex = allActivities.findIndex(item => item === a);
+                const name = a.raw.activityName || a.raw.Name || a.type;
                 let zColor = "text-emerald-400";
                 let zName = "FatMax (Lätt)";
                 if (a.hr > 142) { zColor = "text-rose-400"; zName = "Tröskel/Hård"; }
@@ -653,7 +717,7 @@
                 tbody.innerHTML += `
                     <tr onclick="showActivityDetail(${actIndex})" class="border-b border-slate-800 clickable-row">
                         <td class="p-2.5 font-mono text-[11px]">${a.date}</td>
-                        <td class="p-2.5">${a.type}</td>
+                        <td class="p-2.5 font-medium">${name}</td>
                         <td class="p-2.5 font-semibold text-white">${a.distance.toFixed(1)}</td>
                         <td class="p-2.5">${Math.round(a.duration/60)} min</td>
                         <td class="p-2.5 font-mono">${a.hr > 0 ? a.hr + ' bpm' : '-'}</td>
@@ -709,13 +773,14 @@
 
             data.forEach((a) => {
                 const actIndex = allActivities.findIndex(item => item === a);
+                const name = a.raw.activityName || a.raw.Name || a.type;
                 const status = a.gct > 240 ? '<span class="text-rose-400 font-bold">⚠️ Varning (>240ms)</span>' : '<span class="text-emerald-400 font-medium">OK</span>';
                 tbody.innerHTML += `
                     <tr onclick="showActivityDetail(${actIndex})" class="border-b border-slate-800 clickable-row">
                         <td class="p-2.5 font-mono text-[11px]">${a.date}</td>
-                        <td class="p-2.5">${a.distance.toFixed(1)} km</td>
+                        <td class="p-2.5 font-medium">${name}</td>
                         <td class="p-2.5 font-bold font-mono">${a.gct} ms</td>
-                        <td class="p-2.5 font-mono">${a.balance}</td>
+                        <td class="p-2.5 font-mono">${formatBalance(a.balance)}</td>
                         <td class="p-2.5 font-mono">${a.cadence} spm</td>
                         <td class="p-2.5">${status}</td>
                         <td class="p-2.5 text-right"><span class="text-xs text-emerald-400 font-semibold hover:underline">Visa &rarr;</span></td>
@@ -776,9 +841,9 @@
         function loadFallback() {
             document.getElementById('statusText').textContent = "Offline (Exempeldata)";
             processData([
-                { startTimeLocal: '2026-11-06', activityType: 'Löpning', distance: 8.5, duration: 2700, avgGroundContactTime: 232, avgGroundContactBalance: '50.1% L', averageHR: 121, maxHR: 135, calories: 540, maxSpeed: 3.4 },
-                { startTimeLocal: '2026-11-04', activityType: 'Styrketräning', distance: 0, duration: 2400, avgGroundContactTime: 0, averageHR: 105, calories: 280 },
-                { startTimeLocal: '2026-11-02', activityType: 'Löpning', distance: 10.0, duration: 3200, avgGroundContactTime: 238, avgGroundContactBalance: '50.4% L', averageHR: 123, maxHR: 139, calories: 680, maxSpeed: 3.6 }
+                { startTimeLocal: '2026-11-06', activityName: 'Morgonjogg i lugnt tempo', activityType: 'Löpning', distance: 8.5432, duration: 2700, avgGroundContactTime: 232.45, avgGroundContactBalance: '50.123% L', averageHR: 121 },
+                { startTimeLocal: '2026-11-04', activityName: 'Tung vad- och hälstyrka', activityType: 'Styrketräning', distance: 0, duration: 2400, avgGroundContactTime: 0, averageHR: 105 },
+                { startTimeLocal: '2026-11-02', activityName: 'Aerob distans', activityType: 'Löpning', distance: 10.012, duration: 3200, avgGroundContactTime: 238.99, avgGroundContactBalance: '50.412% L', averageHR: 123 }
             ]);
         }
     </script>
