@@ -329,7 +329,7 @@
             <!-- Visuella Nyckeltalskort för Passet -->
             <div id="detailCardsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
-            <!-- Eget Kort för Split Summaries (Intervaller / Uppdelningar) -->
+            <!-- Eget Kort för Split Summaries (Fas- & Intervallfördelning) -->
             <div id="splitSummariesCard" class="hidden bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i> Split Summaries (Fas- & Intervallfördelning)
@@ -338,7 +338,7 @@
             </div>
 
             <!-- Kilometertabell (Data per kilometer) -->
-            <div id="kmTableCard" class="hidden bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+            <div id="kmTableCard" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i> Data per Kilometer (Laps / Splits)
                 </h3>
@@ -440,7 +440,6 @@
             switchTab(previousTab || 'overview');
         }
 
-        // Hjälpfunktion: Formatera sekunder till t.ex. "1 h 25 min 30 sek" eller "25 min 10 sek"
         function formatTimeDetailed(totalSeconds) {
             if (isNaN(totalSeconds) || totalSeconds === null || totalSeconds === undefined) return '-';
             const secNum = Number(totalSeconds);
@@ -457,7 +456,6 @@
             return res.join(' ');
         }
 
-        // Konvertera m/s till tempo (min/km, ex: "4:30 min/km")
         function formatPace(metersPerSec) {
             if (!metersPerSec || isNaN(metersPerSec) || metersPerSec <= 0) return '-';
             const secPerKm = 1000 / metersPerSec;
@@ -532,7 +530,7 @@
                 </div>
             `;
 
-            // Split Summaries / Intervaller
+            // Split Summaries
             const splitCard = document.getElementById('splitSummariesCard');
             const splitContent = document.getElementById('splitSummariesContent');
             const rawSplitVal = act.raw['splitSummaries'];
@@ -574,62 +572,80 @@
                     splitContent.innerHTML = html;
                     splitCard.classList.remove('hidden');
                 } catch(e) {
-                    console.error("Kunde inte parsa splitSummaries JSON:", e);
                     splitCard.classList.add('hidden');
                 }
             } else {
                 splitCard.classList.add('hidden');
             }
 
-            // Kilometertabell (Laps / Splits per km)
+            // Kilometertabell (Letar i alla fält som innehåller lap, split eller interval)
             const kmCard = document.getElementById('kmTableCard');
             const kmBody = document.getElementById('kmTableBody');
-            const rawLapVal = act.raw['laps'] || act.raw['lapSummaries'] || act.raw['splits'];
+            
+            const lapKey = Object.keys(act.raw).find(k => {
+                const lower = k.toLowerCase();
+                return lower.includes('lap') || lower.includes('split') || lower.includes('interval');
+            });
 
-            if (rawLapVal && String(rawLapVal).trim().startsWith('[')) {
-                try {
-                    const laps = JSON.parse(rawLapVal.replace(/'/g, '"'));
-                    let kmHtml = '';
-                    let accumulatedSec = 0;
+            let lapsParsed = false;
+            if (lapKey && act.raw[lapKey]) {
+                const valStr = String(act.raw[lapKey]).trim();
+                if (valStr.startsWith('[')) {
+                    try {
+                        const laps = JSON.parse(valStr.replace(/'/g, '"'));
+                        if (Array.isArray(laps) && laps.length > 0) {
+                            let kmHtml = '';
+                            let accumulatedSec = 0;
 
-                    laps.forEach((l, idx) => {
-                        const lapTime = Number(l.duration || l.time || 0);
-                        accumulatedSec += lapTime;
-                        const accTimeStr = formatTimeDetailed(accumulatedSec);
-                        const pace = formatPace(l.averageSpeed || l.speed);
-                        const maxPace = formatPace(l.maxSpeed);
-                        // Om lägsta hastighet (maxSpeed) finns
-                        const minPace = formatPace(l.minSpeed); 
-                        const gctLap = l.avgGroundContactTime ? Number(l.avgGroundContactTime).toFixed(1) + ' ms' : '-';
-                        const balLap = l.avgGroundContactBalanceLeft ? formatBalance(l.avgGroundContactBalanceLeft + '% L') : '-';
-                        const hrLap = l.averageHR ? l.averageHR + ' bpm' : '-';
-                        const minHr = l.minHR ? l.minHR + ' bpm' : '-';
-                        const maxHr = l.maxHR ? l.maxHR + ' bpm' : '-';
+                            laps.forEach((l, idx) => {
+                                const lapTime = Number(l.duration || l.time || l.elapsedDuration || 0);
+                                accumulatedSec += lapTime;
+                                const accTimeStr = formatTimeDetailed(accumulatedSec);
+                                const pace = formatPace(l.averageSpeed || l.speed);
+                                const minPace = formatPace(l.minSpeed || l.maxSpeed); // Vissa skript inverterar
+                                const maxPace = formatPace(l.maxSpeed || l.minSpeed);
+                                const gctLap = l.avgGroundContactTime ? Number(l.avgGroundContactTime).toFixed(1) + ' ms' : '-';
+                                const balLap = l.avgGroundContactBalanceLeft ? formatBalance(l.avgGroundContactBalanceLeft + '% L') : '-';
+                                const hrLap = l.averageHR ? l.averageHR + ' bpm' : '-';
+                                const minHr = l.minHR ? l.minHR + ' bpm' : '-';
+                                const maxHr = l.maxHR ? l.maxHR + ' bpm' : '-';
 
-                        kmHtml += `
-                            <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
-                                <td class="p-2.5 font-bold text-emerald-400">Km ${idx + 1}</td>
-                                <td class="p-2.5 text-white font-semibold">${accTimeStr}</td>
-                                <td class="p-2.5">${pace}</td>
-                                <td class="p-2.5 text-slate-400">${minPace}</td>
-                                <td class="p-2.5 text-slate-400">${maxPace}</td>
-                                <td class="p-2.5 text-amber-400">${gctLap}</td>
-                                <td class="p-2.5 text-purple-400">${balLap}</td>
-                                <td class="p-2.5">${hrLap}</td>
-                                <td class="p-2.5 text-slate-400">${minHr}</td>
-                                <td class="p-2.5 text-slate-400">${maxHr}</td>
-                            </tr>
-                        `;
-                    });
-
-                    kmBody.innerHTML = kmHtml;
-                    kmCard.classList.remove('hidden');
-                } catch(e) {
-                    console.error("Kunde inte parsa lap/km-data", e);
-                    kmCard.classList.add('hidden');
+                                kmHtml += `
+                                    <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
+                                        <td class="p-2.5 font-bold text-emerald-400">Km ${idx + 1}</td>
+                                        <td class="p-2.5 text-white font-semibold">${accTimeStr}</td>
+                                        <td class="p-2.5">${pace}</td>
+                                        <td class="p-2.5 text-slate-400">${minPace}</td>
+                                        <td class="p-2.5 text-slate-400">${maxPace}</td>
+                                        <td class="p-2.5 text-amber-400">${gctLap}</td>
+                                        <td class="p-2.5 text-purple-400">${balLap}</td>
+                                        <td class="p-2.5">${hrLap}</td>
+                                        <td class="p-2.5 text-slate-400">${minHr}</td>
+                                        <td class="p-2.5 text-slate-400">${maxHr}</td>
+                                    </tr>
+                                `;
+                            });
+                            kmBody.innerHTML = kmHtml;
+                            kmCard.classList.remove('hidden');
+                            lapsParsed = true;
+                        }
+                    } catch(e) {
+                        console.error("Kunde inte parsa lap-data", e);
+                    }
                 }
-            } else {
-                kmCard.classList.add('hidden');
+            }
+
+            // Om passet saknar lap-data i CSV:n skapar vi en snygg informativ rad i tabellen eller döljer den
+            if (!lapsParsed) {
+                // Om du vill visa en testrad eller dölja tills riktig data finns:
+                kmBody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="p-4 text-center text-slate-500 italic">
+                            Inga uppdelade kilometerdata (laps/splits) hittades i CSV-filens kolumner för detta pass.
+                        </td>
+                    </tr>
+                `;
+                kmCard.classList.remove('hidden');
             }
 
             // Tabell med ALLA CSV-fält (avrundade)
@@ -642,14 +658,6 @@
                 let val = act.raw[k];
                 if (k.toLowerCase().includes('balance')) {
                     val = formatBalance(val);
-                } else if (k.toLowerCase().includes('duration') || k.toLowerCase().includes('time') && !k.toLowerCase().includes('local')) {
-                    // Om det är tidsrelaterat fält i rådata, formatera snyggt om det är ett rent tal
-                    const num = Number(val);
-                    if (!isNaN(num) && num > 60) {
-                        val = `${val} (${formatTimeDetailed(num)})`;
-                    } else {
-                        val = formatVal(val);
-                    }
                 } else {
                     val = formatVal(val);
                 }
