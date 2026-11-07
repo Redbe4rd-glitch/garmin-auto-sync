@@ -329,13 +329,13 @@
             <!-- Visuella Nyckeltalskort för Passet -->
             <div id="detailCardsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
-            <!-- Eget Kort för Split Summaries -->
-            <div id="splitSummariesCard" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+            <!-- Eget Kort för Split Summaries (Intervaller / Uppdelningar) -->
+            <div id="splitSummariesCard" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i> Split Summaries (Intervaller / Lap-data)
+                    <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i> Split Summaries (Fas- & Intervallfördelning)
                 </h3>
-                <div id="splitSummariesContent" class="text-xs text-slate-300">
-                    <!-- Fylls dynamiskt -->
+                <div id="splitSummariesContent" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Fylls dynamiskt av JS -->
                 </div>
             </div>
 
@@ -416,13 +416,11 @@
             switchTab(previousTab || 'overview');
         }
 
-        // Hjälpfunktion för att snygga till och avrunda siffror med > 2 decimaler
         function formatVal(val) {
             if (val === undefined || val === null || val === '') return '<span class="text-slate-600">-</span>';
             const str = String(val).trim();
             const num = Number(str);
             if (!isNaN(num) && str !== '') {
-                // Om det är ett decimaltal med fler än 2 decimaler, avrunda till 2
                 if (str.includes('.')) {
                     const parts = str.split('.');
                     if (parts[1] && parts[1].length > 2) {
@@ -434,10 +432,8 @@
             return str;
         }
 
-        // Formatera GCT-balans till 1 decimal om möjligt
         function formatBalance(bal) {
             if (!bal) return '50/50';
-            // Exempel: "50.1234% L" -> plocka ut siffror och avrunda till 1 decimal
             const match = bal.match(/([\d.]+)/);
             if (match) {
                 const val = parseFloat(match[0]);
@@ -448,16 +444,25 @@
             return bal;
         }
 
+        // Översätt splitType till snygga svenska namn
+        function translateSplitType(type) {
+            switch(type) {
+                case 'RWD_RUN': return 'Löpning';
+                case 'RWD_WALK': return 'Gång';
+                case 'RWD_STAND': return 'Stilla / Väntan';
+                default: return type || 'Intervall';
+            }
+        }
+
         function showActivityDetail(index) {
             const act = allActivities[index];
             if (!act) return;
 
-            // Använd activityName som rubrik om det finns, annars Typ + Datum
             const activityName = act.raw.activityName || act.raw.Name || act.raw.title || `${act.type} – ${act.date}`;
             document.getElementById('detailHeaderTitle').textContent = activityName;
             document.getElementById('detailHeaderSub').textContent = `Datum: ${act.date} | Distans: ${act.distance.toFixed(2)} km | Tid: ${Math.round(act.duration/60)} min`;
 
-            // Visuella Kort
+            // Visuella Huvudkort
             const cardsGrid = document.getElementById('detailCardsGrid');
             cardsGrid.innerHTML = `
                 <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-4">
@@ -478,18 +483,59 @@
                 </div>
             `;
 
-            // Split Summaries / Lap-data kort
+            // Split Summaries / Intervaller Parsning
+            const splitContent = document.getElementById('splitContent') || document.getElementById('splitSummariesContent');
             const splitCard = document.getElementById('splitSummariesCard');
-            const splitContent = document.getElementById('splitSummariesContent');
-            const splitDataKey = Object.keys(act.raw).find(k => k.toLowerCase().includes('split') || k.toLowerCase().includes('lap') || k.toLowerCase().includes('interval'));
             
-            if (splitDataKey && act.raw[splitDataKey]) {
-                splitCard.classList.remove('hidden');
-                splitContent.textContent = act.raw[splitDataKey];
+            // Leta efter fält i rådata som kan innehålla split-data (t.ex. splitSummaries eller liknande)
+            const splitKey = Object.keys(act.raw).find(k => k.toLowerCase().includes('split') || k.toLowerCase().includes('lap'));
+            
+            if (splitKey && act.raw[splitKey]) {
+                try {
+                    let rawVal = act.raw[splitKey];
+                    // Om det är en strängifierad JSON-array (likt ditt exempel)
+                    if (typeof rawVal === 'string' && rawVal.trim().startsWith('[')) {
+                        const splits = JSON.parse(rawVal.replace(/'/g, '"'));
+                        let html = '';
+                        
+                        splits.forEach(s => {
+                            const name = translateSplitType(s.splitType);
+                            const distMeters = s.distance ? (s.distance).toFixed(0) : 0;
+                            const durationSec = s.duration ? (s.duration).toFixed(1) : 0;
+                            const speedKmh = s.averageSpeed ? (s.averageSpeed * 3.6).toFixed(1) : 0;
+                            const cad = s.avgStepFrequency ? Math.round(s.avgStepFrequency) : '-';
+                            const gctSplit = s.avgGroundContactTime ? s.avgGroundContactTime.toFixed(1) : '-';
+                            const balLeft = s.avgGroundContactBalanceLeft ? s.avgGroundContactBalanceLeft.toFixed(1) : '-';
+                            const balRight = (100 - parseFloat(balLeft)).toFixed(1);
+
+                            html += `
+                                <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 space-y-2">
+                                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                                        <span class="font-bold text-emerald-400 text-sm">${name}</span>
+                                        <span class="text-[11px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded">${s.noOfSplits || 1} st</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                        <div><span class="text-slate-400">Distans:</span> <span class="font-semibold text-white">${distMeters} m</span></div>
+                                        <div><span class="text-slate-400">Tid:</span> <span class="font-semibold text-white">${durationSec} s</span></div>
+                                        <div><span class="text-slate-400">Hastighet:</span> <span class="font-semibold text-white">${speedKmh} km/h</span></div>
+                                        <div><span class="text-slate-400">Kadens:</span> <span class="font-semibold text-white">${cad} spm</span></div>
+                                        <div><span class="text-slate-400">GCT:</span> <span class="font-semibold text-amber-400">${gctSplit} ms</span></div>
+                                        <div><span class="text-slate-400">GCT Balans:</span> <span class="font-semibold text-purple-400">${balLeft}%V / ${balRight}%H</span></div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        splitContent.innerHTML = html;
+                        splitCard.classList.remove('hidden');
+                    } else {
+                        splitCard.classList.add('hidden');
+                    }
+                } catch(e) {
+                    console.error("Kunde inte parsa split-data", e);
+                    splitCard.classList.add('hidden');
+                }
             } else {
-                // Kolla om det finns vanliga split-fält eller visa meddelande
-                splitCard.classList.remove('hidden');
-                splitContent.innerHTML = '<span class="text-slate-400 italic">Inga separata split-summaries registrerade i denna CSV-rad (eller fältet saknas).</span>';
+                splitCard.classList.add('hidden');
             }
 
             // Tabell med ALLA CSV-fält (avrundade)
@@ -839,11 +885,19 @@
         }
 
         function loadFallback() {
-            document.getElementById('statusText').textContent = "Offline (Exempeldata)";
+            document.getElementById('statusText').textContent = "Offline (Exempeldata med test-splits)";
             processData([
-                { startTimeLocal: '2026-11-06', activityName: 'Morgonjogg i lugnt tempo', activityType: 'Löpning', distance: 8.5432, duration: 2700, avgGroundContactTime: 232.45, avgGroundContactBalance: '50.123% L', averageHR: 121 },
-                { startTimeLocal: '2026-11-04', activityName: 'Tung vad- och hälstyrka', activityType: 'Styrketräning', distance: 0, duration: 2400, avgGroundContactTime: 0, averageHR: 105 },
-                { startTimeLocal: '2026-11-02', activityName: 'Aerob distans', activityType: 'Löpning', distance: 10.012, duration: 3200, avgGroundContactTime: 238.99, avgGroundContactBalance: '50.412% L', averageHR: 123 }
+                { 
+                    startTimeLocal: '2026-11-06', 
+                    activityName: 'Morgonjogg med gång & vila', 
+                    activityType: 'Löpning', 
+                    distance: 4173, 
+                    duration: 1525, 
+                    avgGroundContactTime: 266.7, 
+                    avgGroundContactBalance: '51.0% L', 
+                    averageHR: 132,
+                    splitSummaries: '[{"noOfSplits": 1, "duration": 7.0, "splitType": "RWD_STAND", "distance": 5.44, "averageSpeed": 0.78, "avgStepFrequency": 101.0, "avgGroundContactBalanceLeft": 42.0, "avgGroundContactTime": 649.7}, {"noOfSplits": 5, "duration": 268.0, "splitType": "RWD_WALK", "distance": 417.3, "averageSpeed": 1.56, "avgStepFrequency": 120.2, "avgGroundContactBalanceLeft": 50.38, "avgGroundContactTime": 371.3}, {"noOfSplits": 5, "duration": 1249.7, "splitType": "RWD_RUN", "distance": 3721.9, "averageSpeed": 2.98, "avgStepFrequency": 175.6, "avgGroundContactBalanceLeft": 51.0, "avgGroundContactTime": 266.7}]'
+                }
             ]);
         }
     </script>
