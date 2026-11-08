@@ -618,9 +618,14 @@
                             const balRaw = getProp(s, ['avgGroundContactBalanceLeft', 'avgBalanceLeft']);
                             const balSplit = balRaw ? formatBalance(balRaw + '% L') : '-';
                             
-                            const hrSplit = s.averageHR ? Math.round(s.averageHR) + ' bpm' : '-';
-                            const minHr = s.minHR ? Math.round(s.minHR) + ' bpm' : '-';
-                            const maxHr = s.maxHR ? Math.round(s.maxHR) + ' bpm' : '-';
+                            const hrRaw = getProp(s, ['averageHeartRate', 'avgHeartRate', 'averageHR', 'heartRate']);
+                            const hrSplit = hrRaw !== null ? Math.round(hrRaw) + ' bpm' : '-';
+                            
+                            const minHrRaw = getProp(s, ['minHeartRate', 'minHR', 'minimumHeartRate']);
+                            const minHr = minHrRaw !== null ? Math.round(minHrRaw) + ' bpm' : '-';
+                            
+                            const maxHrRaw = getProp(s, ['maxHeartRate', 'maxHR', 'maximumHeartRate']);
+                            const maxHr = maxHrRaw !== null ? Math.round(maxHrRaw) + ' bpm' : '-';
 
                             splitHtml += `
                                 <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
