@@ -433,6 +433,7 @@
         const WORKFLOW_ID = 'sync.yml';
 
         let allActivities = [];
+        let allHealthData = [];
         let activeTimeFilter = 7;
         let currentTab = 'overview';
         let previousTab = 'overview';
@@ -444,12 +445,14 @@
         let chartHealthObj = null;
 
         const CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_activities.csv`;
-
+        const HEALTH_CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_health.csv`;
+        
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             fetchData();
+            loadHealthData();
         });
-
+        
         function switchTab(tabId) {
             if (currentTab !== 'detail' && tabId !== 'detail') {
                 previousTab = currentTab;
@@ -829,7 +832,28 @@
                 if (refreshIcon) refreshIcon.classList.remove('animate-spin');
             }
         }
-
+        
+        async function loadHealthData() {
+            try {
+                const res = await fetch(HEALTH_CSV_URL, { cache: 'no-cache' });
+                if (res.ok) {
+                    const text = await res.text();
+                    Papa.parse(text, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            allHealthData = results.data || [];
+                            if (!document.getElementById('sec-health').classList.contains('hidden')) {
+                                renderHealthTab();
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn("Kunde inte ladda garmin_health.csv ännu:", e);
+            }
+        }
+        
         function parseCsv(csvText) {
             Papa.parse(csvText, {
                 header: true,
@@ -1052,79 +1076,113 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
         }
-
         let chartSleepObj = null;
 
-function renderHealthTab() {
-    // Sätt simulerade eller inlästa värden (kopplas mot Garmin-data om fälten finns)
-    document.getElementById('health-rhr').textContent = '52 bpm';
-    document.getElementById('health-hrv').textContent = 'Balanserad';
-    document.getElementById('health-sleep').textContent = '78 / 100';
-    document.getElementById('health-recovery').textContent = '12 h';
-
-    // Logik för skadeförebyggande beslutsstöd (50+ fokus)
-    const titleEl = document.getElementById('readinessTitle');
-    const descEl = document.getElementById('readinessDesc');
-    const actionEl = document.getElementById('readinessAction');
-    const bannerEl = document.getElementById('readinessBanner');
-    const iconEl = document.getElementById('readinessIcon');
-
-    // Här kan villkor baseras på vilopuls/HRV (t.ex. om vilopuls är normal 50-54)
-    titleEl.textContent = "Kroppen är i balans – God beredskap";
-    descEl.textContent = "Vilopuls och HRV är inom normal intervall. Ingen förhöjd trötthet i leder eller senor.";
-    actionEl.textContent = "Tröskel / Styrka OK";
-    
-    bannerEl.className = "bg-gradient-to-r from-emerald-900/40 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex items-center justify-between shadow-lg";
-
-    // 1. Vilopuls-trend graf
-    const ctx1 = document.getElementById('chartHealthTrend').getContext('2d');
-    if (chartHealthObj) chartHealthObj.destroy();
-    chartHealthObj = new Chart(ctx1, {
-        type: 'line',
-        data: {
-            labels: ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'],
-            datasets: [{ 
-                label: 'Vilopuls (bpm)', 
-                data: [53, 51, 52, 54, 50, 52, 51], 
-                borderColor: '#f43f5e', 
-                backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                fill: true,
-                tension: 0.3 
-            }]
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }
+        function renderHealthTab() {
+            let filtered = [...allHealthData];
+            if (typeof activeTimeFilter === 'number' && activeTimeFilter > 0) {
+                filtered = filtered.slice(0, activeTimeFilter);
+            }
+        
+            if (filtered.length === 0) {
+                document.getElementById('readinessTitle').textContent = "Ingen hälsodata inläst ännu";
+                document.getElementById('readinessDesc').textContent = "Kör synken för att skapa garmin_health.csv.";
+                return;
+            }
+        
+            const latest = filtered[0] || {};
+            const latestRHR = latest.restingHeartRate ? Math.round(Number(latest.restingHeartRate)) : '--';
+            const validRHRs = filtered.map(d => Number(d.restingHeartRate)).filter(v => v > 0);
+            const avgRHR = validRHRs.length ? (validRHRs.reduce((a, b) => a + b, 0) / validRHRs.length).toFixed(1) : '--';
+        
+            const hrvStatus = latest.hrvStatus || 'Balanserad';
+            const validSleep = filtered.map(d => Number(d.sleepScore)).filter(v => v > 0);
+            const avgSleepScore = validSleep.length ? Math.round(validSleep.reduce((a, b) => a + b, 0) / validSleep.length) : '--';
+            const latestBB = latest.bodyBattery ? latest.bodyBattery + '%' : '--';
+        
+            document.getElementById('health-rhr').textContent = `${latestRHR} bpm`;
+            document.getElementById('health-hrv').textContent = hrvStatus;
+            document.getElementById('health-sleep').textContent = `${avgSleepScore} / 100`;
+            document.getElementById('health-recovery').textContent = latestBB;
+        
+            const titleEl = document.getElementById('readinessTitle');
+            const descEl = document.getElementById('readinessDesc');
+            const actionEl = document.getElementById('readinessAction');
+            const bannerEl = document.getElementById('readinessBanner');
+        
+            const numRHR = Number(latestRHR);
+            const numAvgRHR = Number(avgRHR);
+        
+            if (numRHR && numAvgRHR && numRHR > numAvgRHR + 4) {
+                titleEl.textContent = "Förhöjd vilopuls – Var försiktig";
+                descEl.textContent = `Dagens vilopuls (${numRHR} bpm) är högre än ditt snitt (${avgRHR} bpm). Ökad skaderisk i senor/leder.`;
+                actionEl.textContent = "Lugn jogg / Vila";
+                bannerEl.className = "bg-gradient-to-r from-amber-900/40 to-slate-800 border border-amber-500/30 rounded-2xl p-5 flex items-center justify-between shadow-lg";
+            } else {
+                titleEl.textContent = "Kroppen är i balans – God beredskap";
+                descEl.textContent = `Vilopuls (${latestRHR} bpm) och HRV är inom normalt intervall. Redo för planerad träning.`;
+                actionEl.textContent = "Tröskel / Styrka OK";
+                bannerEl.className = "bg-gradient-to-r from-emerald-900/40 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex items-center justify-between shadow-lg";
+            }
+        
+            const chartData = [...filtered].reverse();
+            const labels = chartData.map(d => d.date ? d.date.substring(5) : '');
+            const rhrData = chartData.map(d => Number(d.restingHeartRate) || null);
+            const deepSleepHours = chartData.map(d => d.deepSleepSeconds ? (Number(d.deepSleepSeconds) / 3600).toFixed(1) : 0);
+        
+            const ctx1 = document.getElementById('chartHealthTrend').getContext('2d');
+            if (chartHealthObj) chartHealthObj.destroy();
+            chartHealthObj = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{ 
+                        label: 'Vilopuls (bpm)', 
+                        data: rhrData, 
+                        borderColor: '#f43f5e', 
+                        backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                        fill: true,
+                        tension: 0.3 
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } }, 
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } } 
+                    }
+                }
+            });
+        
+            const ctx2 = document.getElementById('chartSleepQuality').getContext('2d');
+            if (chartSleepObj) chartSleepObj.destroy();
+            chartSleepObj = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{ 
+                        label: 'Djup sömn (h)', 
+                        data: deepSleepHours, 
+                        backgroundColor: '#818cf8', 
+                        borderRadius: 4 
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } }, 
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } } 
+                    }
+                }
+            });
+        
+            if (window.lucide) lucide.createIcons();
         }
-    });
-
-    // 2. Sömnkvalitet graf
-    const ctx2 = document.getElementById('chartSleepQuality').getContext('2d');
-    if (chartSleepObj) chartSleepObj.destroy();
-    chartSleepObj = new Chart(ctx2, {
-        type: 'bar',
-        data: {
-            labels: ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'],
-            datasets: [{ 
-                label: 'Djup sömn (h)', 
-                data: [1.8, 2.1, 1.6, 2.2, 1.9, 2.4, 2.0], 
-                backgroundColor: '#818cf8', 
-                borderRadius: 4 
-            }]
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }
-        }
-    });
-
-    lucide.createIcons();
-}
-
+        
         function loadFallback() {
             document.getElementById('statusText').textContent = "Offline (Exempeldata med test-splits)";
             processData([
