@@ -122,7 +122,11 @@ def sync_health_data(access_token):
                 if v != "" or k not in health_records[date_str]:
                     health_records[date_str][k] = v
 
-    fieldnames = ["date", "restingHeartRate", "hrvStatus", "hrvWeeklyAvg", "sleepScore", "sleepTimeSeconds", "deepSleepSeconds", "bodyBattery"]
+    fieldnames = [
+    "date", "restingHeartRate", "hrvStatus", "hrvWeeklyAvg", 
+    "sleepScore", "sleepTimeSeconds", "deepSleepSeconds", "bodyBattery",
+    "rpe", "painLocation", "painLevel"
+]
     
     sorted_records = sorted(health_records.values(), key=lambda x: x["date"], reverse=True)
     
