@@ -593,53 +593,71 @@
             }
 
             // Fas- och Intervalltabell baserad på Split Summaries
+            // Uppdatera tabellrubrikerna så de matchar de nya mätvärdena
             const kmCard = document.getElementById('kmTableCard');
+            const kmTableHead = kmCard.querySelector('thead tr');
+            kmTableHead.innerHTML = `
+                <th class="p-2.5">Fas / Typ</th>
+                <th class="p-2.5">Tid</th>
+                <th class="p-2.5">Distans</th>
+                <th class="p-2.5">Snitttempo</th>
+                <th class="p-2.5">Kadens</th>
+                <th class="p-2.5">Steglängd</th>
+                <th class="p-2.5">GCT</th>
+                <th class="p-2.5">GCT Balans</th>
+                <th class="p-2.5">Medelpuls</th>
+                <th class="p-2.5">Högsta Puls</th>
+            `;
+            
             const kmBody = document.getElementById('kmTableBody');
             let splitsParsed = false;
-
+            
             if (rawSplitVal && String(rawSplitVal).trim().startsWith('[')) {
                 try {
                     const cleanJsonStr = String(rawSplitVal).replace(/'/g, '"');
                     const splits = JSON.parse(cleanJsonStr);
                     if (Array.isArray(splits) && splits.length > 0) {
                         let splitHtml = '';
-                        let accumulatedSec = 0;
-
+            
                         splits.forEach((s) => {
-                            console.log("Fas-objekt från Garmin:", s);
                             const name = translateSplitType(s.splitType);
                             const dur = Number(s.duration || 0);
-                            accumulatedSec += dur;
-                            const accTimeStr = formatTimeDetailed(accumulatedSec);
+                            const timeStr = formatTimeDetailed(dur);
+                            const distMeters = s.distance ? Number(s.distance).toFixed(0) + ' m' : '-';
                             const pace = formatPace(s.averageSpeed || s.speed);
                             
-                            const gctRaw = getProp(s, ['avgGroundContactTime', 'avgGCT', 'groundContactTime']);
-                            const gctSplit = gctRaw ? Number(gctRaw).toFixed(1) + ' ms' : '-';
+                            // Extrahera de gulmarkerade fälten robust med getProp
+                            const cadRaw = getProp(s, ['averageRunCadence', 'avgStepFrequency', 'avgCadence']);
+                            const cadStr = cadRaw !== null ? Math.round(cadRaw) + ' spm' : '-';
+            
+                            const strideRaw = getProp(s, ['avgStepLength', 'strideLength']);
+                            // Konvertera från meter (t.ex. 1.01) till cm för läsbarhet
+                            const strideStr = strideRaw !== null ? (Number(strideRaw) * 100).toFixed(0) + ' cm' : '-';
+            
+                            const gctRaw = getProp(s, ['avgGroundContactTime', 'groundContactTime']);
+                            const gctSplit = gctRaw !== null ? Number(gctRaw).toFixed(1) + ' ms' : '-';
                             
-                            const balRaw = getProp(s, ['avgGroundContactBalanceLeft', 'avgBalanceLeft']);
-                            const balSplit = balRaw ? formatBalance(balRaw + '% L') : '-';
+                            const balRaw = getProp(s, ['avgGroundContactBalanceLeft', 'groundContactBalanceLeft']);
+                            const balSplit = balRaw !== null ? formatBalance(balRaw + '% L') : '-';
                             
-                            const hrRaw = getProp(s, ['averageHeartRate', 'avgHeartRate', 'averageHR', 'heartRate']);
+                            const hrRaw = getProp(s, ['averageHeartRate', 'avgHeartRate', 'averageHR']);
                             const hrSplit = hrRaw !== null ? Math.round(hrRaw) + ' bpm' : '-';
-                            
-                            const minHrRaw = getProp(s, ['minHeartRate', 'minHR', 'minimumHeartRate']);
-                            const minHr = minHrRaw !== null ? Math.round(minHrRaw) + ' bpm' : '-';
-                            
-                            const maxHrRaw = getProp(s, ['maxHeartRate', 'maxHR', 'maximumHeartRate']);
+            
+                            const maxHrRaw = getProp(s, ['maxHeartRate', 'maxHR']);
                             const maxHr = maxHrRaw !== null ? Math.round(maxHrRaw) + ' bpm' : '-';
-
+            
                             splitHtml += `
                                 <tr class="border-b border-slate-800/60 hover:bg-slate-800/40">
-                                    <td class="p-2.5 font-bold text-emerald-400">${name} (${s.noOfSplits || 1} st)</td>
-                                    <td class="p-2.5 text-white font-semibold">${accTimeStr}</td>
+                                    <td class="p-2.5 font-bold text-emerald-400">${name}</td>
+                                    <td class="p-2.5 text-white font-semibold">${timeStr}</td>
+                                    <td class="p-2.5">${distMeters}</td>
                                     <td class="p-2.5">${pace}</td>
-                                    <td class="p-2.5 text-slate-400">-</td>
-                                    <td class="p-2.5 text-slate-400">-</td>
+                                    <td class="p-2.5 text-sky-400">${cadStr}</td>
+                                    <td class="p-2.5 text-indigo-300">${strideStr}</td>
                                     <td class="p-2.5 text-amber-400">${gctSplit}</td>
                                     <td class="p-2.5 text-purple-400">${balSplit}</td>
                                     <td class="p-2.5">${hrSplit}</td>
-                                    <td class="p-2.5 text-slate-400">${minHr}</td>
-                                    <td class="p-2.5 text-slate-400">${maxHr}</td>
+                                    <td class="p-2.5 text-rose-400">${maxHr}</td>
                                 </tr>
                             `;
                         });
