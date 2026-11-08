@@ -288,7 +288,57 @@
 
         <!-- ==================== TAB 4: DYGNET-RUNT & HÄLSODATA ==================== -->
         <section id="sec-health" class="hidden space-y-6">
+            <!-- DAGBOK & SYMPTOMKORT (SPARAS DIREKT I garmin_health.csv) -->
+            <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="edit-3" class="w-4 h-4 text-emerald-400"></i> Dagens Känsla & Känningar (Sparas till CSV)
+                    </h3>
+                    <span class="text-[11px] text-emerald-400 font-medium">Molnbaserad synk</span>
+                </div>
             
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Dagsform / Känsla (1-5)</label>
+                        <select id="log-rpe" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="5">5 - Pigg & Fräsch</option>
+                            <option value="4" selected>4 - Normal / God kännedom</option>
+                            <option value="3">3 - Lite seg / Sliten</option>
+                            <option value="2">2 - Mycket trött</option>
+                            <option value="1">1 - Utmattad / Hängig</option>
+                        </select>
+                    </div>
+            
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Känning i Vad/Hälsena</label>
+                        <select id="log-location" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="none">Ingen känning (Helt OK)</option>
+                            <option value="v-calf">Vänster Vad</option>
+                            <option value="h-calf">Höger Vad</option>
+                            <option value="v-achilles">Vänster Hälsena</option>
+                            <option value="h-achilles">Höger Hälsena</option>
+                        </select>
+                    </div>
+            
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Smärtskala / Stelhet (0-10)</label>
+                        <select id="log-pain" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="0">0 - Smärtfri</option>
+                            <option value="1">1 - Mycket lätt stelhet vid start</option>
+                            <option value="2">2 - Lätt stelhet (släpper efter uppvärmning)</option>
+                            <option value="3">3 - Tydlig stelhet/muggighet</option>
+                            <option value="4">4 - Molande känning under löpning</option>
+                            <option value="5">5+ - Hugg/Smärta (Bör ej springa)</option>
+                        </select>
+                    </div>
+                </div>
+            
+                <div class="flex justify-end pt-2">
+                    <button onclick="saveDailyLogToGitHub()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition shadow">
+                        <i data-lucide="cloud-upload" class="w-4 h-4"></i> Spara till garmin_health.csv
+                    </button>
+                </div>
+            </div>
             <!-- DAGENS TRÄNINGSREKOMMENDATION (BESLUTSSTÖD) -->
             <div id="readinessBanner" class="bg-gradient-to-r from-emerald-900/40 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex items-center justify-between shadow-lg">
                 <div class="flex items-center gap-4">
@@ -761,7 +811,103 @@
             });
             renderAll();
         }
-
+        
+        async function saveDailyLogToGitHub() {
+        let token = localStorage.getItem('gh_pat_token');
+        if (!token) {
+            token = prompt("Ange din GitHub Personal Access Token (PAT) för att spara till repot:");
+            if (token) {
+                localStorage.setItem('gh_pat_token', token.trim());
+            } else {
+                alert("Token krävs för att spara direkt till GitHub.");
+                return;
+            }
+        }
+    
+        const todayStr = new Date().toISOString().substring(0, 10);
+        const newRpe = document.getElementById('log-rpe').value;
+        const newLocation = document.getElementById('log-location').value;
+        const newPain = document.getElementById('log-pain').value;
+    
+        // 1. Hämta befintlig garmin_health.csv från GitHub för att inte skriva över allt
+        const filePath = "garmin_health.csv";
+        const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${filePath}`;
+    
+        try {
+            const getRes = await fetch(apiUrl, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json' }
+            });
+    
+            if (!getRes.ok) {
+                alert("Kunde inte hämta befintlig hälsorapport från GitHub. Kontrollera din PAT-token.");
+                return;
+            }
+    
+            const fileData = await getRes.json();
+            const decodedContent = decodeURIComponent(escape(atob(fileData.content)));
+    
+            // 2. Parsa CSV, uppdatera dagens rad eller lägg till ny
+            let parsed = Papa.parse(decodedContent, { header: true, skipEmptyLines: true });
+            let rows = parsed.data;
+    
+            let found = false;
+            rows.forEach(r => {
+                if (r.date === todayStr) {
+                    r.rpe = newRpe;
+                    r.painLocation = newLocation;
+                    r.painLevel = newPain;
+                    found = true;
+                }
+            });
+    
+            if (!found) {
+                rows.unshift({
+                    date: todayStr,
+                    restingHeartRate: "",
+                    hrvStatus: "",
+                    hrvWeeklyAvg: "",
+                    sleepScore: "",
+                    sleepTimeSeconds: "",
+                    deepSleepSeconds: "",
+                    bodyBattery: "",
+                    rpe: newRpe,
+                    painLocation: newLocation,
+                    painLevel: newPain
+                });
+            }
+    
+            // Konvertera tillbaka till CSV-format
+            const updatedCsv = Papa.unparse(rows);
+            const encodedContent = btoa(unescape(encodeURIComponent(updatedCsv)));
+    
+            // 3. Skicka uppdateringen till GitHub (Commit)
+            const putRes = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'vnd.github+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: `Uppdatera dagsnotering och känning för ${todayStr}`,
+                    content: encodedContent,
+                    sha: fileData.sha
+                })
+            });
+    
+            if (putRes.ok) {
+                alert("✅ Dagsnoteringen har sparats direkt till garmin_health.csv på GitHub!");
+                loadHealthData(); // Ladda om datan i dashboarden
+            } else {
+                const err = await putRes.json().catch(() => ({}));
+                alert(`Kunde inte spara: ${err.message || putRes.statusText}`);
+            }
+    
+        } catch (e) {
+            console.error(e);
+            alert("Ett nätverksfel uppstod vid kommunikation med GitHub API.");
+        }
+    }
         async function triggerGitHubWorkflow() {
             let token = localStorage.getItem('gh_pat_token');
             if (!token) {
@@ -863,7 +1009,7 @@
                 }
             });
         }
-
+        
         function processData(rows) {
             allActivities = rows.map((r, i) => {
                 const date = r.startTimeLocal || r.Date || r.Datum || `2026-11-0${i+1}`;
