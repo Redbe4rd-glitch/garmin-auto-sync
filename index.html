@@ -1094,11 +1094,11 @@
 
             // Översätt HRV status från engelska Garmin-nycklar
             const rawHrv = latest.hrvStatus || '';
-            let hrvStatus = 'Balanserad';
-            if (rawHrv === 'LOW') hrvStatus = 'Låg ⚠️';
-            else if (rawHrv === 'UNBALANCED') hrvStatus = 'Obalanserad';
-            else if (rawHrv === 'BALANCED') hrvStatus = 'Balanserad';
-            else if (rawHrv) hrvStatus = rawHrv;
+            let displayHrvStatus = 'Balanserad';
+            if (rawHrv === 'LOW') displayHrvStatus = 'Låg ⚠️';
+            else if (rawHrv === 'UNBALANCED') displayHrvStatus = 'Obalanserad';
+            else if (rawHrv === 'BALANCED') displayHrvStatus = 'Balanserad';
+            else if (rawHrv) displayHrvStatus = rawHrv;
             
             const latestRHR = latest.restingHeartRate ? Math.round(Number(latest.restingHeartRate)) : '--';
             const validRHRs = filtered.map(d => Number(d.restingHeartRate)).filter(v => v > 0);
@@ -1110,7 +1110,7 @@
             const latestBB = latest.bodyBattery ? latest.bodyBattery + '%' : '--';
         
             document.getElementById('health-rhr').textContent = `${latestRHR} bpm`;
-            document.getElementById('health-hrv').textContent = hrvStatus;
+            document.getElementById('health-hrv').textContent = displayHrvStatus;
             document.getElementById('health-sleep').textContent = `${avgSleepScore} / 100`;
             document.getElementById('health-recovery').textContent = latestBB;
         
