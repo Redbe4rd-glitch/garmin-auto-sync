@@ -606,6 +606,7 @@
                         let accumulatedSec = 0;
 
                         splits.forEach((s) => {
+                            console.log("Fas-objekt från Garmin:", s);
                             const name = translateSplitType(s.splitType);
                             const dur = Number(s.duration || 0);
                             accumulatedSec += dur;
