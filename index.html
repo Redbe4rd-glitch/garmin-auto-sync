@@ -1091,6 +1091,15 @@
             }
         
             const latest = filtered[0] || {};
+
+            // Översätt HRV status från engelska Garmin-nycklar
+            const rawHrv = latest.hrvStatus || '';
+            let hrvStatus = 'Balanserad';
+            if (rawHrv === 'LOW') hrvStatus = 'Låg ⚠️';
+            else if (rawHrv === 'UNBALANCED') hrvStatus = 'Obalanserad';
+            else if (rawHrv === 'BALANCED') hrvStatus = 'Balanserad';
+            else if (rawHrv) hrvStatus = rawHrv;
+            
             const latestRHR = latest.restingHeartRate ? Math.round(Number(latest.restingHeartRate)) : '--';
             const validRHRs = filtered.map(d => Number(d.restingHeartRate)).filter(v => v > 0);
             const avgRHR = validRHRs.length ? (validRHRs.reduce((a, b) => a + b, 0) / validRHRs.length).toFixed(1) : '--';
