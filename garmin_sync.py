@@ -52,8 +52,8 @@ def sync_health_data(access_token):
                     health_records[row["date"]] = row
 
     for date_str in dates:
-        # 1. Daglig sammanfattning (Vilopuls & Body Battery)
-        summary_url = f"https://personal.connectapi.garmin.com/usersummary-service/usersummary/daily/{date_str}"
+        # 1. Korrigerad URL med ?calendarDate= för daglig sammanfattning (Vilopuls & Body Battery)
+        summary_url = f"https://personal.connectapi.garmin.com/usersummary-service/usersummary/daily?calendarDate={date_str}"
         summary_data = fetch_garmin_api(summary_url, access_token) or {}
 
         # 2. HRV-data
@@ -64,7 +64,11 @@ def sync_health_data(access_token):
         sleep_url = f"https://personal.connectapi.garmin.com/sleep-service/sleep/dailySleep?date={date_str}"
         sleep_data = fetch_garmin_api(sleep_url, access_token) or {}
 
-        # --- Robust utläsning av mätvärden ---
+        # Hantera om summary_data returneras som en lista eller ett objekt
+        if isinstance(summary_data, list) and len(summary_data) > 0:
+            summary_data = summary_data[0]
+
+        # Parsa ut mätvärden
         rhr = (
             summary_data.get("restingHeartRate") or 
             summary_data.get("rhr") or 
