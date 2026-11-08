@@ -64,17 +64,38 @@ def sync_health_data(access_token):
         sleep_url = f"https://personal.connectapi.garmin.com/sleep-service/sleep/dailySleep?date={date_str}"
         sleep_data = fetch_garmin_api(sleep_url, access_token) or {}
 
-        # Parsa ut mätvärden
-        rhr = summary_data.get("restingHeartRate") or summary_data.get("rhr") or ""
-        body_battery = summary_data.get("bodyBatteryMostRecentValue") or summary_data.get("bodyBattery") or ""
+        # --- Robust utläsning av mätvärden ---
+        rhr = (
+            summary_data.get("restingHeartRate") or 
+            summary_data.get("rhr") or 
+            summary_data.get("userDailySummary", {}).get("restingHeartRate") or
+            ""
+        )
         
-        hrv_summary = hrv_data.get("hrvSummary") or {}
-        hrv_status = hrv_summary.get("status") or hrv_data.get("status") or ""
+        body_battery = (
+            summary_data.get("bodyBatteryMostRecentValue") or 
+            summary_data.get("bodyBattery") or 
+            summary_data.get("userDailySummary", {}).get("bodyBatteryMostRecentValue") or 
+            ""
+        )
+        
+        hrv_summary = hrv_data.get("hrvSummary") or hrv_data or {}
+        hrv_status = hrv_summary.get("status") or ""
         hrv_weekly_avg = hrv_summary.get("weeklyAvg") or ""
 
         sleep_dto = sleep_data.get("dailySleepDTO") or sleep_data or {}
-        sleep_scores = sleep_dto.get("sleepScore") or {}
-        sleep_overall = sleep_scores.get("overallScore", {}).get("value") if isinstance(sleep_scores.get("overallScore"), dict) else sleep_scores.get("overallScore") or ""
+        sleep_scores = sleep_dto.get("sleepScores") or sleep_dto.get("sleepScore") or {}
+        
+        sleep_overall = ""
+        if isinstance(sleep_scores, dict):
+            overall = sleep_scores.get("overallScore") or sleep_scores.get("overall")
+            if isinstance(overall, dict):
+                sleep_overall = overall.get("value") or ""
+            elif isinstance(overall, (int, float, str)):
+                sleep_overall = overall
+        elif isinstance(sleep_scores, (int, float, str)):
+            sleep_overall = sleep_scores
+
         deep_sleep_sec = sleep_dto.get("deepSleepSeconds") or ""
         sleep_time_sec = sleep_dto.get("sleepTimeSeconds") or ""
 
