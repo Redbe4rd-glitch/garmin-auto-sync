@@ -976,17 +976,15 @@
 
         async function fetchData() {
             const refreshIcon = document.getElementById('refreshIcon');
+            
+            // Sätt på snurrandet enbart när funktionen anropas
             if (refreshIcon) refreshIcon.classList.add('animate-spin');
-            document.getElementById('statusText').textContent = "Hämtar data från GitHub...";
-
-            // Sätt en timeout på 10 sekunder så att anropet inte hänger sig
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+            
+            const statusTextEl = document.getElementById('statusText');
+            if (statusTextEl) statusTextEl.textContent = "Hämtar data från GitHub...";
+        
             try {
-                const res = await fetch(CSV_URL, { cache: 'no-cache', signal: controller.signal });
-                clearTimeout(timeoutId);
-                
+                const res = await fetch(CSV_URL + "?t=" + Date.now(), { cache: 'no-cache' });
                 if (res.ok) {
                     const text = await res.text();
                     parseCsv(text);
@@ -994,11 +992,13 @@
                     loadFallback();
                 }
             } catch (e) {
-                console.warn("Kunde inte hämta CSV, laddar fallback:", e);
+                console.warn("Kunde inte hämta CSV:", e);
                 loadFallback();
             } finally {
-                // Säkerställ alltid att ikonen slutar snurra
-                if (refreshIcon) refreshIcon.classList.remove('animate-spin');
+                // Detta block körs garanterat och stänger av snurrandet
+                if (refreshIcon) {
+                    refreshIcon.classList.remove('animate-spin');
+                }
             }
         }
         
