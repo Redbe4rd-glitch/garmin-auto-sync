@@ -248,7 +248,7 @@
                         <h3 class="text-sm font-bold text-white flex items-center gap-2">
                             <i data-lucide="footprints" class="w-4 h-4 text-amber-400"></i> Markontakttid - GCT (ms)
                         </h3>
-                        <span class="text-[11px] text-amber-400 font-medium">Mål: &lt; 240 ms</span>
+                        <span class="text-[11px] text-amber-400 font-medium">Tempobaserad baslinje</span>
                     </div>
                     <div class="h-64">
                         <canvas id="chartGctTrend"></canvas>
@@ -509,7 +509,6 @@
         
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
-            // Säkerställ att inga ikoner snurrar vid start
             document.querySelectorAll('#refreshIcon, #syncIcon').forEach(el => el.classList.remove('animate-spin'));
             fetchData();
             loadHealthData();
@@ -616,6 +615,57 @@
             return null;
         }
 
+        /**
+         * Analyserar löpmått dynamiskt utifrån personlig historisk baseline (2020-2026)
+         */
+        function analyzeRunMetrics(act) {
+            const cadence = act.cadence;
+            const gct = act.gct;
+            const speedMps = parseFloat(act.raw.averageSpeed || act.raw.averageSpeed || 0);
+            const paceMinKm = speedMps > 0 ? (1000 / speedMps) / 60 : null;
+
+            let balanceLeft = 50.5;
+            const balMatch = String(act.balance).match(/([\d.]+)/);
+            if (balMatch) balanceLeft = parseFloat(balMatch[1]);
+
+            let warnings = [];
+            let status = 'OK';
+
+            // Tempobaserad GCT-förväntan
+            if (gct > 0 && paceMinKm) {
+                let expectedGct = 269;
+                if (paceMinKm < 4.5) expectedGct = 253;
+                else if (paceMinKm >= 4.5 && paceMinKm < 5.0) expectedGct = 262;
+                else if (paceMinKm >= 5.0 && paceMinKm < 5.5) expectedGct = 269;
+                else expectedGct = 277;
+
+                if (gct > expectedGct + 12) {
+                    warnings.push(`Hög GCT (${gct} ms vs ~${expectedGct} ms för ${formatPace(speedMps)})`);
+                }
+            }
+
+            // Kadens-kontroll
+            if (cadence > 0 && cadence < 158) {
+                warnings.push(`Låg kadens (${cadence} spm)`);
+            }
+
+            // GCT-balans kontroll (V/H)
+            if (balanceLeft > 51.8 || balanceLeft < 48.5) {
+                warnings.push(`Snedbelastning (${balanceLeft.toFixed(1)}% V)`);
+            }
+
+            if (warnings.length > 0) {
+                status = 'Varning';
+            }
+
+            return {
+                status: status,
+                warnings: warnings,
+                cadenceStr: cadence > 0 ? cadence + ' spm' : '-',
+                gctStr: gct > 0 ? gct + ' ms' : '-'
+            };
+        }
+
         function showActivityDetail(index) {
             const act = allActivities[index];
             if (!act) return;
@@ -623,6 +673,9 @@
             const activityName = act.raw.activityName || act.raw.Name || act.raw.title || `${act.type} – ${act.date}`;
             document.getElementById('detailHeaderTitle').textContent = activityName;
             document.getElementById('detailHeaderSub').textContent = `Datum: ${act.date} | Distans: ${act.distance.toFixed(2)} km | Tid: ${formatTimeDetailed(act.duration)}`;
+
+            const analysis = analyzeRunMetrics(act);
+            const gctColor = analysis.status === 'Varning' ? 'text-rose-400' : 'text-emerald-400';
 
             const cardsGrid = document.getElementById('detailCardsGrid');
             cardsGrid.innerHTML = `
@@ -634,9 +687,9 @@
                     <span class="text-[10px] text-slate-400 uppercase tracking-wider">Medelpuls</span>
                     <div class="text-xl font-bold ${act.hr > 142 ? 'text-rose-400' : (act.hr <= 124 ? 'text-emerald-400' : 'text-sky-400')} mt-1">${act.hr > 0 ? act.hr + ' bpm' : 'N/A'}</div>
                 </div>
-                <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-4">
+                <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-4" title="${analysis.warnings.join(', ')}">
                     <span class="text-[10px] text-slate-400 uppercase tracking-wider">GCT (Markkontakt)</span>
-                    <div class="text-xl font-bold ${act.gct > 240 ? 'text-rose-400' : 'text-amber-400'} mt-1">${act.gct > 0 ? act.gct + ' ms' : 'N/A'}</div>
+                    <div class="text-xl font-bold ${gctColor} mt-1">${analysis.gctStr}</div>
                 </div>
                 <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-4">
                     <span class="text-[10px] text-slate-400 uppercase tracking-wider">GCT-Balans</span>
@@ -678,7 +731,7 @@
                                     <div><span class="text-slate-400">Distans:</span> <span class="font-semibold text-white">${distMeters} m</span></div>
                                     <div><span class="text-slate-400">Tid:</span> <span class="font-semibold text-white">${durationStr}</span></div>
                                     <div><span class="text-slate-400">Hastighet:</span> <span class="font-semibold text-white">${speedKmh} km/h</span></div>
-                                    <div><span class="text-slate-400">Kadens:</span> <span class="font-semibold text-white">${Math.round(cad)} spm</span></div>
+                                    <div><span class="text-slate-400">Kadens:</span> <span class="font-semibold text-white">${cad !== '-' ? Math.round(cad) + ' spm' : '-'}</span></div>
                                     <div><span class="text-slate-400">GCT:</span> <span class="font-semibold text-amber-400">${gctSplit !== '-' ? gctSplit + ' ms' : '-'}</span></div>
                                     <div><span class="text-slate-400">GCT Balans:</span> <span class="font-semibold text-purple-400">${balLeftStr !== '-' ? balLeftStr + '%V / ' + balRightStr + '%H' : '-'}</span></div>
                                 </div>
@@ -1044,7 +1097,11 @@
                 const gct = parseInt(r.avgGroundContactTime || r.GCT || 0);
                 const balance = r.avgGroundContactBalance || r.Balance || '50/50';
                 const hr = parseInt(r.averageHR || r.HR || 0);
-                const cadence = parseInt(r.averageRunningCadence || r.Cadence || 165);
+                
+                // Robust avläsning av kadens över alla möjliga Garmin-fältnamn
+                const cadenceRaw = r.averageRunningCadenceInStepsPerMinute || r.averageRunningCadence || r.avgCadence || r.cadence;
+                const cadence = (cadenceRaw !== undefined && cadenceRaw !== null && cadenceRaw !== '') ? Math.round(parseFloat(cadenceRaw)) : 0;
+
                 const typeRaw = String(r.activityType || r.Type || 'Löpning').toLowerCase();
 
                 let type = 'Löpning';
@@ -1104,7 +1161,7 @@
             document.getElementById('kpi-volume').textContent = `${vol7d} km`;
             document.getElementById('kpi-volume-sub').textContent = `${recent7d.length} pass senaste 7 dagarna`;
             document.getElementById('kpi-fatmax').textContent = `${fatMaxPct}%`;
-            document.getElementById('kpi-gct').textContent = latestGct ? `${latestGct.gct} ms` : '235 ms';
+            document.getElementById('kpi-gct').textContent = latestGct ? `${latestGct.gct} ms` : '269 ms';
             document.getElementById('kpi-gct-sub').textContent = `Balans: ${latestGct ? formatBalance(latestGct.balance) : '50/50'}`;
             document.getElementById('kpi-strength').textContent = `${strength7d} st`;
 
@@ -1198,15 +1255,19 @@
             data.forEach((a) => {
                 const actIndex = allActivities.findIndex(item => item === a);
                 const name = a.raw.activityName || a.raw.Name || a.type;
-                const status = a.gct > 240 ? '<span class="text-rose-400 font-bold">⚠️ Varning (>240ms)</span>' : '<span class="text-emerald-400 font-medium">OK</span>';
+                const analysis = analyzeRunMetrics(a);
+                const statusHtml = analysis.status === 'Varning' 
+                    ? `<span class="text-rose-400 font-bold" title="${analysis.warnings.join(', ')}">⚠️ Varning</span>` 
+                    : '<span class="text-emerald-400 font-medium">✓ Optimal</span>';
+
                 tbody.innerHTML += `
                     <tr onclick="showActivityDetail(${actIndex})" class="border-b border-slate-800 clickable-row">
                         <td class="p-2.5 font-mono text-[11px]">${a.date}</td>
                         <td class="p-2.5 font-medium">${name}</td>
-                        <td class="p-2.5 font-bold font-mono">${a.gct} ms</td>
+                        <td class="p-2.5 font-bold font-mono">${analysis.gctStr}</td>
                         <td class="p-2.5 font-mono">${formatBalance(a.balance)}</td>
-                        <td class="p-2.5 font-mono">${a.cadence} spm</td>
-                        <td class="p-2.5">${status}</td>
+                        <td class="p-2.5 font-mono">${analysis.cadenceStr}</td>
+                        <td class="p-2.5">${statusHtml}</td>
                         <td class="p-2.5 text-right"><span class="text-xs text-emerald-400 font-semibold hover:underline">Visa &rarr;</span></td>
                     </tr>
                 `;
@@ -1261,7 +1322,6 @@
             }
         
             const latest = filtered[0] || {};
-
             const todayStr = new Date().toISOString().substring(0, 10);
             const todayRecord = filtered.find(d => d.date === todayStr) || latest;
             
@@ -1296,7 +1356,6 @@
             const latestBB = latest.bodyBattery ? latest.bodyBattery + '%' : '--';
         
             const painLevel = latest.painLevel ? Number(latest.painLevel) : 0;
-            
             const numRHR = Number(latestRHR);
             const numAvgRHR = Number(avgRHR);
             const rhrAvsteg = (!isNaN(numRHR) && !isNaN(numAvgRHR)) ? (numRHR - numAvgRHR) : 0;
@@ -1316,7 +1375,6 @@
 
             if (painLevel >= 3 || rhrAvsteg >= 5) {
                 titleEl.textContent = "🔴 Rött Ljus: Hög Skaderisk / Belastning";
-                
                 if (painLevel >= 3) {
                     descEl.textContent = `Tydlig känning loggad (${latest.painLocation || 'Vad/Hälsena'} - ${painLevel}/10). Löpvila krävs för att låta senvävnaden återhämta sig.`;
                     actionEl.textContent = "Crosstrainer / Cykel + Rehab";
@@ -1324,29 +1382,25 @@
                     descEl.textContent = `Vilopulsen är avsevärd förhöjd (+${rhrAvsteg.toFixed(1)} bpm). Centrala nervsystemet är överbelastat.`;
                     actionEl.textContent = "Total Vila & Återhämtning";
                 }
-
                 bannerEl.className = "bg-gradient-to-r from-rose-950/80 to-slate-800 border border-rose-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
             else if (painLevel >= 1) {
                 titleEl.textContent = "🟡 Gult Ljus: Skadeförebyggande läge (Stelhet/Lätt känning)";
                 descEl.textContent = `Stelhet loggad (${latest.painLocation || 'Vad/Hälsena'} - ${painLevel}/10). Löpning är tillåten i lugnt tempo, men undvik snabbhet/backar.`;
                 actionEl.textContent = "Lugn jogg + Tåhävningar";
-
                 bannerEl.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
             else if (isHrvLow || rhrAvsteg > 2 || bbVal < 40) {
                 titleEl.textContent = "🟠 Moderat beredskap: Central trötthet";
                 descEl.textContent = `HRV avviker eller vilopulsen är förhöjd (+${rhrAvsteg.toFixed(1)} bpm). Muskelstrukturen är hel, men hjärta/nervsystem behöver spara energi.`;
                 actionEl.textContent = "Lugn FatMax (Aerob Bas)";
-
                 bannerEl.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
             else {
                 titleEl.textContent = "🟢 Grönt Ljus: Kroppen i utmärkt balans";
                 descEl.textContent = `Vilopuls (${latestRHR} bpm) och HRV är stabila. Ingen smärta loggad. Redo för planerad träning.`;
                 actionEl.textContent = "Tröskel / Kvalitet OK";
-
-                bannerEl.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
+                bannerEl.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
         
             const chartData = [...filtered].reverse();
@@ -1416,10 +1470,11 @@
                     activityType: 'Löpning', 
                     distance: 3000, 
                     duration: 1250, 
-                    avgGroundContactTime: 235.0, 
-                    avgGroundContactBalance: '50.2% L', 
+                    avgGroundContactTime: 269.0, 
+                    avgGroundContactBalance: '50.5% L', 
                     averageHR: 130,
-                    splitSummaries: '[{"noOfSplits": 1, "duration": 7.0, "splitType": "RWD_STAND", "distance": 5.44, "averageSpeed": 0.78, "avgStepFrequency": 101.0, "avgGroundContactBalanceLeft": 42.0, "avgGroundContactTime": 649.7}]'
+                    averageRunningCadenceInStepsPerMinute: 169,
+                    splitSummaries: '[{"noOfSplits": 1, "duration": 7.0, "splitType": "RWD_STAND", "distance": 5.44, "averageSpeed": 0.78, "avgStepFrequency": 101.0, "avgGroundContactBalanceLeft": 42.0, "avgGroundContactTime": 269.0}]'
                 }
             ]);
         }
