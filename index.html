@@ -1302,27 +1302,63 @@
             document.getElementById('health-sleep').textContent = `${avgSleepScore} / 100`;
             document.getElementById('health-recovery').textContent = latestBB;
         
-            const titleEl = document.getElementById('readinessTitle');
-            const descEl = document.getElementById('readinessDesc');
-            const actionEl = document.getElementById('readinessAction');
-            const bannerEl = document.getElementById('readinessBanner');
+            // =========================================================================
+    // INTELLIGENT BESLUTSMOTOR FÖR 50+ LÖPNING & REHAB
+    // =========================================================================
+    const titleEl = document.getElementById('readinessTitle');
+    const descEl = document.getElementById('readinessDesc');
+    const actionEl = document.getElementById('readinessAction');
+    const bannerEl = document.getElementById('readinessBanner');
+
+    const numRHR = Number(latestRHR);
+    const numAvgRHR = Number(avgRHR);
+    const rhrAvsteg = (!isNaN(numRHR) && !isNaN(numAvgRHR)) ? (numRHR - numAvgRHR) : 0;
+    
+    // Hämta Body Battery och Sömn om tillgängligt
+    const bbVal = latest.bodyBattery ? Number(latest.bodyBattery) : 100;
+    const isHrvLow = displayHrvStatus.includes('Låg') || displayHrvStatus.includes('Obalanserad');
+
+    // 1. RÖTT LJUS: Skada/Smärta >= 3 ELLER extrem trötthet (+5 bpm / mycket låg HRV)
+    if (painLevel >= 3 || rhrAvsteg >= 5) {
+        titleEl.textContent = "🔴 Rött Ljus: Hög Skaderisk / Belastning";
         
-            if (painLevel >= 4 || rhrAvsteg > 5) {
-                titleEl.textContent = "⚠️ Varning: Hög belastning / Smärtkänning";
-                descEl.textContent = `Känning loggad (${painLevel}/10 i smärta) eller förhöjd vilopuls (+${rhrAvsteg} bpm).`;
-                actionEl.textContent = "Vila / Rehab & Crosstrainer";
-                bannerEl.className = "bg-gradient-to-r from-rose-900/50 to-slate-800 border border-rose-500/40 rounded-2xl p-5 flex items-center justify-between shadow-lg";
-            } else if (painLevel >= 1 || displayHrvStatus.includes('Låg') || rhrAvsteg > 2) {
-                titleEl.textContent = "⚠️ Moderat beredskap – Skadeförebyggande läge";
-                descEl.textContent = `Stelhet/Känning loggad (${painLevel}/10) eller viss HRV-påverkan. Sänk tempot.`;
-                actionEl.textContent = "Lugn FatMax + Tåhävningar";
-                bannerEl.className = "bg-gradient-to-r from-amber-900/50 to-slate-800 border border-amber-500/40 rounded-2xl p-5 flex items-center justify-between shadow-lg";
-            } else {
-                titleEl.textContent = "🟢 Kroppen i utmärkt balans";
-                descEl.textContent = `Inga känningar loggade, vilopuls (${latestRHR} bpm) och HRV visar god återhämtning.`;
-                actionEl.textContent = "Planerat pass / Tröskel OK";
-                bannerEl.className = "bg-gradient-to-r from-emerald-900/50 to-slate-800 border border-emerald-500/40 rounded-2xl p-5 flex items-center justify-between shadow-lg";
-            }
+        if (painLevel >= 3) {
+            descEl.textContent = `Tydlig känning loggad (${latest.painLocation || 'Vad/Hälsena'} - ${painLevel}/10). Löpvila krävs för att låta senvävnaden återhämta sig.`;
+            actionEl.textContent = "Crosstrainer / Cykel + Rehab";
+        } else {
+            descEl.textContent = `Vilopulsen är avsevärd förhöjd (+${rhrAvsteg.toFixed(1)} bpm). Centrala nervsystemet är överbelastat.`;
+            actionEl.textContent = "Total Vila & Återhämtning";
+        }
+
+        bannerEl.className = "bg-gradient-to-r from-rose-950/80 to-slate-800 border border-rose-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
+    }
+
+    // 2. ORANGE/GULT LJUS: Lätt känning (1-2) -> Skadeförebyggande löpning
+    else if (painLevel >= 1) {
+        titleEl.textContent = "🟡 Gult Ljus: Skadeförebyggande läge (Stelhet/Lätt känning)";
+        descEl.textContent = `Stelhet loggad (${latest.painLocation || 'Vad/Hälsena'} - ${painLevel}/10). Löpning är tillåten i lugnt tempo, men undvik snabbhet/backar.`;
+        actionEl.textContent = "Lugn jogg + Tåhävningar";
+
+        bannerEl.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
+    }
+
+    // 3. ORANGE/GULT LJUS: Central trötthet (HRV låg eller RHR förhöjd +2-4 bpm)
+    else if (isHrvLow || rhrAvsteg > 2 || bbVal < 40) {
+        titleEl.textContent = "🟠 Moderat beredskap: Central trötthet";
+        descEl.textContent = `HRV avviker eller vilopulsen är förhöjd (+${rhrAvsteg.toFixed(1)} bpm). Muskelstrukturen är hel, men hjärta/nervsystem behöver spara energi.`;
+        actionEl.textContent = "Lugn FatMax (Aerob Bas)";
+
+        bannerEl.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
+    }
+
+    // 4. GRÖNT LJUS: Alla värden optimala -> Klartecken för kvalitets- / tröskelpass
+    else {
+        titleEl.textContent = "🟢 Grönt Ljus: Kroppen i utmärkt balans";
+        descEl.textContent = `Vilopuls (${latestRHR} bpm) och HRV är stabila. Ingen smärta loggad. Redo för planerad träning.`;
+        actionEl.textContent = "Tröskel / Kvalitet OK";
+
+        bannerEl.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
+    }
         
             const chartData = [...filtered].reverse();
             const labels = chartData.map(d => d.date ? d.date.substring(5) : '');
