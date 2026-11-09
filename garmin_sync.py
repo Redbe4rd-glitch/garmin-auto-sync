@@ -182,16 +182,22 @@ def main():
 
     print(f"Hämtade {len(recent_activities)} pass från Garmin. Uppdaterar detaljer...")
 
-    # 4. Hämta detaljer (splitSummaries) för de senaste passen
+    # 4. Hämta detaljer (splitSummaries) ENDAST för nya pass som saknar det
+    print(f"Kontrollerar detaljer och faser för nya pass...")
     for act in recent_activities[:MAX_DETAILED_ACTIVITIES]:
-        act_id = act.get("activityId")
+        act_id = get_activity_id(act)
         if act_id:
+            # Om passet redan finns sparat och har splitSummaries, hoppa över API-anropet!
+            if act_id in raw_combined and raw_combined[act_id].get("splitSummaries"):
+                continue
+                
+            print(f"Hämtar nya detaljer för pass ID: {act_id}...")
             details = fetch_activity_details(access_token, act_id)
             if details:
                 act.update(details)
                 if "splitSummaries" in details:
                     act["splitSummaries"] = json.dumps(details["splitSummaries"], ensure_ascii=False)
-            time.sleep(0.2)  # Skonsam paus
+            time.sleep(0.5)  # Säker paus mellan anropen
 
     # 5. Lägg till/uppdatera de nyhämtade passen i vår gemensamma samling
     for act in recent_activities:
