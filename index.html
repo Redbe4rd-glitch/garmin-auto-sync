@@ -123,32 +123,31 @@
                 </div>
             </div>
 
-            <!-- DYNAMISK DOKTORSBAR FÖR MÅNAD & VECKA (VISAS NÄR ETT ÅR ÄR VALT) -->
+            <!-- DYNAMISK DOKTORSBAR FÖR MÅNAD & VECKA -->
             <div id="subDateFilter" class="hidden pt-2 border-t border-slate-700/60 flex items-center gap-4 text-xs">
                 <span class="text-slate-400 font-medium">Finjustera valda året:</span>
                 <div class="flex items-center gap-2">
                     <label class="text-slate-400">Månad:</label>
                     <select id="filterMonth" onchange="renderAll()" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500">
                         <option value="all">Alla Månader</option>
-                        <option value="01">Januari (01)</option>
-                        <option value="02">Februari (02)</option>
-                        <option value="03">Mars (03)</option>
-                        <option value="04">April (04)</option>
-                        <option value="05">Maj (05)</option>
-                        <option value="06">Juni (06)</option>
-                        <option value="07">Juli (07)</option>
-                        <option value="08">Augusti (08)</option>
-                        <option value="09">September (09)</option>
-                        <option value="10">Oktober (10)</option>
-                        <option value="11">November (11)</option>
-                        <option value="12">December (12)</option>
+                        <option value="01">Januari</option>
+                        <option value="02">Februari</option>
+                        <option value="03">Mars</option>
+                        <option value="04">April</option>
+                        <option value="05">Maj</option>
+                        <option value="06">Juni</option>
+                        <option value="07">Juli</option>
+                        <option value="08">Augusti</option>
+                        <option value="09">September</option>
+                        <option value="10">Oktober</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
                     </select>
                 </div>
                 <div class="flex items-center gap-2">
                     <label class="text-slate-400">Vecka:</label>
                     <select id="filterWeek" onchange="renderAll()" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500">
                         <option value="all">Alla Veckor</option>
-                        <!-- Genereras dynamiskt via JS 1-52 -->
                     </select>
                 </div>
             </div>
@@ -678,7 +677,6 @@
             return null;
         }
 
-        // Hjälpfunktion för ISO-veckor
         function getWeekNumber(d) {
             const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             const dayNum = date.getUTCDay() || 7;
@@ -686,6 +684,23 @@
             const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
             const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
             return weekNo < 10 ? '0' + weekNo : '' + weekNo;
+        }
+
+        // Hjälpfunktion för att beräkna glidande medelvärde (trendkurva)
+        function calculateMovingAverage(data, windowSize = 5) {
+            let result = [];
+            for (let i = 0; i < data.length; i++) {
+                let start = Math.max(0, i - Math.floor(windowSize / 2));
+                let end = Math.min(data.length, i + Math.floor(windowSize / 2) + 1);
+                let subset = data.slice(start, end).filter(v => v !== null && !isNaN(v));
+                if (subset.length > 0) {
+                    let avg = subset.reduce((a, b) => a + b, 0) / subset.length;
+                    result.push(Number(avg.toFixed(1)));
+                } else {
+                    result.push(null);
+                }
+            }
+            return result;
         }
 
         function analyzeRunMetrics(act) {
@@ -763,7 +778,6 @@
         function getFilteredData() {
             let list = [...allActivities];
 
-            // 1. Tids- & Årsfilter
             if (['7', '30', '90'].includes(activePeriodFilter)) {
                 const days = parseInt(activePeriodFilter);
                 const cutoff = new Date();
@@ -772,13 +786,11 @@
             } else if (['2026', '2025', '2021'].includes(activePeriodFilter)) {
                 list = list.filter(a => a.date.startsWith(activePeriodFilter));
 
-                // Månadsfilter
                 const mVal = document.getElementById('filterMonth') ? document.getElementById('filterMonth').value : 'all';
                 if (mVal !== 'all') {
                     list = list.filter(a => a.date.substring(5, 7) === mVal);
                 }
 
-                // Veckofilter
                 const wVal = document.getElementById('filterWeek') ? document.getElementById('filterWeek').value : 'all';
                 if (wVal !== 'all') {
                     list = list.filter(a => {
@@ -788,13 +800,11 @@
                 }
             }
 
-            // 2. Aktivitetstyp-filter
             const typeVal = document.getElementById('filterType') ? document.getElementById('filterType').value : 'all';
             if (typeVal !== 'all') {
                 list = list.filter(a => a.type === typeVal);
             }
 
-            // 3. Intensitets-filter (Zoner)
             const zoneVal = document.getElementById('filterZone') ? document.getElementById('filterZone').value : 'all';
             if (zoneVal === 'fatmax') {
                 list = list.filter(a => a.hr > 0 && a.hr <= 124);
@@ -966,7 +976,6 @@
                 }
             }
 
-            // FALLBACK FÖR GAMLA PASS UTAN SPLITS
             if (!splitsParsed) {
                 const speedMps = parseFloat(act.raw.averageSpeed || 0);
                 const paceStr = formatPace(speedMps);
@@ -1352,18 +1361,29 @@
             });
 
             const runs = [...data].reverse();
+            const labels = runs.map(r => r.date); // Visar fullständigt ÅÅÅÅ-MM-DD
+            const distances = runs.map(r => r.distance);
+            const distTrend = calculateMovingAverage(distances, 5);
+
             const ctx1 = document.getElementById('chartActivityDistance').getContext('2d');
             if (chartDistanceObj) chartDistanceObj.destroy();
             chartDistanceObj = new Chart(ctx1, {
                 type: 'bar',
                 data: {
-                    labels: runs.map(r => r.date.substring(5)),
-                    datasets: [{ label: 'Km', data: runs.map(r => r.distance), backgroundColor: '#34d399', borderRadius: 4 }]
+                    labels: labels,
+                    datasets: [
+                        { label: 'Km', data: distances, backgroundColor: '#34d399', borderRadius: 4, order: 2 },
+                        { label: 'Trend', data: distTrend, type: 'line', borderColor: '#60a5fa', borderWidth: 2, pointRadius: 0, tension: 0.4, order: 1 }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 12 } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(51, 65, 85, 0.4)' } }
+                    },
                     onClick: (evt, elements) => {
                         if (elements.length > 0) {
                             const index = elements[0].index;
@@ -1417,18 +1437,32 @@
             });
 
             const runs = [...data].reverse();
+            const labels = runs.map(r => r.date); // Fullständigt datum med år
+            const gcts = runs.map(r => r.gct);
+            const gctTrend = calculateMovingAverage(gcts, 5);
+
+            const cadences = runs.map(r => r.cadence);
+            const cadTrend = calculateMovingAverage(cadences, 5);
+
             const ctx1 = document.getElementById('chartGctTrend').getContext('2d');
             if (chartGctObj) chartGctObj.destroy();
             chartGctObj = new Chart(ctx1, {
                 type: 'line',
                 data: {
-                    labels: runs.map(r => r.date.substring(5)),
-                    datasets: [{ label: 'GCT (ms)', data: runs.map(r => r.gct), borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', fill: true, tension: 0.3 }]
+                    labels: labels,
+                    datasets: [
+                        { label: 'GCT (ms)', data: gcts, borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', fill: true, tension: 0.3 },
+                        { label: 'Trend', data: gctTrend, borderColor: '#f87171', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 12 } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(51, 65, 85, 0.4)' } }
+                    },
                     onClick: (evt, elements) => {
                         if (elements.length > 0) {
                             const index = elements[0].index;
@@ -1445,10 +1479,21 @@
             chartCadenceObj = new Chart(ctx2, {
                 type: 'line',
                 data: {
-                    labels: runs.map(r => r.date.substring(5)),
-                    datasets: [{ label: 'Kadens', data: runs.map(r => r.cadence), borderColor: '#34d399', tension: 0.3 }]
+                    labels: labels,
+                    datasets: [
+                        { label: 'Kadens', data: cadences, borderColor: '#34d399', tension: 0.3 },
+                        { label: 'Trend', data: cadTrend, borderColor: '#38bdf8', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+                    ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 12 } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(51, 65, 85, 0.4)' } }
+                    }
+                }
             });
         }
 
@@ -1543,8 +1588,9 @@
             }
         
             const chartData = [...filtered].reverse();
-            const labels = chartData.map(d => d.date ? d.date.substring(5) : '');
+            const labels = chartData.map(d => d.date ? d.date : ''); // Fullständigt datum med år även här
             const rhrData = chartData.map(d => Number(d.restingHeartRate) || null);
+            const rhrTrend = calculateMovingAverage(rhrData, 5);
             const deepSleepHours = chartData.map(d => d.deepSleepSeconds ? (Number(d.deepSleepSeconds) / 3600).toFixed(1) : 0);
         
             const ctx1 = document.getElementById('chartHealthTrend').getContext('2d');
@@ -1553,22 +1599,18 @@
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{ 
-                        label: 'Vilopuls (bpm)', 
-                        data: rhrData, 
-                        borderColor: '#f43f5e', 
-                        backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                        fill: true,
-                        tension: 0.3 
-                    }]
+                    datasets: [
+                        { label: 'Vilopuls (bpm)', data: rhrData, borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.1)', fill: true, tension: 0.3 },
+                        { label: 'Trend', data: rhrTrend, borderColor: '#fbbf24', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+                    ]
                 },
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 12 } } },
                     scales: { 
                         y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } }, 
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } } 
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 } } 
                     }
                 }
             });
@@ -1592,7 +1634,7 @@
                     plugins: { legend: { display: false } },
                     scales: { 
                         y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } }, 
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } } 
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 } } 
                     }
                 }
             });
