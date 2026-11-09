@@ -976,26 +976,30 @@
 
         async function fetchData() {
             const refreshIcon = document.getElementById('refreshIcon');
-            
-            // Sätt på snurrandet enbart när funktionen anropas
-            if (refreshIcon) refreshIcon.classList.add('animate-spin');
-            
+            if (refreshIcon) {
+                refreshIcon.classList.add('animate-spin');
+            }
+        
             const statusTextEl = document.getElementById('statusText');
-            if (statusTextEl) statusTextEl.textContent = "Hämtar data från GitHub...";
+            if (statusTextEl) {
+                statusTextEl.textContent = "Hämtar data från GitHub...";
+            }
         
             try {
                 const res = await fetch(CSV_URL + "?t=" + Date.now(), { cache: 'no-cache' });
                 if (res.ok) {
                     const text = await res.text();
                     parseCsv(text);
+                    if (statusTextEl) statusTextEl.textContent = "Live Synkad";
                 } else {
+                    console.warn("Kunde inte nå GitHub, använder fallback.");
                     loadFallback();
                 }
             } catch (e) {
-                console.warn("Kunde inte hämta CSV:", e);
+                console.error("Fel vid hämtning av CSV:", e);
                 loadFallback();
             } finally {
-                // Detta block körs garanterat och stänger av snurrandet
+                // Detta körs garanterat alltid och stänger av ikonen
                 if (refreshIcon) {
                     refreshIcon.classList.remove('animate-spin');
                 }
