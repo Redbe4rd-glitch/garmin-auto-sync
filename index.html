@@ -82,16 +82,43 @@
 
     <main class="max-w-6xl mx-auto px-4 pt-6">
 
-        <!-- GLOBAL TIME HORIZON FILTER -->
-        <div id="timeFilterBar" class="hidden mb-6 flex justify-between items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
-            <span class="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                <i data-lucide="calendar" class="w-4 h-4 text-emerald-400"></i> Tidshorisont:
-            </span>
-            <div class="flex gap-1.5">
-                <button onclick="setTimeFilter(7)" id="btn-tf-7" class="tf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-700 text-slate-200 border border-slate-600">7 Dagar</button>
-                <button onclick="setTimeFilter(30)" id="btn-tf-30" class="tf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700">30 Dagar</button>
-                <button onclick="setTimeFilter(90)" id="btn-tf-90" class="tf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700">90 Dagar</button>
-                <button onclick="setTimeFilter(0)" id="btn-tf-0" class="tf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700">Alla</button>
+        <!-- ADVANCED MULTI-FILTER BAR -->
+        <div id="timeFilterBar" class="hidden mb-6 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/80 shadow-md space-y-3 md:space-y-0 md:flex md:items-center md:justify-between gap-4">
+            <!-- Tidsfönster / År -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <i data-lucide="filter" class="w-4 h-4 text-emerald-400"></i> Period:
+                </span>
+                <div class="flex gap-1 flex-wrap">
+                    <button onclick="setPeriodFilter('7')" id="btn-p-7" class="pf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-700 text-slate-200 border border-slate-600 font-semibold">7 Dagar</button>
+                    <button onclick="setPeriodFilter('30')" id="btn-p-30" class="pf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700">30 Dagar</button>
+                    <button onclick="setPeriodFilter('90')" id="btn-p-90" class="pf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700">90 Dagar</button>
+                    <button onclick="setPeriodFilter('2026')" id="btn-p-2026" class="pf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700">2026</button>
+                    <button onclick="setPeriodFilter('2025')" id="btn-p-2025" class="pf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700">2025</button>
+                    <button onclick="setPeriodFilter('2021')" id="btn-p-2021" class="pf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700">2021 ⭐</button>
+                    <button onclick="setPeriodFilter('0')" id="btn-p-0" class="pf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700">Alla År</button>
+                </div>
+            </div>
+
+            <!-- Aktivitetstyp & Pulszon -->
+            <div class="flex items-center gap-3 text-xs">
+                <div>
+                    <select id="filterType" onchange="renderAll()" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+                        <option value="all">Alla Aktiviteter</option>
+                        <option value="Löpning">Endast Löpning</option>
+                        <option value="Styrketräning">Endast Styrka</option>
+                        <option value="Crosstrainer">Endast Crosstrainer</option>
+                        <option value="Cykling">Endast Cykling</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="filterZone" onchange="renderAll()" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500">
+                        <option value="all">Alla Pulser</option>
+                        <option value="fatmax">FatMax (≤124 bpm)</option>
+                        <option value="mid">Mellan (125-142 bpm)</option>
+                        <option value="threshold">Tröskel (>142 bpm)</option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -218,7 +245,7 @@
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5">
                 <h3 class="text-sm font-bold text-white mb-3 flex justify-between items-center">
                     <span>Aktivitetshistorik</span>
-                    <span class="text-[10px] font-normal text-slate-400">Klicka på en rad för fullständig mätdata</span>
+                    <span class="text-[10px] font-normal text-slate-400" id="filteredCountText">Visar -- pass</span>
                 </h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs text-slate-300">
@@ -288,7 +315,6 @@
 
         <!-- ==================== TAB 4: DYGNET-RUNT & HÄLSODATA ==================== -->
         <section id="sec-health" class="hidden space-y-6">
-            <!-- DAGBOK & SYMPTOMKORT (SPARAS DIREKT I garmin_health.csv) -->
             <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -339,7 +365,7 @@
                     </button>
                 </div>
             </div>
-            <!-- DAGENS TRÄNINGSREKOMMENDATION (BESLUTSSTÖD) -->
+
             <div id="readinessBanner" class="bg-gradient-to-r from-emerald-900/40 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex items-center justify-between shadow-lg">
                 <div class="flex items-center gap-4">
                     <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
@@ -357,7 +383,6 @@
                 </div>
             </div>
 
-            <!-- VISUELL STATUS & HISTORIK AV DAGENS NOTERING (Placerad under beredskaps-kortet) -->
             <div id="logStatusCard" class="mt-4 bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between text-xs text-slate-300">
                 <div class="flex items-center gap-2">
                     <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
@@ -366,7 +391,6 @@
                 <span id="logStatusDate" class="text-slate-400 font-mono"></span>
             </div>
 
-            <!-- UTÖKADE KPI-KORT FÖR HÄLSA -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4">
                     <span class="text-[10px] text-slate-400 uppercase tracking-wider">Vilopuls (Senaste)</span>
@@ -390,7 +414,6 @@
                 </div>
             </div>
 
-            <!-- GRAFER & TRENDER -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5">
                     <h3 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
@@ -413,7 +436,7 @@
         </section>
 
 
-        <!-- ==================== TAB 5: DEDIKERAD PASSDETALJ-VY ==================== -->
+        <!-- ==================== TAB 5: PASSDETALJER ==================== -->
         <section id="sec-detail" class="hidden space-y-6">
             <div class="flex items-center justify-between bg-slate-800/50 border border-slate-700/60 rounded-2xl p-4">
                 <button onclick="goBackFromDetail()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 transition">
@@ -425,10 +448,8 @@
                 </div>
             </div>
 
-            <!-- Visuella Nyckeltalskort för Passet -->
             <div id="detailCardsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
-            <!-- Eget Kort för Split Summaries (Fas- & Intervallfördelning) -->
             <div id="splitSummariesCard" class="hidden bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i> Split Summaries (Fas- & Intervallfördelning)
@@ -436,7 +457,6 @@
                 <div id="splitSummariesContent" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
             </div>
 
-            <!-- Fas- och Intervalltabell (Ersätter km-tabellen) -->
             <div id="kmTableCard" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i> Fas- & Intervallöversikt (Split Summaries)
@@ -462,7 +482,6 @@
                 </div>
             </div>
 
-            <!-- Fullständig Tabell över ALLA CSV-Värden (avrundade) -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -493,7 +512,7 @@
 
         let allActivities = [];
         let allHealthData = [];
-        let activeTimeFilter = 7;
+        let activePeriodFilter = '7'; // Standard
         let currentTab = 'overview';
         let previousTab = 'overview';
 
@@ -615,13 +634,10 @@
             return null;
         }
 
-        /**
-         * Analyserar löpmått dynamiskt utifrån personlig historisk baseline (2020-2026)
-         */
         function analyzeRunMetrics(act) {
             const cadence = act.cadence;
             const gct = act.gct;
-            const speedMps = parseFloat(act.raw.averageSpeed || act.raw.averageSpeed || 0);
+            const speedMps = parseFloat(act.raw.averageSpeed || 0);
             const paceMinKm = speedMps > 0 ? (1000 / speedMps) / 60 : null;
 
             let balanceLeft = 50.5;
@@ -631,7 +647,6 @@
             let warnings = [];
             let status = 'OK';
 
-            // Tempobaserad GCT-förväntan
             if (gct > 0 && paceMinKm) {
                 let expectedGct = 269;
                 if (paceMinKm < 4.5) expectedGct = 253;
@@ -640,16 +655,14 @@
                 else expectedGct = 277;
 
                 if (gct > expectedGct + 12) {
-                    warnings.push(`Hög GCT (${gct} ms vs ~${expectedGct} ms för ${formatPace(speedMps)})`);
+                    warnings.push(`Hög GCT (${gct} ms vs ~${expectedGct} ms)`);
                 }
             }
 
-            // Kadens-kontroll
             if (cadence > 0 && cadence < 158) {
                 warnings.push(`Låg kadens (${cadence} spm)`);
             }
 
-            // GCT-balans kontroll (V/H)
             if (balanceLeft > 51.8 || balanceLeft < 48.5) {
                 warnings.push(`Snedbelastning (${balanceLeft.toFixed(1)}% V)`);
             }
@@ -664,6 +677,53 @@
                 cadenceStr: cadence > 0 ? cadence + ' spm' : '-',
                 gctStr: gct > 0 ? gct + ' ms' : '-'
             };
+        }
+
+        function setPeriodFilter(val) {
+            activePeriodFilter = val;
+            ['7', '30', '90', '2026', '2025', '2021', '0'].forEach(p => {
+                const btn = document.getElementById(`btn-p-${p}`);
+                if (btn) {
+                    if (p === val) {
+                        btn.className = "pf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-700 text-slate-200 border border-slate-600 font-semibold";
+                    } else {
+                        btn.className = "pf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700";
+                    }
+                }
+            });
+            renderAll();
+        }
+
+        function getFilteredData() {
+            let list = [...allActivities];
+
+            // 1. Tids- & Årsfilter
+            if (activePeriodFilter === '7' || activePeriodFilter === '30' || activePeriodFilter === '90') {
+                const days = parseInt(activePeriodFilter);
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - days);
+                list = list.filter(a => new Date(a.date) >= cutoff);
+            } else if (activePeriodFilter === '2026' || activePeriodFilter === '2025' || activePeriodFilter === '2021') {
+                list = list.filter(a => a.date.startsWith(activePeriodFilter));
+            }
+
+            // 2. Aktivitetstyp-filter
+            const typeVal = document.getElementById('filterType') ? document.getElementById('filterType').value : 'all';
+            if (typeVal !== 'all') {
+                list = list.filter(a => a.type === typeVal);
+            }
+
+            // 3. Intensitets-filter (Zoner)
+            const zoneVal = document.getElementById('filterZone') ? document.getElementById('filterZone').value : 'all';
+            if (zoneVal === 'fatmax') {
+                list = list.filter(a => a.hr > 0 && a.hr <= 124);
+            } else if (zoneVal === 'mid') {
+                list = list.filter(a => a.hr > 124 && a.hr <= 142);
+            } else if (zoneVal === 'threshold') {
+                list = list.filter(a => a.hr > 142);
+            }
+
+            return list;
         }
 
         function showActivityDetail(index) {
@@ -857,19 +917,6 @@
             switchTab('detail');
         }
 
-        function setTimeFilter(days) {
-            activeTimeFilter = days;
-            [7, 30, 90, 0].forEach(d => {
-                const btn = document.getElementById(`btn-tf-${d}`);
-                if (d === days) {
-                    btn.className = "tf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-700 text-slate-200 border border-slate-600 font-semibold";
-                } else {
-                    btn.className = "tf-btn px-2.5 py-1 text-xs rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700";
-                }
-            });
-            renderAll();
-        }
-        
         function populateTodayLogForm() {
             const todayStr = new Date().toISOString().substring(0, 10);
             const todayRecord = allHealthData.find(d => d.date === todayStr);
@@ -1098,7 +1145,6 @@
                 const balance = r.avgGroundContactBalance || r.Balance || '50/50';
                 const hr = parseInt(r.averageHR || r.HR || 0);
                 
-                // Robust avläsning av kadens över alla möjliga Garmin-fältnamn
                 const cadenceRaw = r.averageRunningCadenceInStepsPerMinute || r.averageRunningCadence || r.avgCadence || r.cadence;
                 const cadence = (cadenceRaw !== undefined && cadenceRaw !== null && cadenceRaw !== '') ? Math.round(parseFloat(cadenceRaw)) : 0;
 
@@ -1129,13 +1175,6 @@
             document.getElementById('dataCountBadge').textContent = `${allActivities.length} Pass Inlästa`;
 
             renderAll();
-        }
-
-        function getFilteredData() {
-            if (activeTimeFilter === 0) return allActivities;
-            const cutoff = new Date();
-            cutoff.setDate(cutoff.getDate() - activeTimeFilter);
-            return allActivities.filter(a => new Date(a.date) >= cutoff);
         }
 
         function renderAll() {
@@ -1185,6 +1224,8 @@
 
         function renderActivitiesTab() {
             const data = getFilteredData();
+            document.getElementById('filteredCountText').textContent = `Visar ${data.length} av ${allActivities.length} pass`;
+
             const tbody = document.getElementById('activitiesTableBody');
             tbody.innerHTML = '';
             data.forEach((a) => {
@@ -1311,10 +1352,6 @@
 
         function renderHealthTab() {
             let filtered = [...allHealthData];
-            if (typeof activeTimeFilter === 'number' && activeTimeFilter > 0) {
-                filtered = filtered.slice(0, activeTimeFilter);
-            }
-        
             if (filtered.length === 0) {
                 document.getElementById('readinessTitle').textContent = "Ingen hälsodata inläst ännu";
                 document.getElementById('readinessDesc').textContent = "Kör synken eller spara en dagsnotering för att skapa garmin_health.csv.";
@@ -1335,7 +1372,7 @@
                     statusTextEl.innerHTML = `Senaste notering: RPE <b>${todayRecord.rpe || '-'}</b>/5 | <span class="text-emerald-400">${painDesc}</span>`;
                     statusDateEl.textContent = `Datum: ${todayRecord.date || todayStr}`;
                 } else {
-                    statusTextEl.textContent = `Ingen subjektiv dagsnotering sparad för idag (${todayStr}). Använd formuläret ovan för att logga.`;
+                    statusTextEl.textContent = `Ingen subjective dagsnotering sparad för idag (${todayStr}). Använd formuläret ovan för att logga.`;
                     statusDateEl.textContent = "";
                 }
             }
