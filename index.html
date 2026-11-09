@@ -502,12 +502,15 @@
         let chartGctObj = null;
         let chartCadenceObj = null;
         let chartHealthObj = null;
+        let chartSleepObj = null;
 
         const CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_activities.csv`;
         const HEALTH_CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_health.csv`;
         
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+            // Säkerställ att inga ikoner snurrar vid start
+            document.querySelectorAll('#refreshIcon, #syncIcon').forEach(el => el.classList.remove('animate-spin'));
             fetchData();
             loadHealthData();
         });
@@ -621,7 +624,6 @@
             document.getElementById('detailHeaderTitle').textContent = activityName;
             document.getElementById('detailHeaderSub').textContent = `Datum: ${act.date} | Distans: ${act.distance.toFixed(2)} km | Tid: ${formatTimeDetailed(act.duration)}`;
 
-            // Visuella Huvudkort
             const cardsGrid = document.getElementById('detailCardsGrid');
             cardsGrid.innerHTML = `
                 <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-4">
@@ -642,7 +644,6 @@
                 </div>
             `;
 
-            // Split Summaries (Fas- & Intervallfördelning)
             const splitCard = document.getElementById('splitSummariesCard');
             const splitContent = document.getElementById('splitSummariesContent');
             const rawSplitVal = getProp(act.raw, ['splitSummaries', 'splitsummaries']);
@@ -694,7 +695,6 @@
                 splitCard.classList.add('hidden');
             }
 
-            // Fas- och Intervalltabell baserad på Split Summaries
             const kmCard = document.getElementById('kmTableCard');
             const kmTableHead = kmCard.querySelector('thead tr');
             kmTableHead.innerHTML = `
@@ -780,7 +780,6 @@
                 kmCard.classList.remove('hidden');
             }
 
-            // Tabell med ALLA CSV-fält (avrundade)
             const rawBody = document.getElementById('detailRawTableBody');
             rawBody.innerHTML = '';
             const rawKeys = Object.keys(act.raw || {});
@@ -818,7 +817,6 @@
             renderAll();
         }
         
-        // Fyll i formuläret med sparad data från CSV för idag
         function populateTodayLogForm() {
             const todayStr = new Date().toISOString().substring(0, 10);
             const todayRecord = allHealthData.find(d => d.date === todayStr);
@@ -999,7 +997,6 @@
                 console.error("Fel vid hämtning av CSV:", e);
                 loadFallback();
             } finally {
-                // Detta körs garanterat alltid och stänger av ikonen
                 if (refreshIcon) {
                     refreshIcon.classList.remove('animate-spin');
                 }
@@ -1016,9 +1013,7 @@
                         skipEmptyLines: true,
                         complete: function(results) {
                             allHealthData = results.data || [];
-
                             populateTodayLogForm();
-                            
                             if (!document.getElementById('sec-health').classList.contains('hidden')) {
                                 renderHealthTab();
                             }
@@ -1253,8 +1248,6 @@
             });
         }
 
-        let chartSleepObj = null;
-
         function renderHealthTab() {
             let filtered = [...allHealthData];
             if (typeof activeTimeFilter === 'number' && activeTimeFilter > 0) {
@@ -1269,7 +1262,6 @@
         
             const latest = filtered[0] || {};
 
-            // Uppdatera statusrutan under beredskaps-kortet
             const todayStr = new Date().toISOString().substring(0, 10);
             const todayRecord = filtered.find(d => d.date === todayStr) || latest;
             
@@ -1314,9 +1306,6 @@
             document.getElementById('health-sleep').textContent = `${avgSleepScore} / 100`;
             document.getElementById('health-recovery').textContent = latestBB;
         
-            // =========================================================================
-            // INTELLIGENT BESLUTSMOTOR FÖR 50+ LÖPNING & REHAB
-            // =========================================================================
             const titleEl = document.getElementById('readinessTitle');
             const descEl = document.getElementById('readinessDesc');
             const actionEl = document.getElementById('readinessAction');
@@ -1325,7 +1314,6 @@
             const bbVal = latest.bodyBattery ? Number(latest.bodyBattery) : 100;
             const isHrvLow = displayHrvStatus.includes('Låg') || displayHrvStatus.includes('Obalanserad');
 
-            // 1. RÖTT LJUS: Skada/Smärta >= 3 ELLER extrem trötthet (+5 bpm / mycket låg HRV)
             if (painLevel >= 3 || rhrAvsteg >= 5) {
                 titleEl.textContent = "🔴 Rött Ljus: Hög Skaderisk / Belastning";
                 
@@ -1339,8 +1327,6 @@
 
                 bannerEl.className = "bg-gradient-to-r from-rose-950/80 to-slate-800 border border-rose-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
-
-            // 2. ORANGE/GULT LJUS: Lätt känning (1-2) -> Skadeförebyggande löpning
             else if (painLevel >= 1) {
                 titleEl.textContent = "🟡 Gult Ljus: Skadeförebyggande läge (Stelhet/Lätt känning)";
                 descEl.textContent = `Stelhet loggad (${latest.painLocation || 'Vad/Hälsena'} - ${painLevel}/10). Löpning är tillåten i lugnt tempo, men undvik snabbhet/backar.`;
@@ -1348,8 +1334,6 @@
 
                 bannerEl.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
-
-            // 3. ORANGE/GULT LJUS: Central trötthet (HRV låg eller RHR förhöjd +2-4 bpm)
             else if (isHrvLow || rhrAvsteg > 2 || bbVal < 40) {
                 titleEl.textContent = "🟠 Moderat beredskap: Central trötthet";
                 descEl.textContent = `HRV avviker eller vilopulsen är förhöjd (+${rhrAvsteg.toFixed(1)} bpm). Muskelstrukturen är hel, men hjärta/nervsystem behöver spara energi.`;
@@ -1357,8 +1341,6 @@
 
                 bannerEl.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
-
-            // 4. GRÖNT LJUS: Alla värden optimala -> Klartecken för kvalitets- / tröskelpass
             else {
                 titleEl.textContent = "🟢 Grönt Ljus: Kroppen i utmärkt balans";
                 descEl.textContent = `Vilopuls (${latestRHR} bpm) och HRV är stabila. Ingen smärta loggad. Redo för planerad träning.`;
@@ -1442,5 +1424,6 @@
             ]);
         }
     </script>
+    
 </body>
 </html>
