@@ -357,6 +357,15 @@
                 </div>
             </div>
 
+            <!-- VISUELL STATUS & HISTORIK AV DAGENS NOTERING (Placerad under beredskaps-kortet) -->
+            <div id="logStatusCard" class="mt-4 bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between text-xs text-slate-300">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+                    <span id="logStatusText">Laddar dagens status...</span>
+                </div>
+                <span id="logStatusDate" class="text-slate-400 font-mono"></span>
+            </div>
+
             <!-- UTÖKADE KPI-KORT FÖR HÄLSA -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4">
@@ -1248,6 +1257,25 @@
             }
         
             const latest = filtered[0] || {};
+
+            // Uppdatera statusrutan under beredskaps-kortet
+            const todayStr = new Date().toISOString().substring(0, 10);
+            const todayRecord = filtered.find(d => d.date === todayStr) || latest;
+            
+            const statusTextEl = document.getElementById('logStatusText');
+            const statusDateEl = document.getElementById('logStatusDate');
+        
+            if (statusTextEl && todayRecord) {
+                const hasLog = todayRecord.rpe || (todayRecord.painLevel && Number(todayRecord.painLevel) > 0);
+                if (hasLog) {
+                    const painDesc = Number(todayRecord.painLevel) > 0 ? `Känning: ${todayRecord.painLocation} (${todayRecord.painLevel}/10)` : 'Helt smärtfri i vader/hälsenor';
+                    statusTextEl.innerHTML = `Senaste notering: RPE <b>${todayRecord.rpe || '-'}</b>/5 | <span class="text-emerald-400">${painDesc}</span>`;
+                    statusDateEl.textContent = `Datum: ${todayRecord.date || todayStr}`;
+                } else {
+                    statusTextEl.textContent = `Ingen subjektiv dagsnotering sparad för idag (${todayStr}). Använd formuläret ovan för att logga.`;
+                    statusDateEl.textContent = "";
+                }
+            }
             
             const rawHrv = latest.hrvStatus || '';
             let displayHrvStatus = 'Balanserad';
