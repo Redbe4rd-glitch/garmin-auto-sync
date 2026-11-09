@@ -504,8 +504,8 @@
         let chartHealthObj = null;
         let chartSleepObj = null;
 
-        const CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_activities.csv`;
-        const HEALTH_CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_health.csv`;
+        const CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_activities.csv?t=` + Date.now();
+        const HEALTH_CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_health.csv?t=` + Date.now();
         
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
