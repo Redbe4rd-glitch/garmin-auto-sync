@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 API_KEY = os.getenv("GARMIN_API_KEY")
 ACTIVITIES_FILENAME = "garmin_activities.csv"
 HEALTH_FILENAME = "garmin_health.csv"
-MAX_DETAILED_ACTIVITIES = 20  # Räcker med de 20 senaste för detaljer/faser
+MAX_DETAILED_ACTIVITIES = 5  # Vi kollar bara de 5 senaste passen efter nya detaljer
 HEALTH_DAYS = 30  # Antal dagar tillbaka att hämta dygnet-runt-data för
 
 def get_activity_id(act):
@@ -197,7 +197,7 @@ def main():
                 act.update(details)
                 if "splitSummaries" in details:
                     act["splitSummaries"] = json.dumps(details["splitSummaries"], ensure_ascii=False)
-            time.sleep(0.5)  # Säker paus mellan anropen
+            time.sleep(1.0)  # Lite längre säkerhetspaus (1 sekund) mellan anropen
 
     # 5. Lägg till/uppdatera de nyhämtade passen i vår gemensamma samling
     for act in recent_activities:
