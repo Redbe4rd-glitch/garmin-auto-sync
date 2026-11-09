@@ -812,102 +812,110 @@
             renderAll();
         }
         
+        // Fyll i formuläret med sparad data från CSV för idag
+        function populateTodayLogForm() {
+            const todayStr = new Date().toISOString().substring(0, 10);
+            const todayRecord = allHealthData.find(d => d.date === todayStr);
+        
+            if (todayRecord) {
+                if (todayRecord.rpe) document.getElementById('log-rpe').value = todayRecord.rpe;
+                if (todayRecord.painLocation) document.getElementById('log-location').value = todayRecord.painLocation;
+                if (todayRecord.painLevel) document.getElementById('log-pain').value = todayRecord.painLevel;
+            }
+        }
+
         async function saveDailyLogToGitHub() {
-        let token = localStorage.getItem('gh_pat_token');
-        if (!token) {
-            token = prompt("Ange din GitHub Personal Access Token (PAT) för att spara till repot:");
-            if (token) {
-                localStorage.setItem('gh_pat_token', token.trim());
-            } else {
-                alert("Token krävs för att spara direkt till GitHub.");
-                return;
-            }
-        }
-    
-        const todayStr = new Date().toISOString().substring(0, 10);
-        const newRpe = document.getElementById('log-rpe').value;
-        const newLocation = document.getElementById('log-location').value;
-        const newPain = document.getElementById('log-pain').value;
-    
-        // 1. Hämta befintlig garmin_health.csv från GitHub för att inte skriva över allt
-        const filePath = "garmin_health.csv";
-        const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${filePath}`;
-    
-        try {
-            const getRes = await fetch(apiUrl, {
-                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json' }
-            });
-    
-            if (!getRes.ok) {
-                alert("Kunde inte hämta befintlig hälsorapport från GitHub. Kontrollera din PAT-token.");
-                return;
-            }
-    
-            const fileData = await getRes.json();
-            const decodedContent = decodeURIComponent(escape(atob(fileData.content)));
-    
-            // 2. Parsa CSV, uppdatera dagens rad eller lägg till ny
-            let parsed = Papa.parse(decodedContent, { header: true, skipEmptyLines: true });
-            let rows = parsed.data;
-    
-            let found = false;
-            rows.forEach(r => {
-                if (r.date === todayStr) {
-                    r.rpe = newRpe;
-                    r.painLocation = newLocation;
-                    r.painLevel = newPain;
-                    found = true;
+            let token = localStorage.getItem('gh_pat_token');
+            if (!token) {
+                token = prompt("Ange din GitHub Personal Access Token (PAT) för att spara till repot:");
+                if (token) {
+                    localStorage.setItem('gh_pat_token', token.trim());
+                } else {
+                    alert("Token krävs för att spara direkt till GitHub.");
+                    return;
                 }
-            });
-    
-            if (!found) {
-                rows.unshift({
-                    date: todayStr,
-                    restingHeartRate: "",
-                    hrvStatus: "",
-                    hrvWeeklyAvg: "",
-                    sleepScore: "",
-                    sleepTimeSeconds: "",
-                    deepSleepSeconds: "",
-                    bodyBattery: "",
-                    rpe: newRpe,
-                    painLocation: newLocation,
-                    painLevel: newPain
+            }
+        
+            const todayStr = new Date().toISOString().substring(0, 10);
+            const newRpe = document.getElementById('log-rpe').value;
+            const newLocation = document.getElementById('log-location').value;
+            const newPain = document.getElementById('log-pain').value;
+        
+            const filePath = "garmin_health.csv";
+            const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${filePath}`;
+        
+            try {
+                const getRes = await fetch(apiUrl, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json' }
                 });
+        
+                if (!getRes.ok) {
+                    alert("Kunde inte hämta befintlig hälsorapport från GitHub. Kontrollera din PAT-token.");
+                    return;
+                }
+        
+                const fileData = await getRes.json();
+                const decodedContent = decodeURIComponent(escape(atob(fileData.content)));
+        
+                let parsed = Papa.parse(decodedContent, { header: true, skipEmptyLines: true });
+                let rows = parsed.data;
+        
+                let found = false;
+                rows.forEach(r => {
+                    if (r.date === todayStr) {
+                        r.rpe = newRpe;
+                        r.painLocation = newLocation;
+                        r.painLevel = newPain;
+                        found = true;
+                    }
+                });
+        
+                if (!found) {
+                    rows.unshift({
+                        date: todayStr,
+                        restingHeartRate: "",
+                        hrvStatus: "",
+                        hrvWeeklyAvg: "",
+                        sleepScore: "",
+                        sleepTimeSeconds: "",
+                        deepSleepSeconds: "",
+                        bodyBattery: "",
+                        rpe: newRpe,
+                        painLocation: newLocation,
+                        painLevel: newPain
+                    });
+                }
+        
+                const updatedCsv = Papa.unparse(rows);
+                const encodedContent = btoa(unescape(encodeURIComponent(updatedCsv)));
+        
+                const putRes = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'vnd.github+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Uppdatera dagsnotering och känning för ${todayStr}`,
+                        content: encodedContent,
+                        sha: fileData.sha
+                    })
+                });
+        
+                if (putRes.ok) {
+                    alert("✅ Dagsnoteringen har sparats direkt till garmin_health.csv på GitHub!");
+                    loadHealthData();
+                } else {
+                    const err = await putRes.json().catch(() => ({}));
+                    alert(`Kunde inte spara: ${err.message || putRes.statusText}`);
+                }
+        
+            } catch (e) {
+                console.error(e);
+                alert("Ett nätverksfel uppstod vid kommunikation med GitHub API.");
             }
-    
-            // Konvertera tillbaka till CSV-format
-            const updatedCsv = Papa.unparse(rows);
-            const encodedContent = btoa(unescape(encodeURIComponent(updatedCsv)));
-    
-            // 3. Skicka uppdateringen till GitHub (Commit)
-            const putRes = await fetch(apiUrl, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'vnd.github+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: `Uppdatera dagsnotering och känning för ${todayStr}`,
-                    content: encodedContent,
-                    sha: fileData.sha
-                })
-            });
-    
-            if (putRes.ok) {
-                alert("✅ Dagsnoteringen har sparats direkt till garmin_health.csv på GitHub!");
-                loadHealthData(); // Ladda om datan i dashboarden
-            } else {
-                const err = await putRes.json().catch(() => ({}));
-                alert(`Kunde inte spara: ${err.message || putRes.statusText}`);
-            }
-    
-        } catch (e) {
-            console.error(e);
-            alert("Ett nätverksfel uppstod vid kommunikation med GitHub API.");
         }
-    }
         async function triggerGitHubWorkflow() {
             let token = localStorage.getItem('gh_pat_token');
             if (!token) {
@@ -989,6 +997,9 @@
                         skipEmptyLines: true,
                         complete: function(results) {
                             allHealthData = results.data || [];
+
+                            populateTodayLogForm();
+                            
                             if (!document.getElementById('sec-health').classList.contains('hidden')) {
                                 renderHealthTab();
                             }
@@ -1232,28 +1243,31 @@
         
             if (filtered.length === 0) {
                 document.getElementById('readinessTitle').textContent = "Ingen hälsodata inläst ännu";
-                document.getElementById('readinessDesc').textContent = "Kör synken för att skapa garmin_health.csv.";
+                document.getElementById('readinessDesc').textContent = "Kör synken eller spara en dagsnotering för att skapa garmin_health.csv.";
                 return;
             }
         
             const latest = filtered[0] || {};
-
-            // Översätt HRV status från engelska Garmin-nycklar
+            
             const rawHrv = latest.hrvStatus || '';
             let displayHrvStatus = 'Balanserad';
             if (rawHrv === 'LOW') displayHrvStatus = 'Låg ⚠️';
             else if (rawHrv === 'UNBALANCED') displayHrvStatus = 'Obalanserad';
             else if (rawHrv === 'BALANCED') displayHrvStatus = 'Balanserad';
             else if (rawHrv) displayHrvStatus = rawHrv;
-            
+        
             const latestRHR = latest.restingHeartRate ? Math.round(Number(latest.restingHeartRate)) : '--';
             const validRHRs = filtered.map(d => Number(d.restingHeartRate)).filter(v => v > 0);
             const avgRHR = validRHRs.length ? (validRHRs.reduce((a, b) => a + b, 0) / validRHRs.length).toFixed(1) : '--';
         
-            const hrvStatus = latest.hrvStatus || 'Balanserad';
             const validSleep = filtered.map(d => Number(d.sleepScore)).filter(v => v > 0);
             const avgSleepScore = validSleep.length ? Math.round(validSleep.reduce((a, b) => a + b, 0) / validSleep.length) : '--';
             const latestBB = latest.bodyBattery ? latest.bodyBattery + '%' : '--';
+        
+            const painLevel = latest.painLevel ? Number(latest.painLevel) : 0;
+            const numRHR = Number(latestRHR);
+            const numAvgRHR = Number(avgRHR);
+            const rhrAvsteg = (!isNaN(numRHR) && !isNaN(numAvgRHR)) ? (numRHR - numAvgRHR) : 0;
         
             document.getElementById('health-rhr').textContent = `${latestRHR} bpm`;
             document.getElementById('health-hrv').textContent = displayHrvStatus;
@@ -1265,19 +1279,21 @@
             const actionEl = document.getElementById('readinessAction');
             const bannerEl = document.getElementById('readinessBanner');
         
-            const numRHR = Number(latestRHR);
-            const numAvgRHR = Number(avgRHR);
-        
-            if (numRHR && numAvgRHR && numRHR > numAvgRHR + 4) {
-                titleEl.textContent = "Förhöjd vilopuls – Var försiktig";
-                descEl.textContent = `Dagens vilopuls (${numRHR} bpm) är högre än ditt snitt (${avgRHR} bpm). Ökad skaderisk i senor/leder.`;
-                actionEl.textContent = "Lugn jogg / Vila";
-                bannerEl.className = "bg-gradient-to-r from-amber-900/40 to-slate-800 border border-amber-500/30 rounded-2xl p-5 flex items-center justify-between shadow-lg";
+            if (painLevel >= 4 || rhrAvsteg > 5) {
+                titleEl.textContent = "⚠️ Varning: Hög belastning / Smärtkänning";
+                descEl.textContent = `Känning loggad (${painLevel}/10 i smärta) eller förhöjd vilopuls (+${rhrAvsteg} bpm).`;
+                actionEl.textContent = "Vila / Rehab & Crosstrainer";
+                bannerEl.className = "bg-gradient-to-r from-rose-900/50 to-slate-800 border border-rose-500/40 rounded-2xl p-5 flex items-center justify-between shadow-lg";
+            } else if (painLevel >= 1 || displayHrvStatus.includes('Låg') || rhrAvsteg > 2) {
+                titleEl.textContent = "⚠️ Moderat beredskap – Skadeförebyggande läge";
+                descEl.textContent = `Stelhet/Känning loggad (${painLevel}/10) eller viss HRV-påverkan. Sänk tempot.`;
+                actionEl.textContent = "Lugn FatMax + Tåhävningar";
+                bannerEl.className = "bg-gradient-to-r from-amber-900/50 to-slate-800 border border-amber-500/40 rounded-2xl p-5 flex items-center justify-between shadow-lg";
             } else {
-                titleEl.textContent = "Kroppen är i balans – God beredskap";
-                descEl.textContent = `Vilopuls (${latestRHR} bpm) och HRV är inom normalt intervall. Redo för planerad träning.`;
-                actionEl.textContent = "Tröskel / Styrka OK";
-                bannerEl.className = "bg-gradient-to-r from-emerald-900/40 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex items-center justify-between shadow-lg";
+                titleEl.textContent = "🟢 Kroppen i utmärkt balans";
+                descEl.textContent = `Inga känningar loggade, vilopuls (${latestRHR} bpm) och HRV visar god återhämtning.`;
+                actionEl.textContent = "Planerat pass / Tröskel OK";
+                bannerEl.className = "bg-gradient-to-r from-emerald-900/50 to-slate-800 border border-emerald-500/40 rounded-2xl p-5 flex items-center justify-between shadow-lg";
             }
         
             const chartData = [...filtered].reverse();
