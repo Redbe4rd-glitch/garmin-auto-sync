@@ -979,8 +979,14 @@
             if (refreshIcon) refreshIcon.classList.add('animate-spin');
             document.getElementById('statusText').textContent = "Hämtar data från GitHub...";
 
+            // Sätt en timeout på 10 sekunder så att anropet inte hänger sig
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
             try {
-                const res = await fetch(CSV_URL, { cache: 'no-cache' });
+                const res = await fetch(CSV_URL, { cache: 'no-cache', signal: controller.signal });
+                clearTimeout(timeoutId);
+                
                 if (res.ok) {
                     const text = await res.text();
                     parseCsv(text);
@@ -988,8 +994,10 @@
                     loadFallback();
                 }
             } catch (e) {
+                console.warn("Kunde inte hämta CSV, laddar fallback:", e);
                 loadFallback();
             } finally {
+                // Säkerställ alltid att ikonen slutar snurra
                 if (refreshIcon) refreshIcon.classList.remove('animate-spin');
             }
         }
