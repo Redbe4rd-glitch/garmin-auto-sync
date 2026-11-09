@@ -695,7 +695,6 @@
             }
 
             // Fas- och Intervalltabell baserad på Split Summaries
-            // Uppdatera tabellrubrikerna så de matchar de nya mätvärdena
             const kmCard = document.getElementById('kmTableCard');
             const kmTableHead = kmCard.querySelector('thead tr');
             kmTableHead.innerHTML = `
@@ -728,12 +727,10 @@
                             const distMeters = s.distance ? Number(s.distance).toFixed(0) + ' m' : '-';
                             const pace = formatPace(s.averageSpeed || s.speed);
                             
-                            // Extrahera de gulmarkerade fälten robust med getProp
                             const cadRaw = getProp(s, ['averageRunCadence', 'avgStepFrequency', 'avgCadence']);
                             const cadStr = cadRaw !== null ? Math.round(cadRaw) + ' spm' : '-';
             
                             const strideRaw = getProp(s, ['avgStepLength', 'strideLength']);
-                            // Konvertera från meter (t.ex. 1.01) till cm för läsbarhet
                             const strideStr = strideRaw !== null ? (Number(strideRaw) * 100).toFixed(0) + ' cm' : '-';
             
                             const gctRaw = getProp(s, ['avgGroundContactTime', 'groundContactTime']);
@@ -925,6 +922,7 @@
                 alert("Ett nätverksfel uppstod vid kommunikation med GitHub API.");
             }
         }
+
         async function triggerGitHubWorkflow() {
             let token = localStorage.getItem('gh_pat_token');
             if (!token) {
@@ -998,7 +996,7 @@
         
         async function loadHealthData() {
             try {
-                const res = await fetch(HEALTH_CSV_URL, { cache: 'no-cache' });
+                const res = await fetch(HEALTH_CSV_URL + "?t=" + Date.now(), { cache: 'no-cache' });
                 if (res.ok) {
                     const text = await res.text();
                     Papa.parse(text, {
@@ -1242,7 +1240,6 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
         }
-        let chartSleepObj = null;
 
         let chartSleepObj = null;
 
@@ -1296,7 +1293,6 @@
         
             const painLevel = latest.painLevel ? Number(latest.painLevel) : 0;
             
-            // Beräkna numeriska värden en enda gång
             const numRHR = Number(latestRHR);
             const numAvgRHR = Number(avgRHR);
             const rhrAvsteg = (!isNaN(numRHR) && !isNaN(numAvgRHR)) ? (numRHR - numAvgRHR) : 0;
