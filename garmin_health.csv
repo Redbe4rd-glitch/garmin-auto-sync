@@ -1,5 +1,6 @@
 date,restingHeartRate,hrvStatus,hrvWeeklyAvg,sleepScore,sleepTimeSeconds,deepSleepSeconds,bodyBattery,rpe,painLocation,painLevel
-2026-11-09,41,LOW,52,66,20880,6540,15,4,h-achilles,1
+2026-11-10,39,LOW,52,67,24120,4680,60,,,
+2026-11-09,41,LOW,52,66,20880,6540,7,4,h-achilles,1
 2026-11-08,41,LOW,54,83,28440,4920,12,4,h-achilles,1
 2026-11-07,40,UNBALANCED,55,86,29700,7980,6,,,
 2026-11-06,44,LOW,54,,25200,,5,,,
