@@ -8,8 +8,8 @@ on:
         required: true
         default: ''
       workout_json:
-        description: 'Passstruktur i JSON-format'
-        required: true
+        description: 'Passstruktur i JSON-format (valfritt)'
+        required: false
         default: ''
 
 jobs:
@@ -27,17 +27,21 @@ jobs:
 
           api_key = os.environ['API_KEY']
           workout_date = os.environ['WORKOUT_DATE']
-          workout_json = os.environ['WORKOUT_JSON']
+          workout_json = os.environ['WORKOUT_JSON'].strip()
 
-          # Använd '0' som athlete_id för att referera till nyckelns ägare
           url = 'https://intervals.icu/api/v1/athlete/0/events'
           auth_header = base64.b64encode(f'API_KEY:{api_key}'.encode('utf-8')).decode('utf-8')
 
-          try:
-              workout_data = json.loads(workout_json)
-          except Exception as e:
-              print('Kunde inte avläsa JSON för passet:', e)
-              exit(1)
+          # Om inget anges, använd standardpasset (Pyramiden)
+          if not workout_json:
+              default_desc = '- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR'
+              workout_data = {'filename': 'Pyramiden.txt', 'description': default_desc}
+          else:
+              try:
+                  workout_data = json.loads(workout_json)
+              except Exception as e:
+                  print('Kunde inte avläsa JSON, använder standardpass:', e)
+                  workout_data = {'filename': 'Pass.txt', 'description': workout_json}
 
           payload = {
               'category': 'WORKOUT',
