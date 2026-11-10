@@ -27,6 +27,7 @@
 </head>
 <body class="min-h-screen pb-12">
 
+    <!-- Header -->
     <header class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -35,18 +36,14 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight text-white">Garmin Hub (Intervals.icu)</h1>
-                    <p class="text-xs text-slate-400">Direktintegration utan CSV-filer</p>
+                    <p class="text-xs text-slate-400">Direktintegration via API</p>
                 </div>
             </div>
             
             <div class="flex items-center gap-2">
-                <button onclick="sendPyramidToday()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 transition shadow">
-                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                    <span>Skicka Pyramiden till Klockan</span>
-                </button>
                 <button onclick="fetchIntervalsData()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refreshIcon"></i>
-                    <span>Hämta Data</span>
+                    <span>Uppdatera Data</span>
                 </button>
             </div>
         </div>
@@ -54,20 +51,93 @@
 
     <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
 
+        <!-- API Status Banner -->
         <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 flex justify-between items-center">
-            <div class="text-xs text-slate-300">
+            <div class="text-xs text-slate-300 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span class="font-bold text-white">API-Status:</span> <span id="statusText">Väntar på anrop...</span>
             </div>
-            <div class="flex items-center gap-2">
-                <button onclick="configureApiKeys()" class="text-[10px] text-slate-400 hover:text-indigo-400 underline">Ändra API-Uppgifter</button>
+            <div class="flex items-center gap-3">
+                <button onclick="configureApiKeys()" class="text-xs text-slate-400 hover:text-indigo-400 underline">Ändra API-Uppgifter</button>
                 <span id="dataCountBadge" class="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold rounded-full">-- Pass Hämtade</span>
             </div>
         </div>
 
-        <!-- Träningspass -->
+        <!-- Dashboard KPI-Kort -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
+                <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                    <i data-lucide="footprints" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Volym (Senaste 7 Dagarna)</p>
+                    <h3 class="text-xl font-bold text-white" id="kpiWeeklyVol">0.0 km</h3>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
+                <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+                    <i data-lucide="heart-pulse" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-400">FatMax-andel (&le;124 bpm)</p>
+                    <h3 class="text-xl font-bold text-white" id="kpiFatmaxShare">0%</h3>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
+                <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                    <i data-lucide="dumbbell" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-medium text-slate-400">Styrke- & Alternativpass</p>
+                    <h3 class="text-xl font-bold text-white" id="kpiAltCount">0 st</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Passbibliotek / Snabbknappar -->
         <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
             <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Aktiviteter från Intervals.icu
+                <i data-lucide="send" class="w-4 h-4 text-emerald-400"></i> Skicka Pass till Garmin-Klockan
+            </h3>
+            <div class="flex flex-wrap gap-3">
+                <button onclick="sendPyramidToday()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
+                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                    <span>Skicka Pyramiden (Idag)</span>
+                </button>
+                <button onclick="sendLongRunToday()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
+                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                    <span>Skicka Kontrollerat Långpass (6km)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Diagramsektion -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i> Veckoöversikt (Löpdistans km)
+                </h3>
+                <div class="h-56 relative">
+                    <canvas id="weeklyVolumeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Pulszonsfördelning
+                </h3>
+                <div class="h-56 relative flex justify-center">
+                    <canvas id="hrZoneChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Träningshistorik-Tabell -->
+        <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Träningshistorik (Senaste 30 Dagar)
             </h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-300">
@@ -83,7 +153,7 @@
                     </thead>
                     <tbody id="activitiesTableBody" class="divide-y divide-slate-800 font-mono text-[11px]">
                         <tr>
-                            <td colspan="6" class="p-4 text-center text-slate-500">Klicka på "Hämta Data" eller ange dina API-uppgifter för att ladda in passer.</td>
+                            <td colspan="6" class="p-4 text-center text-slate-500">Hämtar historik...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -95,6 +165,9 @@
     <script>
         const GITHUB_USERNAME = 'Redbe4rd-glitch';
         const GITHUB_REPO = 'garmin-auto-sync';
+
+        let volumeChartInstance = null;
+        let zoneChartInstance = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) lucide.createIcons();
@@ -128,7 +201,7 @@
             const statusText = document.getElementById('statusText');
             const refreshIcon = document.getElementById('refreshIcon');
             if (refreshIcon) refreshIcon.classList.add('animate-spin');
-            statusText.textContent = "Hämtar data från Intervals.icu...";
+            statusText.textContent = "Hämtar data...";
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             const oldestDate = new Date();
@@ -142,8 +215,8 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    renderActivities(data);
-                    statusText.textContent = "Live Ansluten via API";
+                    processAndRenderDashboard(data);
+                    statusText.textContent = "Ansluten via API";
                 } else {
                     statusText.textContent = `Fel vid hämtning (${response.status})`;
                     alert("Kunde inte hämta data. Kontrollera din API-nyckel och Athlete ID.");
@@ -156,18 +229,66 @@
             }
         }
 
-        function renderActivities(activities) {
+        function processAndRenderDashboard(activities) {
+            activities.sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
+
+            // KPI-beräkningar
+            const now = new Date();
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(now.getDate() - 7);
+
+            let weeklyVol = 0;
+            let runPassesCount = 0;
+            let fatmaxPassesCount = 0;
+            let altCount = 0;
+
+            let hrLowCount = 0;
+            let hrMidCount = 0;
+            let hrHighCount = 0;
+
+            activities.forEach(act => {
+                const actDate = new Date(act.start_date_local);
+                const distKm = act.distance ? act.distance / 1000 : 0;
+                const isRun = act.type === 'Run';
+                const hr = act.average_heartrate || 0;
+
+                if (actDate >= sevenDaysAgo && isRun) {
+                    weeklyVol += distKm;
+                }
+
+                if (isRun) {
+                    runPassesCount++;
+                    if (hr > 0 && hr <= 124) fatmaxPassesCount++;
+                } else {
+                    altCount++;
+                }
+
+                if (hr > 0) {
+                    if (hr <= 124) hrLowCount++;
+                    else if (hr <= 145) hrMidCount++;
+                    else hrHighCount++;
+                }
+            });
+
+            document.getElementById('kpiWeeklyVol').textContent = `${weeklyVol.toFixed(1)} km`;
+            const fatmaxShare = runPassesCount > 0 ? Math.round((fatmaxPassesCount / runPassesCount) * 100) : 0;
+            document.getElementById('kpiFatmaxShare').textContent = `${fatmaxShare}%`;
+            document.getElementById('kpiAltCount').textContent = `${altCount} st`;
+
+            renderTable(activities);
+            renderCharts(activities, hrLowCount, hrMidCount, hrHighCount);
+        }
+
+        function renderTable(activities) {
             const tbody = document.getElementById('activitiesTableBody');
             const countBadge = document.getElementById('dataCountBadge');
             tbody.innerHTML = '';
             countBadge.textContent = `${activities.length} Pass Hämtade`;
 
             if (activities.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Inga aktiviteter hittades för den valda perioden.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Inga aktiviteter hittades.</td></tr>';
                 return;
             }
-
-            activities.sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
 
             activities.forEach(act => {
                 const date = String(act.start_date_local).substring(0, 10);
@@ -187,6 +308,71 @@
                         <td class="p-2.5 text-rose-400">${hr}</td>
                     </tr>
                 `;
+            });
+        }
+
+        function renderCharts(activities, hrLow, hrMid, hrHigh) {
+            // 1. Veckovolym Chart
+            const daysMap = {};
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().substring(0, 10);
+                daysMap[dateStr] = 0;
+            }
+
+            activities.forEach(act => {
+                const dateStr = String(act.start_date_local).substring(0, 10);
+                if (daysMap[dateStr] !== undefined && act.type === 'Run') {
+                    daysMap[dateStr] += act.distance ? act.distance / 1000 : 0;
+                }
+            });
+
+            const volCtx = document.getElementById('weeklyVolumeChart').getContext('2d');
+            if (volumeChartInstance) volumeChartInstance.destroy();
+
+            volumeChartInstance = new Chart(volCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(daysMap).map(d => d.substring(5)),
+                    datasets: [{
+                        label: 'Löpning (km)',
+                        data: Object.values(daysMap),
+                        backgroundColor: '#6366f1',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    }
+                }
+            });
+
+            // 2. Pulszonsfördelning Chart
+            const zoneCtx = document.getElementById('hrZoneChart').getContext('2d');
+            if (zoneChartInstance) zoneChartInstance.destroy();
+
+            zoneChartInstance = new Chart(zoneCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['FatMax (<=124)', 'Mellan (125-145)', 'Tröskel (>145)'],
+                    datasets: [{
+                        data: [hrLow, hrMid, hrHigh],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#f8fafc', font: { size: 10 } } }
+                    }
+                }
             });
         }
 
@@ -216,22 +402,27 @@
                 });
 
                 if (response.ok || response.status === 204) {
-                    alert("✅ Pyramiden har skickats till Intervals.icu och synkas till din Garmin-klocka inom kort!");
+                    alert("✅ Passet har skickats till Intervals.icu och synkas till din klocka inom kort!");
                 } else {
                     const err = await response.json().catch(() => ({}));
                     alert(`Kunde inte skicka passet: ${err.message || response.statusText}`);
                 }
             } catch (e) {
                 console.error(e);
-                alert("Ett fel uppstod vid anrop till GitHub Actions.");
+                alert("Ett fel uppstod vid kommunikation med GitHub API.");
             }
         }
 
         function sendPyramidToday() {
             const today = new Date().toISOString().substring(0, 10);
             const pyramidText = `- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR`;
-            
             sendWorkoutToIntervals(today, pyramidText);
+        }
+
+        function sendLongRunToday() {
+            const today = new Date().toISOString().substring(0, 10);
+            const longRunText = `- 5m Warmup 60-70% HR\n\nMain Set 6x\n- 4m 70-80% HR\n- 1m Walk\n\n- 5m Cooldown 60-70% HR`;
+            sendWorkoutToIntervals(today, longRunText);
         }
     </script>
 </body>
