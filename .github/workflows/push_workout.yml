@@ -1,0 +1,57 @@
+name: Push Workout to Intervals.icu
+
+on:
+  workflow_dispatch:
+    inputs:
+      workout_date:
+        description: 'Datum för passet (YYYY-MM-DD)'
+        required: true
+        default: ''
+      workout_text:
+        description: 'Passstruktur i Intervals.icu-format'
+        required: true
+        default: ''
+
+jobs:
+  push-workout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Workout via API
+        env:
+          API_KEY: ${{ secrets.INTERVALS_API_KEY }}
+          ATHLETE_ID: ${{ secrets.INTERVALS_ATHLETE_ID }}
+          WORKOUT_DATE: ${{ github.event.inputs.workout_date }}
+          WORKOUT_TEXT: ${{ github.event.inputs.workout_text }}
+        run: |
+          python -c "
+          import os, json, urllib.request, base64
+
+          api_key = os.environ['API_KEY']
+          athlete_id = os.environ['ATHLETE_ID']
+          workout_date = os.environ['WORKOUT_DATE']
+          workout_text = os.environ['WORKOUT_TEXT']
+
+          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/events'
+          auth_header = base64.b64encode(f'API_KEY:{api_key}'.encode('utf-8')).decode('utf-8')
+
+          payload = {
+              'category': 'WORKOUT',
+              'start_date_local': f'{workout_date}T00:00:00',
+              'type': 'Run',
+              'filename': 'Pyramiden.txt',
+              'description': workout_text
+          }
+
+          req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={
+              'Authorization': f'Basic {auth_header}',
+              'Content-Type': 'application/json'
+          }, method='POST')
+
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  print('Status:', resp.status)
+                  print('Response:', resp.read().decode('utf-8'))
+          except Exception as e:
+              print('Error:', e)
+              exit(1)
+          "
