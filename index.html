@@ -349,14 +349,14 @@
             <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="edit-3" class="w-4 h-4 text-emerald-400"></i> Dagens Känsla & Känningar (Sparas till CSV)
+                        <i data-lucide="edit-3" class="w-4 h-4 text-emerald-400"></i> Morgonens Känsla & Känningar (Systemisk Status)
                     </h3>
                     <span class="text-[11px] text-emerald-400 font-medium">Molnbaserad synk</span>
                 </div>
             
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Dagsform / Känsla (1-5)</label>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Dagsform / Känsla på morgonen (1-5)</label>
                         <select id="log-rpe" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
                             <option value="5">5 - Pigg & Fräsch</option>
                             <option value="4" selected>4 - Normal / God kännedom</option>
@@ -365,28 +365,35 @@
                             <option value="1">1 - Utmattad / Hängig</option>
                         </select>
                     </div>
-            
+
                     <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Känning i Vad/Hälsena</label>
-                        <select id="log-location" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
-                            <option value="none">Ingen känning (Helt OK)</option>
-                            <option value="v-calf">Vänster Vad</option>
-                            <option value="h-calf">Höger Vad</option>
-                            <option value="v-achilles">Vänster Hälsena</option>
-                            <option value="h-achilles">Höger Hälsena</option>
-                        </select>
-                    </div>
-            
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Smärtskala / Stelhet (0-10)</label>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Smärtskala / Nattlig stelhet (0-10)</label>
                         <select id="log-pain" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
                             <option value="0">0 - Smärtfri</option>
                             <option value="1">1 - Mycket lätt stelhet vid start</option>
                             <option value="2">2 - Lätt stelhet (släpper efter uppvärmning)</option>
                             <option value="3">3 - Tydlig stelhet/muggighet</option>
-                            <option value="4">4 - Molande känning under löpning</option>
-                            <option value="5">5+ - Hugg/Smärta (Bör ej springa)</option>
+                            <option value="4">4 - Molande känning</option>
+                            <option value="5">5+ - Hugg/Smärta</option>
                         </select>
+                    </div>
+
+                    <div class="md:col-span-1">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Morgonkänningar (Välj flera):</label>
+                        <div class="bg-slate-900 border border-slate-700 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1 text-xs text-slate-300">
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-calf" class="log-loc-cb"> Vänster Vad</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-calf" class="log-loc-cb"> Höger Vad</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-achilles" class="log-loc-cb"> Vänster Hälsena</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-achilles" class="log-loc-cb"> Höger Hälsena</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-hip" class="log-loc-cb"> Vänster Höft</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-hip" class="log-loc-cb"> Höger Höft</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-groin" class="log-loc-cb"> Vänster Ljumske</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-groin" class="log-loc-cb"> Höger Ljumske</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-hamstring" class="log-loc-cb"> Vänster Baksida Lår</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-hamstring" class="log-loc-cb"> Höger Baksida Lår</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-knee" class="log-loc-cb"> Vänster Knä</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-knee" class="log-loc-cb"> Höger Knä</label>
+                        </div>
                     </div>
                 </div>
             
@@ -481,6 +488,65 @@
 
             <div id="detailCardsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
+            <!-- POST-PASS LOGGFORMULÄR (Mekanisk Belastningsrespons) -->
+            <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="check-square" class="w-4 h-4 text-emerald-400"></i> Hur kändes DETTA pass? (Post-Pass Respons)
+                    </h3>
+                    <span class="text-[11px] text-emerald-400 font-medium">Sparas till passnotering</span>
+                </div>
+            
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Passkänsla (Post-RPE 1-5)</label>
+                        <select id="post-rpe" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="5">5 - Lätt & Pigg hela passet</option>
+                            <option value="4" selected>4 - Kontrollerat / Bra känsla</option>
+                            <option value="3">3 - Ganska tufft / Sliter lite</option>
+                            <option value="2">2 - Tungt / Stela ben</option>
+                            <option value="1">1 - Extremt tungt / Avbröt</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Smärtnivå under/efter passet (0-10)</label>
+                        <select id="post-pain" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="0">0 - Helt smärtfri</option>
+                            <option value="1">1 - Känning 1/10 (Släppte snabbt)</option>
+                            <option value="2">2 - Lätt stelhet efteråt</option>
+                            <option value="3">3 - Tydlig känning under löpning</option>
+                            <option value="4">4 - Ökande smärta under passet</option>
+                            <option value="5">5+ - Skarp smärta (Borde ej sprungit)</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-1">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Känningar uppkomna/förvärrade av passet:</label>
+                        <div class="bg-slate-900 border border-slate-700 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1 text-xs text-slate-300">
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-calf" class="post-loc-cb"> Vänster Vad</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-calf" class="post-loc-cb"> Höger Vad</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-achilles" class="post-loc-cb"> Vänster Hälsena</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-achilles" class="post-loc-cb"> Höger Hälsena</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-hip" class="post-loc-cb"> Vänster Höft</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-hip" class="post-loc-cb"> Höger Höft</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-groin" class="post-loc-cb"> Vänster Ljumske</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-groin" class="post-loc-cb"> Höger Ljumske</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-hamstring" class="post-loc-cb"> Vänster Baksida Lår</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-hamstring" class="post-loc-cb"> Höger Baksida Lår</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="v-knee" class="post-loc-cb"> Vänster Knä</label>
+                            <label class="flex items-center gap-1.5"><input type="checkbox" value="h-knee" class="post-loc-cb"> Höger Knä</label>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="flex justify-end pt-2">
+                    <button onclick="savePostActivityLog()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition shadow">
+                        <i data-lucide="save" class="w-4 h-4"></i> Spara Passrespons
+                    </button>
+                </div>
+            </div>
+
             <div id="splitSummariesCard" class="hidden bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i> Split Summaries (Fas- & Intervallfördelning)
@@ -546,6 +612,7 @@
         let activePeriodFilter = '7'; // Standard
         let currentTab = 'overview';
         let previousTab = 'overview';
+        let currentSelectedActIndex = null;
 
         let chartDistanceObj = null;
         let chartIntensityObj = null;
@@ -686,7 +753,6 @@
             return weekNo < 10 ? '0' + weekNo : '' + weekNo;
         }
 
-        // Hjälpfunktion för att beräkna glidande medelvärde (trendkurva)
         function calculateMovingAverage(data, windowSize = 5) {
             let result = [];
             for (let i = 0; i < data.length; i++) {
@@ -818,6 +884,7 @@
         }
 
         function showActivityDetail(index) {
+            currentSelectedActIndex = index;
             const act = allActivities[index];
             if (!act) return;
 
@@ -847,6 +914,26 @@
                     <div class="text-xl font-bold text-purple-400 mt-1">${formatBalance(act.balance)}</div>
                 </div>
             `;
+
+            // Ladda sparad post-pass-notering om den finns
+            const storedLog = localStorage.getItem(`post_act_${act.date}_${act.type}`);
+            document.querySelectorAll('.post-loc-cb').forEach(cb => cb.checked = false);
+            if (storedLog) {
+                try {
+                    const parsed = JSON.parse(storedLog);
+                    if (parsed.postRpe) document.getElementById('post-rpe').value = parsed.postRpe;
+                    if (parsed.postPain) document.getElementById('post-pain').value = parsed.postPain;
+                    if (parsed.postLocations && Array.isArray(parsed.postLocations)) {
+                        parsed.postLocations.forEach(loc => {
+                            const cb = document.querySelector(`.post-loc-cb[value="${loc}"]`);
+                            if (cb) cb.checked = true;
+                        });
+                    }
+                } catch(e){}
+            } else {
+                document.getElementById('post-rpe').value = '4';
+                document.getElementById('post-pain').value = '0';
+            }
 
             const splitCard = document.getElementById('splitSummariesCard');
             const splitContent = document.getElementById('splitSummariesContent');
@@ -1028,14 +1115,45 @@
             switchTab('detail');
         }
 
+        function savePostActivityLog() {
+            if (currentSelectedActIndex === null) return;
+            const act = allActivities[currentSelectedActIndex];
+            if (!act) return;
+
+            const postRpe = document.getElementById('post-rpe').value;
+            const postPain = document.getElementById('post-pain').value;
+            const selectedLocs = [];
+            document.querySelectorAll('.post-loc-cb:checked').forEach(cb => selectedLocs.push(cb.value));
+
+            const logObj = {
+                date: act.date,
+                type: act.type,
+                postRpe: postRpe,
+                postPain: postPain,
+                postLocations: selectedLocs
+            };
+
+            localStorage.setItem(`post_act_${act.date}_${act.type}`, JSON.stringify(logObj));
+            alert(`✅ Passresponsen har sparats för ${act.type} (${act.date})!`);
+            renderAll();
+        }
+
         function populateTodayLogForm() {
             const todayStr = new Date().toISOString().substring(0, 10);
             const todayRecord = allHealthData.find(d => d.date === todayStr);
         
+            document.querySelectorAll('.log-loc-cb').forEach(cb => cb.checked = false);
+
             if (todayRecord) {
                 if (todayRecord.rpe) document.getElementById('log-rpe').value = todayRecord.rpe;
-                if (todayRecord.painLocation) document.getElementById('log-location').value = todayRecord.painLocation;
                 if (todayRecord.painLevel) document.getElementById('log-pain').value = todayRecord.painLevel;
+                if (todayRecord.painLocation) {
+                    const locs = String(todayRecord.painLocation).split(',');
+                    locs.forEach(l => {
+                        const cb = document.querySelector(`.log-loc-cb[value="${l.trim()}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
             }
         }
 
@@ -1053,8 +1171,11 @@
         
             const todayStr = new Date().toISOString().substring(0, 10);
             const newRpe = document.getElementById('log-rpe').value;
-            const newLocation = document.getElementById('log-location').value;
             const newPain = document.getElementById('log-pain').value;
+
+            const selectedLocs = [];
+            document.querySelectorAll('.log-loc-cb:checked').forEach(cb => selectedLocs.push(cb.value));
+            const newLocation = selectedLocs.join(',');
         
             const filePath = "garmin_health.csv";
             const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${filePath}`;
@@ -1112,7 +1233,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        message: `Uppdatera dagsnotering och känning för ${todayStr}`,
+                        message: `Uppdatera dagsnotering och känningar för ${todayStr}`,
                         content: encodedContent,
                         sha: fileData.sha
                     })
@@ -1347,10 +1468,23 @@
                 if (a.hr > 142) { zColor = "text-rose-400"; zName = "Tröskel/Hård"; }
                 else if (a.hr > 124) { zColor = "text-sky-400"; zName = "Mellan"; }
 
+                const storedLog = localStorage.getItem(`post_act_${a.date}_${a.type}`);
+                let postBadge = '';
+                if (storedLog) {
+                    try {
+                        const parsed = JSON.parse(storedLog);
+                        if (parsed.postPain && Number(parsed.postPain) > 0) {
+                            postBadge = ` <span class="text-[10px] text-rose-400 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-800/60" title="Post-pass smärta: ${parsed.postPain}/10">⚠️ ${parsed.postPain}/10</span>`;
+                        } else {
+                            postBadge = ` <span class="text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60">✓ Loggat</span>`;
+                        }
+                    } catch(e){}
+                }
+
                 tbody.innerHTML += `
                     <tr onclick="showActivityDetail(${actIndex})" class="border-b border-slate-800 clickable-row">
                         <td class="p-2.5 font-mono text-[11px]">${a.date}</td>
-                        <td class="p-2.5 font-medium">${name}</td>
+                        <td class="p-2.5 font-medium">${name}${postBadge}</td>
                         <td class="p-2.5 font-semibold text-white">${a.distance.toFixed(1)}</td>
                         <td class="p-2.5">${formatTimeDetailed(a.duration)}</td>
                         <td class="p-2.5 font-mono">${a.hr > 0 ? a.hr + ' bpm' : '-'}</td>
@@ -1361,7 +1495,7 @@
             });
 
             const runs = [...data].reverse();
-            const labels = runs.map(r => r.date); // Visar fullständigt ÅÅÅÅ-MM-DD
+            const labels = runs.map(r => r.date);
             const distances = runs.map(r => r.distance);
             const distTrend = calculateMovingAverage(distances, 5);
 
@@ -1437,7 +1571,7 @@
             });
 
             const runs = [...data].reverse();
-            const labels = runs.map(r => r.date); // Fullständigt datum med år
+            const labels = runs.map(r => r.date);
             const gcts = runs.map(r => r.gct);
             const gctTrend = calculateMovingAverage(gcts, 5);
 
@@ -1515,11 +1649,11 @@
             if (statusTextEl && todayRecord) {
                 const hasLog = todayRecord.rpe || (todayRecord.painLevel && Number(todayRecord.painLevel) > 0);
                 if (hasLog) {
-                    const painDesc = Number(todayRecord.painLevel) > 0 ? `Känning: ${todayRecord.painLocation} (${todayRecord.painLevel}/10)` : 'Helt smärtfri i vader/hälsenor';
-                    statusTextEl.innerHTML = `Senaste notering: RPE <b>${todayRecord.rpe || '-'}</b>/5 | <span class="text-emerald-400">${painDesc}</span>`;
+                    const painDesc = Number(todayRecord.painLevel) > 0 ? `Känningar: ${todayRecord.painLocation || 'Vad/Hälsena'} (${todayRecord.painLevel}/10)` : 'Helt smärtfri i vader/hälsenor';
+                    statusTextEl.innerHTML = `Morgonnotering: RPE <b>${todayRecord.rpe || '-'}</b>/5 | <span class="text-emerald-400">${painDesc}</span>`;
                     statusDateEl.textContent = `Datum: ${todayRecord.date || todayStr}`;
                 } else {
-                    statusTextEl.textContent = `Ingen subjektiv dagsnotering sparad för idag (${todayStr}). Använd formuläret ovan för att logga.`;
+                    statusTextEl.textContent = `Ingen morgonnotering sparad för idag (${todayStr}). Använd formuläret ovan för att logga.`;
                     statusDateEl.textContent = "";
                 }
             }
@@ -1560,7 +1694,7 @@
             if (painLevel >= 3 || rhrAvsteg >= 5) {
                 titleEl.textContent = "🔴 Rött Ljus: Hög Skaderisk / Belastning";
                 if (painLevel >= 3) {
-                    descEl.textContent = `Tydlig känning loggad (${latest.painLocation || 'Vad/Hälsena'} - ${painLevel}/10). Löpvila krävs för att låta senvävnaden återhämta sig.`;
+                    descEl.textContent = `Tydlig känning loggad (${latest.painLocation || 'Område'} - ${painLevel}/10). Löpvila krävs för att låta vävnaden återhämta sig.`;
                     actionEl.textContent = "Crosstrainer / Cykel + Rehab";
                 } else {
                     descEl.textContent = `Vilopulsen är avsevärd förhöjd (+${rhrAvsteg.toFixed(1)} bpm). Centrala nervsystemet är överbelastat.`;
@@ -1570,25 +1704,25 @@
             }
             else if (painLevel >= 1) {
                 titleEl.textContent = "🟡 Gult Ljus: Skadeförebyggande läge (Stelhet/Lätt känning)";
-                descEl.textContent = `Stelhet loggad (${latest.painLocation || 'Vad/Hälsena'} - ${painLevel}/10). Löpning är tillåten i lugnt tempo, men undvik snabbhet/backar.`;
-                actionEl.textContent = "Lugn jogg + Tåhävningar";
+                descEl.textContent = `Stelhet loggad (${latest.painLocation || 'Område'} - ${painLevel}/10). Löpning tillåten i FatMax med gångpauser.`;
+                actionEl.textContent = "Pyramidjogg / Gång + Tåhävningar";
                 bannerEl.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
             else if (isHrvLow || rhrAvsteg > 2 || bbVal < 40) {
                 titleEl.textContent = "🟠 Moderat beredskap: Central trötthet";
-                descEl.textContent = `HRV avviker eller vilopulsen är förhöjd (+${rhrAvsteg.toFixed(1)} bpm). Muskelstrukturen är hel, men hjärta/nervsystem behöver spara energi.`;
+                descEl.textContent = `HRV avviker eller vilopulsen är förhöjd (+${rhrAvsteg.toFixed(1)} bpm). Muskelstrukturen hel, men spara energi.`;
                 actionEl.textContent = "Lugn FatMax (Aerob Bas)";
                 bannerEl.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
             else {
                 titleEl.textContent = "🟢 Grönt Ljus: Kroppen i utmärkt balans";
-                descEl.textContent = `Vilopuls (${latestRHR} bpm) och HRV är stabila. Ingen smärta loggad. Redo för planerad träning.`;
-                actionEl.textContent = "Tröskel / Kvalitet OK";
+                descEl.textContent = `Vilopuls (${latestRHR} bpm) och HRV stabila. Redo för planerad träning och omväxlande pass.`;
+                actionEl.textContent = "Kvalitet & Pyramid-jogg OK";
                 bannerEl.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex items-center justify-between shadow-lg transition-all";
             }
         
             const chartData = [...filtered].reverse();
-            const labels = chartData.map(d => d.date ? d.date : ''); // Fullständigt datum med år även här
+            const labels = chartData.map(d => d.date ? d.date : '');
             const rhrData = chartData.map(d => Number(d.restingHeartRate) || null);
             const rhrTrend = calculateMovingAverage(rhrData, 5);
             const deepSleepHours = chartData.map(d => d.deepSleepSeconds ? (Number(d.deepSleepSeconds) / 3600).toFixed(1) : 0);
