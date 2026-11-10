@@ -393,6 +393,7 @@
                 category: 'WORKOUT',
                 start_date_local: `${workoutDate}T00:00:00`,
                 type: 'Run',
+                name: filename.replace('.txt', ''), // Använder filnamnet som namn på passet
                 filename: filename,
                 description: workoutText
             };
@@ -408,7 +409,8 @@
                 });
         
                 if (response.ok || response.status === 201) {
-                    alert("✅ Passet har skickats direkt till Intervals.icu och synkas till din klocka!");
+                    alert("✅ Passet har skickats till Intervals.icu och synkas till din klocka!");
+                    fetchIntervalsData(); // Uppdatera listan
                 } else {
                     const errText = await response.text();
                     alert(`Kunde inte skicka passet (${response.status}): ${errText}`);
@@ -417,18 +419,6 @@
                 console.error(e);
                 alert("Ett nätverksfel uppstod vid kommunikation med Intervals.icu.");
             }
-        }
-        
-        function sendPyramidToday() {
-            const today = new Date().toISOString().substring(0, 10);
-            const pyramidText = `- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR`;
-            sendWorkoutDirectly(today, "Pyramiden.txt", pyramidText);
-        }
-        
-        function sendLongRunToday() {
-            const today = new Date().toISOString().substring(0, 10);
-            const longRunText = `- 5m Warmup 60-70% HR\n\nMain Set 6x\n- 4m 70-80% HR\n- 1m Walk\n\n- 5m Cooldown 60-70% HR`;
-            sendWorkoutDirectly(today, "Langpass.txt", longRunText);
         }
     </script>
 </body>
