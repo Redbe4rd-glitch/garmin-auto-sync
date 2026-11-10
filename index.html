@@ -57,6 +57,10 @@
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refreshIcon"></i>
                     <span>Ladda om CSV</span>
                 </button>
+                <button onclick="copyCoachGenieReport()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-lg flex items-center gap-1.5 transition shadow">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    <span>Kopiera till Coach Genie</span>
+                </button>
             </div>
         </div>
 
@@ -1889,6 +1893,55 @@
                 }
             ]);
         }
+
+        function copyCoachGenieReport() {
+    const todayStr = new Date().toISOString().substring(0, 10);
+    const latestHealth = allHealthData && allHealthData.length > 0 ? allHealthData[0] : {};
+
+    // 1. Bygg 30-pass historik i kompakt format
+    const passCount = Math.min(30, allActivities.length);
+    const activityLines = allActivities.slice(0, passCount).map((a, i) => {
+        const activityId = `${a.date}_${a.type}`;
+        const postLog = allPostActivityLogs.find(p => p.activityId === activityId) || {};
+        
+        const dist = a.distance ? a.distance.toFixed(1) + 'km' : '0km';
+        const dur = a.duration ? Math.round(a.duration / 60) + 'm' : '0m';
+        const hr = a.hr > 0 ? a.hr + 'bpm' : '-';
+        const gct = a.gct > 0 ? `${a.gct}ms` : '-';
+        const bal = a.balance && a.balance !== '50/50' ? formatBalance(a.balance) : '';
+        
+        const rpe = postLog.postRpe ? `RPE:${postLog.postRpe}/5` : 'RPE:-';
+        const pain = postLog.postPain ? `Smärta:${postLog.postPain}/10` : 'Smärta:0/10';
+        const locs = postLog.postLocations ? `(${postLog.postLocations})` : '';
+
+        return `${i+1}. ${a.date} | ${a.type} | ${dist} | ${dur} | ${hr} | GCT:${gct} ${bal} | ${rpe} ${pain} ${locs}`.trim();
+    }).join('\n');
+
+    // 2. Sammanställ hela prompten till Coach Genie
+    const promptText = `Här är min dagsstatus och min kompletta träningshistorik för de senaste ${passCount} passen hämtad från min Garmin Analytics Hub (${todayStr}):
+
+        📊 MORGONENS HÄLSODATA & BEREDSAP (${latestHealth.date || todayStr})
+        • Dagsform (RPE): ${latestHealth.rpe || '-'}/5
+        • Morgonstelhet/smärta: ${latestHealth.painLevel || 0}/10
+        • Aktiva morgonkänningar: ${latestHealth.painLocation || 'Inga'}
+        • Vilopuls: ${latestHealth.restingHeartRate || '--'} bpm | HRV: ${latestHealth.hrvStatus || 'Stabila'}
+        • Sömnscore: ${latestHealth.sleepScore || '--'}/100 | Body Battery: ${latestHealth.bodyBattery || '--'}%
+        
+        🏃 TRÄNINGSHISTORIK (SENASTE ${passCount} PASSEN)
+        ${activityLines}
+        
+        ---
+        Coach Genie: Analysera min belastning, GCT-trender och min mekaniska respons (känningar) över dessa ${passCount} pass. Vad är din bedömning av min form och vad rekommenderar du för veckoplanering?`;
+        
+            // 3. Kopiera till urklipp
+            navigator.clipboard.writeText(promptText).then(() => {
+                alert(`✅ Coach Genie-rapporten med de senaste ${passCount} passen har kopierats till urklipp! Klistra bara in den i chatten.`);
+            }).catch(err => {
+                console.error("Kunde inte kopiera till urklipp:", err);
+                alert("Kunde inte kopiera automatiskt. Kontrollera behörigheterna i din webbläsare.");
+            });
+        }
+        
     </script>
     
 </body>
