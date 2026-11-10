@@ -19,7 +19,6 @@ jobs:
       - name: Send Workout via API
         env:
           API_KEY: ${{ secrets.INTERVALS_API_KEY }}
-          ATHLETE_ID: ${{ secrets.INTERVALS_ATHLETE_ID }}
           WORKOUT_DATE: ${{ github.event.inputs.workout_date }}
           WORKOUT_JSON: ${{ github.event.inputs.workout_json }}
         run: |
@@ -27,14 +26,13 @@ jobs:
           import os, json, urllib.request, base64
 
           api_key = os.environ['API_KEY']
-          athlete_id = os.environ['ATHLETE_ID']
           workout_date = os.environ['WORKOUT_DATE']
           workout_json = os.environ['WORKOUT_JSON']
 
-          url = f'https://intervals.icu/api/v1/athlete/{athlete_id}/events'
+          # Använd '0' som athlete_id för att referera till nyckelns ägare
+          url = 'https://intervals.icu/api/v1/athlete/0/events'
           auth_header = base64.b64encode(f'API_KEY:{api_key}'.encode('utf-8')).decode('utf-8')
 
-          # Parsa in den skickade JSON-strukturen för passet
           try:
               workout_data = json.loads(workout_json)
           except Exception as e:
