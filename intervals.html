@@ -47,177 +47,296 @@
                 </button>
             </div>
         </div>
+
+        <!-- Flikmeny -->
+        <div class="max-w-6xl mx-auto flex gap-2 mt-3 border-t border-slate-800/80 pt-2">
+            <button onclick="switchTab('dashboard')" id="tabBtnDashboard" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5">
+                <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> Dashboard & Hälsa
+            </button>
+            <button onclick="switchTab('library')" id="tabBtnLibrary" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Passbibliotek & Filosofi
+            </button>
+        </div>
     </header>
 
     <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
 
-        <!-- API Status Banner -->
-        <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 flex justify-between items-center">
-            <div class="text-xs text-slate-300 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="font-bold text-white">API-Status:</span> <span id="statusText">Väntar på anrop...</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <button onclick="configureApiKeys()" class="text-xs text-slate-400 hover:text-indigo-400 underline">Ändra API-Uppgifter</button>
-                <span id="dataCountBadge" class="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold rounded-full">-- Pass Hämtade</span>
-            </div>
-        </div>
-
-        <!-- Dashboard KPI-Kort -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
-                <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-                    <i data-lucide="footprints" class="w-6 h-6"></i>
+        <!-- ================= VYN 1: DASHBOARD ================= -->
+        <div id="viewDashboard" class="space-y-6">
+            <!-- API Status Banner -->
+            <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 flex justify-between items-center">
+                <div class="text-xs text-slate-300 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="font-bold text-white">API-Status:</span> <span id="statusText">Väntar på anrop...</span>
                 </div>
-                <div>
-                    <p class="text-xs font-medium text-slate-400">Volym (Senaste 7 Dagarna)</p>
-                    <h3 class="text-xl font-bold text-white" id="kpiWeeklyVol">0.0 km</h3>
+                <div class="flex items-center gap-3">
+                    <button onclick="configureApiKeys()" class="text-xs text-slate-400 hover:text-indigo-400 underline">Ändra API-Uppgifter</button>
+                    <span id="dataCountBadge" class="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold rounded-full">-- Pass Hämtade</span>
                 </div>
             </div>
 
-            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
-                <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
-                    <i data-lucide="heart-pulse" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-medium text-slate-400">FatMax-andel (&le;124 bpm)</p>
-                    <h3 class="text-xl font-bold text-white" id="kpiFatmaxShare">0%</h3>
-                </div>
-            </div>
-
-            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
-                <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
-                    <i data-lucide="dumbbell" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-medium text-slate-400">Styrke- & Alternativpass</p>
-                    <h3 class="text-xl font-bold text-white" id="kpiAltCount">0 st</h3>
-                </div>
-            </div>
-        </div>
-
-        <!-- Morgonlogg & Hälsa (Wellness) -->
-        <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
-            <div class="flex items-center justify-between">
-                <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="activity" class="w-4 h-4 text-rose-400"></i> Morgonstatus & Skadeförebyggande (Idag)
-                </h3>
-                <span class="text-[11px] text-slate-400" id="wellnessDate">--</span>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-                <!-- Vad/Hälsena -->
-                <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
-                    <div class="flex justify-between font-semibold">
-                        <span class="text-slate-300">Vad / Hälsena</span>
-                        <span class="text-rose-400 font-bold" id="valCalf">0 / 10</span>
+            <!-- Dashboard KPI-Kort -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
+                    <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                        <i data-lucide="footprints" class="w-6 h-6"></i>
                     </div>
-                    <input type="range" min="0" max="10" value="0" id="inputCalf" oninput="document.getElementById('valCalf').textContent = this.value + ' / 10'" class="w-full accent-rose-500">
-                    <p class="text-[10px] text-slate-500">0 = Perfekt, 10 = Smärta</p>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Volym (Senaste 7 Dagarna)</p>
+                        <h3 class="text-xl font-bold text-white" id="kpiWeeklyVol">0.0 km</h3>
+                    </div>
                 </div>
 
-                <!-- Höft -->
-                <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
-                    <div class="flex justify-between font-semibold">
-                        <span class="text-slate-300">Höft / Säteskänning</span>
-                        <span class="text-amber-400 font-bold" id="valHip">0 / 10</span>
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
+                    <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+                        <i data-lucide="heart-pulse" class="w-6 h-6"></i>
                     </div>
-                    <input type="range" min="0" max="10" value="0" id="inputHip" oninput="document.getElementById('valHip').textContent = this.value + ' / 10'" class="w-full accent-amber-500">
-                    <p class="text-[10px] text-slate-500">0 = Mjuk, 10 = Mycket stel</p>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">FatMax-andel (&le;124 bpm)</p>
+                        <h3 class="text-xl font-bold text-white" id="kpiFatmaxShare">0%</h3>
+                    </div>
                 </div>
 
-                <!-- Sömnkvalitet -->
-                <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
-                    <div class="flex justify-between font-semibold">
-                        <span class="text-slate-300">Sömnkvalitet</span>
-                        <span class="text-indigo-400 font-bold" id="valSleep">3 / 5</span>
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
+                    <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                        <i data-lucide="dumbbell" class="w-6 h-6"></i>
                     </div>
-                    <input type="range" min="1" max="5" value="3" id="inputSleep" oninput="document.getElementById('valSleep').textContent = this.value + ' / 5'" class="w-full accent-indigo-500">
-                    <p class="text-[10px] text-slate-500">1 = Dålig, 5 = Utvilad</p>
-                </div>
-
-                <!-- Dagsform -->
-                <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
-                    <div class="flex justify-between font-semibold">
-                        <span class="text-slate-300">Känsla / Energi</span>
-                        <span class="text-emerald-400 font-bold" id="valReadiness">3 / 4</span>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Styrke- & Alternativpass</p>
+                        <h3 class="text-xl font-bold text-white" id="kpiAltCount">0 st</h3>
                     </div>
-                    <input type="range" min="1" max="4" value="3" id="inputReadiness" oninput="document.getElementById('valReadiness').textContent = this.value + ' / 4'" class="w-full accent-emerald-500">
-                    <p class="text-[10px] text-slate-500">1 = Låg, 4 = Pigg</p>
                 </div>
             </div>
 
-            <!-- Anteckningar & Spara-knapp -->
-            <div class="flex flex-col sm:flex-row gap-3 items-center">
-                <input type="text" id="inputWellnessNotes" placeholder="Morgonnoteringar (t.ex. lätt stelhet efter igår)..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
-                <button onclick="saveMorningWellness()" class="w-full sm:w-auto px-5 py-2 bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow shrink-0">
-                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
-                    <span>Spara Status</span>
-                </button>
-            </div>
-        </div>
+            <!-- Morgonlogg & Hälsa (Wellness) -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="activity" class="w-4 h-4 text-rose-400"></i> Morgonstatus & Skadeförebyggande (Idag)
+                    </h3>
+                    <span class="text-[11px] text-slate-400" id="wellnessDate">--</span>
+                </div>
 
-        <!-- Passbibliotek / Snabbknappar -->
-        <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                <i data-lucide="send" class="w-4 h-4 text-emerald-400"></i> Skicka Pass till Garmin-Klockan
-            </h3>
-            <div class="flex flex-wrap gap-3">
-                <button onclick="sendPyramidToday()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
-                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                    <span>Skicka Pyramiden (Idag)</span>
-                </button>
-                <button onclick="sendLongRunToday()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
-                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                    <span>Skicka Kontrollerat Långpass (6km)</span>
-                </button>
-            </div>
-        </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+                    <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
+                        <div class="flex justify-between font-semibold">
+                            <span class="text-slate-300">Vad / Hälsena</span>
+                            <span class="text-rose-400 font-bold" id="valCalf">0 / 10</span>
+                        </div>
+                        <input type="range" min="0" max="10" value="0" id="inputCalf" oninput="document.getElementById('valCalf').textContent = this.value + ' / 10'" class="w-full accent-rose-500">
+                        <p class="text-[10px] text-slate-500">0 = Perfekt, 10 = Smärta</p>
+                    </div>
 
-        <!-- Diagramsektion -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
+                        <div class="flex justify-between font-semibold">
+                            <span class="text-slate-300">Höft / Säteskänning</span>
+                            <span class="text-amber-400 font-bold" id="valHip">0 / 10</span>
+                        </div>
+                        <input type="range" min="0" max="10" value="0" id="inputHip" oninput="document.getElementById('valHip').textContent = this.value + ' / 10'" class="w-full accent-amber-500">
+                        <p class="text-[10px] text-slate-500">0 = Mjuk, 10 = Mycket stel</p>
+                    </div>
+
+                    <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
+                        <div class="flex justify-between font-semibold">
+                            <span class="text-slate-300">Sömnkvalitet</span>
+                            <span class="text-indigo-400 font-bold" id="valSleep">3 / 5</span>
+                        </div>
+                        <input type="range" min="1" max="5" value="3" id="inputSleep" oninput="document.getElementById('valSleep').textContent = this.value + ' / 5'" class="w-full accent-indigo-500">
+                        <p class="text-[10px] text-slate-500">1 = Dålig, 5 = Utvilad</p>
+                    </div>
+
+                    <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
+                        <div class="flex justify-between font-semibold">
+                            <span class="text-slate-300">Känsla / Energi</span>
+                            <span class="text-emerald-400 font-bold" id="valReadiness">3 / 4</span>
+                        </div>
+                        <input type="range" min="1" max="4" value="3" id="inputReadiness" oninput="document.getElementById('valReadiness').textContent = this.value + ' / 4'" class="w-full accent-emerald-500">
+                        <p class="text-[10px] text-slate-500">1 = Låg, 4 = Pigg</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 items-center">
+                    <input type="text" id="inputWellnessNotes" placeholder="Morgonnoteringar..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    <button onclick="saveMorningWellness()" class="w-full sm:w-auto px-5 py-2 bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow shrink-0">
+                        <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                        <span>Spara Status</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Diagramsektion -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i> Veckoöversikt (Löpdistans km)
+                    </h3>
+                    <div class="h-56 relative">
+                        <canvas id="weeklyVolumeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Pulszonsfördelning
+                    </h3>
+                    <div class="h-56 relative flex justify-center">
+                        <canvas id="hrZoneChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Träningshistorik-Tabell -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i> Veckoöversikt (Löpdistans km)
+                    <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Träningshistorik (Senaste 30 Dagar)
                 </h3>
-                <div class="h-56 relative">
-                    <canvas id="weeklyVolumeChart"></canvas>
-                </div>
-            </div>
-
-            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Pulszonsfördelning
-                </h3>
-                <div class="h-56 relative flex justify-center">
-                    <canvas id="hrZoneChart"></canvas>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px]">
+                            <tr>
+                                <th class="p-2.5">Datum</th>
+                                <th class="p-2.5">Aktivitet</th>
+                                <th class="p-2.5">Typ</th>
+                                <th class="p-2.5">Distans</th>
+                                <th class="p-2.5">Tid</th>
+                                <th class="p-2.5">Medelpuls</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activitiesTableBody" class="divide-y divide-slate-800 font-mono text-[11px]">
+                            <tr>
+                                <td colspan="6" class="p-4 text-center text-slate-500">Hämtar historik...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- Träningshistorik-Tabell -->
-        <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Träningshistorik (Senaste 30 Dagar)
-            </h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs text-slate-300">
-                    <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px]">
-                        <tr>
-                            <th class="p-2.5">Datum</th>
-                            <th class="p-2.5">Aktivitet</th>
-                            <th class="p-2.5">Typ</th>
-                            <th class="p-2.5">Distans</th>
-                            <th class="p-2.5">Tid</th>
-                            <th class="p-2.5">Medelpuls</th>
-                        </tr>
-                    </thead>
-                    <tbody id="activitiesTableBody" class="divide-y divide-slate-800 font-mono text-[11px]">
-                        <tr>
-                            <td colspan="6" class="p-4 text-center text-slate-500">Hämtar historik...</td>
-                        </tr>
-                    </tbody>
-                </table>
+        <!-- ================= VYN 2: PASSBIBLIOTEK & FILOSOFI ================= -->
+        <div id="viewLibrary" class="space-y-6 hidden">
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="book-open" class="w-4 h-4 text-indigo-400"></i> Kategoriserat Passbibliotek (Garmin-historik)
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Dina unika favoritpass med träningsfilosofi och direkt synk till klockan.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Pass 1: Norsk Tröskel -->
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-white text-sm">Norsk Tröskel (3 x 10 min)</h4>
+                                <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-semibold rounded-full">Tröskelträning / Seiler</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Effektivt för att höja mjölksyratröskeln utan att slita ut musklerna.</p>
+                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                10m Warmup (60-70%)<br>
+                                Main 3x: 10m tröskel (80-85%) + 2m jogg<br>
+                                5m Cooldown (60-70%)
+                            </div>
+                        </div>
+                        <button onclick="sendNorskThresholdToday()" class="w-full mt-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                        </button>
+                    </div>
+
+                    <!-- Pass 2: Tusingar -->
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-white text-sm">Tusingar (5 x 1000m)</h4>
+                                <span class="px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-semibold rounded-full">Intervall / VO2 Max</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Klassiska intervaller i 10k-fart med ståvila.</p>
+                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                10m Warmup<br>
+                                Main 5x: 1000m i 10k-fart + 90s ståvila<br>
+                                5m Cooldown
+                            </div>
+                        </div>
+                        <button onclick="sendThousandIntervalsToday()" class="w-full mt-3 py-2 bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                        </button>
+                    </div>
+
+                    <!-- Pass 3: Pyramiden -->
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-white text-sm">Pyramiden</h4>
+                                <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Pyramid / Variation</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Intervallpass med växlande längd (1m upp till 4m och ner igen).</p>
+                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                5m Warmup (60-70%)<br>
+                                Main: 1m, 2m, 3m, 4m, 3m, 2m, 1m (70-80%)<br>
+                                5m Cooldown (60-70%)
+                            </div>
+                        </div>
+                        <button onclick="sendPyramidToday()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                        </button>
+                    </div>
+
+                    <!-- Pass 4: Kontrollerat Långpass -->
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-white text-sm">Kontrollerat Långpass</h4>
+                                <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold rounded-full">FatMax / Grund</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Uppbyggande pass med fokus på zon 2 och integrerade gångpauser.</p>
+                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                5m Warmup (60-70%)<br>
+                                Main 6x: 4m löpning (70-80%) + 1m gång<br>
+                                5m Cooldown (60-70%)
+                            </div>
+                        </div>
+                        <button onclick="sendLongRunToday()" class="w-full mt-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                        </button>
+                    </div>
+
+                    <!-- Pass 5: Backintervaller -->
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-white text-sm">Backe (12 x 1 min)</h4>
+                                <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-semibold rounded-full">Styrka & Mekanik</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Styrkebaserad löpning i backe för att stärka upp benmusklerna.</p>
+                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                10m Warmup<br>
+                                Main 12x: 1 min uppför + jogg/gå ner<br>
+                                5m Cooldown
+                            </div>
+                        </div>
+                        <button onclick="sendHillIntervalsToday()" class="w-full mt-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                        </button>
+                    </div>
+
+                    <!-- Pass 6: Återhämtningsjogg -->
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-white text-sm">Återhämtningsjogg</h4>
+                                <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold rounded-full">Polariserat / Lågintensivt</span>
+                            </div>
+                            <p class="text-xs text-slate-400">Mycket lugn jogg för att påskynda återhämtningen.</p>
+                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                30m Lugn jogg (under 124 bpm / FatMax)
+                            </div>
+                        </div>
+                        <button onclick="sendRecoveryToday()" class="w-full mt-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -239,6 +358,26 @@
                 fetchTodayWellness();
             }
         });
+
+        function switchTab(tab) {
+            const dash = document.getElementById('viewDashboard');
+            const lib = document.getElementById('viewLibrary');
+            const btnDash = document.getElementById('tabBtnDashboard');
+            const btnLib = document.getElementById('tabBtnLibrary');
+
+            if (tab === 'dashboard') {
+                dash.classList.remove('hidden');
+                lib.classList.add('hidden');
+                btnDash.className = "px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5";
+                btnLib.className = "px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5";
+            } else {
+                dash.classList.add('hidden');
+                lib.classList.remove('hidden');
+                btnLib.className = "px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5";
+                btnDash.className = "px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5";
+            }
+            if (window.lucide) lucide.createIcons();
+        }
 
         function configureApiKeys() {
             const apiKey = prompt("Ange din API Key från Intervals.icu:", localStorage.getItem('icu_api_key') || '');
@@ -559,16 +698,40 @@
             }
         }
 
+        function sendNorskThresholdToday() {
+            const today = new Date().toISOString().substring(0, 10);
+            const text = "- 10m Warmup 60-70% HR\n\nMain Set 3x\n- 10m 80-85% HR\n- 2m Jog\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Norsk Troskel 3x10m.txt", text);
+        }
+
+        function sendThousandIntervalsToday() {
+            const today = new Date().toISOString().substring(0, 10);
+            const text = "- 10m Warmup 60-70% HR\n\nMain Set 5x\n- 1000m 10k Pace\n- 90s Rest\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Tusingar 5x1k.txt", text);
+        }
+
         function sendPyramidToday() {
             const today = new Date().toISOString().substring(0, 10);
-            const pyramidText = `- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR`;
+            const pyramidText = "- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR";
             sendWorkoutDirectly(today, "Pyramiden.txt", pyramidText);
         }
 
         function sendLongRunToday() {
             const today = new Date().toISOString().substring(0, 10);
-            const longRunText = `- 5m Warmup 60-70% HR\n\nMain Set 6x\n- 4m 70-80% HR\n- 1m Walk\n\n- 5m Cooldown 60-70% HR`;
+            const longRunText = "- 5m Warmup 60-70% HR\n\nMain Set 6x\n- 4m 70-80% HR\n- 1m Walk\n\n- 5m Cooldown 60-70% HR";
             sendWorkoutDirectly(today, "Langpass.txt", longRunText);
+        }
+
+        function sendHillIntervalsToday() {
+            const today = new Date().toISOString().substring(0, 10);
+            const text = "- 10m Warmup 60-70% HR\n\nMain Set 12x\n- 1m Hill Up\n- Jog/Walk Down\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Backintervaller 12x1m.txt", text);
+        }
+
+        function sendRecoveryToday() {
+            const today = new Date().toISOString().substring(0, 10);
+            const recoveryText = "- 30m Recovery Jog <124 bpm";
+            sendWorkoutDirectly(today, "Aterhamtning.txt", recoveryText);
         }
     </script>
 </body>
