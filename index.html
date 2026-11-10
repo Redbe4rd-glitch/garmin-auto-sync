@@ -488,13 +488,13 @@
 
             <div id="detailCardsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
-            <!-- POST-PASS LOGGFORMULÄR (Mekanisk Belastningsrespons) -->
+            <!-- POST-PASS LOGGFORMULÄR KOPPLAT TILL PASS-ID -->
             <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="check-square" class="w-4 h-4 text-emerald-400"></i> Hur kändes DETTA pass? (Post-Pass Respons)
+                        <i data-lucide="check-square" class="w-4 h-4 text-emerald-400"></i> Passrespons & Belastning (Sparas till garmin_post_activities.csv)
                     </h3>
-                    <span class="text-[11px] text-emerald-400 font-medium">Sparas till passnotering</span>
+                    <span class="text-[11px] text-emerald-400 font-medium" id="activityIdBadge">Kopplat till Pass-ID</span>
                 </div>
             
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -510,19 +510,19 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Smärtnivå under/efter passet (0-10)</label>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Smärtskala under/efter passet (0-10)</label>
                         <select id="post-pain" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
                             <option value="0">0 - Helt smärtfri</option>
                             <option value="1">1 - Känning 1/10 (Släppte snabbt)</option>
                             <option value="2">2 - Lätt stelhet efteråt</option>
-                            <option value="3">3 - Tydlig känning under löpning</option>
+                            <option value="3">3 - Tydlig känning under passet</option>
                             <option value="4">4 - Ökande smärta under passet</option>
                             <option value="5">5+ - Skarp smärta (Borde ej sprungit)</option>
                         </select>
                     </div>
 
                     <div class="md:col-span-1">
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Känningar uppkomna/förvärrade av passet:</label>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Känningar påverkade av passet (Välj flera):</label>
                         <div class="bg-slate-900 border border-slate-700 rounded-lg p-2 max-h-32 overflow-y-auto space-y-1 text-xs text-slate-300">
                             <label class="flex items-center gap-1.5"><input type="checkbox" value="v-calf" class="post-loc-cb"> Vänster Vad</label>
                             <label class="flex items-center gap-1.5"><input type="checkbox" value="h-calf" class="post-loc-cb"> Höger Vad</label>
@@ -541,8 +541,8 @@
                 </div>
             
                 <div class="flex justify-end pt-2">
-                    <button onclick="savePostActivityLog()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition shadow">
-                        <i data-lucide="save" class="w-4 h-4"></i> Spara Passrespons
+                    <button onclick="savePostActivityLogToGitHub()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition shadow">
+                        <i data-lucide="cloud-upload" class="w-4 h-4"></i> Spara Passrespons till GitHub
                     </button>
                 </div>
             </div>
@@ -609,6 +609,7 @@
 
         let allActivities = [];
         let allHealthData = [];
+        let allPostActivityLogs = [];
         let activePeriodFilter = '7'; // Standard
         let currentTab = 'overview';
         let previousTab = 'overview';
@@ -623,6 +624,7 @@
 
         const CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_activities.csv?t=` + Date.now();
         const HEALTH_CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_health.csv?t=` + Date.now();
+        const POST_CSV_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/refs/heads/main/garmin_post_activities.csv?t=` + Date.now();
         
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
@@ -630,6 +632,7 @@
             initWeekDropdown();
             fetchData();
             loadHealthData();
+            loadPostActivityLogs();
         });
         
         function initWeekDropdown() {
@@ -888,6 +891,9 @@
             const act = allActivities[index];
             if (!act) return;
 
+            const activityId = `${act.date}_${act.type}`;
+            document.getElementById('activityIdBadge').textContent = `Pass-ID: ${activityId}`;
+
             const activityName = act.raw.activityName || act.raw.Name || act.raw.title || `${act.type} – ${act.date}`;
             document.getElementById('detailHeaderTitle').textContent = activityName;
             document.getElementById('detailHeaderSub').textContent = `Datum: ${act.date} | Distans: ${act.distance.toFixed(2)} km | Tid: ${formatTimeDetailed(act.duration)}`;
@@ -915,21 +921,19 @@
                 </div>
             `;
 
-            // Ladda sparad post-pass-notering om den finns
-            const storedLog = localStorage.getItem(`post_act_${act.date}_${act.type}`);
+            // Ladda sparad post-pass-notering
+            const foundPost = allPostActivityLogs.find(p => p.activityId === activityId);
             document.querySelectorAll('.post-loc-cb').forEach(cb => cb.checked = false);
-            if (storedLog) {
-                try {
-                    const parsed = JSON.parse(storedLog);
-                    if (parsed.postRpe) document.getElementById('post-rpe').value = parsed.postRpe;
-                    if (parsed.postPain) document.getElementById('post-pain').value = parsed.postPain;
-                    if (parsed.postLocations && Array.isArray(parsed.postLocations)) {
-                        parsed.postLocations.forEach(loc => {
-                            const cb = document.querySelector(`.post-loc-cb[value="${loc}"]`);
-                            if (cb) cb.checked = true;
-                        });
-                    }
-                } catch(e){}
+            if (foundPost) {
+                if (foundPost.postRpe) document.getElementById('post-rpe').value = foundPost.postRpe;
+                if (foundPost.postPain) document.getElementById('post-pain').value = foundPost.postPain;
+                if (foundPost.postLocations) {
+                    const locs = String(foundPost.postLocations).split(',');
+                    locs.forEach(l => {
+                        const cb = document.querySelector(`.post-loc-cb[value="${l.trim()}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
             } else {
                 document.getElementById('post-rpe').value = '4';
                 document.getElementById('post-pain').value = '0';
@@ -1115,27 +1119,121 @@
             switchTab('detail');
         }
 
-        function savePostActivityLog() {
+        async function loadPostActivityLogs() {
+            try {
+                const res = await fetch(POST_CSV_URL + "?t=" + Date.now(), { cache: 'no-cache' });
+                if (res.ok) {
+                    const text = await res.text();
+                    Papa.parse(text, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            allPostActivityLogs = results.data || [];
+                            renderActivitiesTab();
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn("Kunde inte ladda garmin_post_activities.csv ännu:", e);
+            }
+        }
+
+        async function savePostActivityLogToGitHub() {
             if (currentSelectedActIndex === null) return;
             const act = allActivities[currentSelectedActIndex];
             if (!act) return;
 
+            let token = localStorage.getItem('gh_pat_token');
+            if (!token) {
+                token = prompt("Ange din GitHub Personal Access Token (PAT) för att spara till repot:");
+                if (token) {
+                    localStorage.setItem('gh_pat_token', token.trim());
+                } else {
+                    alert("Token krävs för att spara till GitHub.");
+                    return;
+                }
+            }
+
+            const activityId = `${act.date}_${act.type}`;
             const postRpe = document.getElementById('post-rpe').value;
             const postPain = document.getElementById('post-pain').value;
             const selectedLocs = [];
             document.querySelectorAll('.post-loc-cb:checked').forEach(cb => selectedLocs.push(cb.value));
+            const postLocations = selectedLocs.join(',');
 
-            const logObj = {
-                date: act.date,
-                type: act.type,
-                postRpe: postRpe,
-                postPain: postPain,
-                postLocations: selectedLocs
-            };
+            const filePath = "garmin_post_activities.csv";
+            const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${filePath}`;
 
-            localStorage.setItem(`post_act_${act.date}_${act.type}`, JSON.stringify(logObj));
-            alert(`✅ Passresponsen har sparats för ${act.type} (${act.date})!`);
-            renderAll();
+            try {
+                let fileSha = null;
+                let rows = [];
+
+                const getRes = await fetch(apiUrl, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json' }
+                });
+
+                if (getRes.ok) {
+                    const fileData = await getRes.json();
+                    fileSha = fileData.sha;
+                    const decodedContent = decodeURIComponent(escape(atob(fileData.content)));
+                    const parsed = Papa.parse(decodedContent, { header: true, skipEmptyLines: true });
+                    rows = parsed.data;
+                }
+
+                let found = false;
+                rows.forEach(r => {
+                    if (r.activityId === activityId) {
+                        r.date = act.date;
+                        r.type = act.type;
+                        r.postRpe = postRpe;
+                        r.postPain = postPain;
+                        r.postLocations = postLocations;
+                        found = true;
+                    }
+                });
+
+                if (!found) {
+                    rows.unshift({
+                        activityId: activityId,
+                        date: act.date,
+                        type: act.type,
+                        postRpe: postRpe,
+                        postPain: postPain,
+                        postLocations: postLocations
+                    });
+                }
+
+                const updatedCsv = Papa.unparse(rows);
+                const encodedContent = btoa(unescape(encodeURIComponent(updatedCsv)));
+
+                const putOptions = {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'vnd.github+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Spara passrespons för pass ${activityId}`,
+                        content: encodedContent
+                    })
+                };
+                if (fileSha) putOptions.body = JSON.stringify({ message: `Uppdatera passrespons för pass ${activityId}`, content: encodedContent, sha: fileSha });
+
+                const putRes = await fetch(apiUrl, putOptions);
+
+                if (putRes.ok) {
+                    alert("✅ Passresponsen har sparats till garmin_post_activities.csv på GitHub!");
+                    loadPostActivityLogs();
+                } else {
+                    const err = await putRes.json().catch(() => ({}));
+                    alert(`Kunde inte spara: ${err.message || putRes.statusText}`);
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert("Ett nätverksfel uppstod vid kommunikation med GitHub API.");
+            }
         }
 
         function populateTodayLogForm() {
@@ -1468,17 +1566,15 @@
                 if (a.hr > 142) { zColor = "text-rose-400"; zName = "Tröskel/Hård"; }
                 else if (a.hr > 124) { zColor = "text-sky-400"; zName = "Mellan"; }
 
-                const storedLog = localStorage.getItem(`post_act_${a.date}_${a.type}`);
+                const activityId = `${a.date}_${a.type}`;
+                const foundPost = allPostActivityLogs.find(p => p.activityId === activityId);
                 let postBadge = '';
-                if (storedLog) {
-                    try {
-                        const parsed = JSON.parse(storedLog);
-                        if (parsed.postPain && Number(parsed.postPain) > 0) {
-                            postBadge = ` <span class="text-[10px] text-rose-400 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-800/60" title="Post-pass smärta: ${parsed.postPain}/10">⚠️ ${parsed.postPain}/10</span>`;
-                        } else {
-                            postBadge = ` <span class="text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60">✓ Loggat</span>`;
-                        }
-                    } catch(e){}
+                if (foundPost) {
+                    if (foundPost.postPain && Number(foundPost.postPain) > 0) {
+                        postBadge = ` <span class="text-[10px] text-rose-400 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-800/60" title="Smärta: ${foundPost.postPain}/10">⚠️ ${foundPost.postPain}/10</span>`;
+                    } else {
+                        postBadge = ` <span class="text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60">✓ Loggat</span>`;
+                    }
                 }
 
                 tbody.innerHTML += `
@@ -1649,7 +1745,7 @@
             if (statusTextEl && todayRecord) {
                 const hasLog = todayRecord.rpe || (todayRecord.painLevel && Number(todayRecord.painLevel) > 0);
                 if (hasLog) {
-                    const painDesc = Number(todayRecord.painLevel) > 0 ? `Känningar: ${todayRecord.painLocation || 'Vad/Hälsena'} (${todayRecord.painLevel}/10)` : 'Helt smärtfri i vader/hälsenor';
+                    const painDesc = Number(todayRecord.painLevel) > 0 ? `Känningar: ${todayRecord.painLocation || 'Område'} (${todayRecord.painLevel}/10)` : 'Helt smärtfri i vader/hälsenor';
                     statusTextEl.innerHTML = `Morgonnotering: RPE <b>${todayRecord.rpe || '-'}</b>/5 | <span class="text-emerald-400">${painDesc}</span>`;
                     statusDateEl.textContent = `Datum: ${todayRecord.date || todayStr}`;
                 } else {
