@@ -376,14 +376,19 @@
             });
         }
 
-        async function sendWorkoutToIntervals(workoutDate, workoutText) {
+        async function sendWorkoutToIntervals(workoutDate, filename, workoutText) {
             let token = localStorage.getItem('gh_pat_token');
             if (!token) {
                 token = prompt("Ange din GitHub Personal Access Token (PAT):");
                 if (token) localStorage.setItem('gh_pat_token', token.trim());
                 else return;
             }
-
+        
+            const workoutPayload = JSON.stringify({
+                filename: filename,
+                description: workoutText
+            });
+        
             try {
                 const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/actions/workflows/push_workout.yml/dispatches`, {
                     method: 'POST',
@@ -396,13 +401,13 @@
                         ref: 'main',
                         inputs: {
                             workout_date: workoutDate,
-                            workout_text: workoutText
+                            workout_json: workoutPayload
                         }
                     })
                 });
-
+        
                 if (response.ok || response.status === 204) {
-                    alert("✅ Passet har skickats till Intervals.icu och synkas till din klocka inom kort!");
+                    alert("✅ Passet har skickats till GitHub Actions och läggs till i Intervals.icu inom några sekunder!");
                 } else {
                     const err = await response.json().catch(() => ({}));
                     alert(`Kunde inte skicka passet: ${err.message || response.statusText}`);
@@ -412,11 +417,11 @@
                 alert("Ett fel uppstod vid kommunikation med GitHub API.");
             }
         }
-
+        
         function sendPyramidToday() {
             const today = new Date().toISOString().substring(0, 10);
-            const pyramidText = `- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR`;
-            sendWorkoutToIntervals(today, pyramidText);
+            const pyramidText = "- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutToIntervals(today, "Pyramiden.txt", pyramidText);
         }
 
         function sendLongRunToday() {
