@@ -420,6 +420,17 @@
                 alert("Ett nätverksfel uppstod vid kommunikation med Intervals.icu.");
             }
         }
+        function sendPyramidToday() {
+            const today = new Date().toISOString().substring(0, 10);
+            const pyramidText = "- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Pyramiden.txt", pyramidText);
+        }
+        
+        function sendLongRunToday() {
+            const today = new Date().toISOString().substring(0, 10);
+            const longRunText = "- 5m Warmup 60-70% HR\n\nMain Set 6x\n- 4m 70-80% HR\n- 1m Walk\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Langpass.txt", longRunText);
+        }
     </script>
 </body>
 </html>
