@@ -38,13 +38,6 @@
                     <p class="text-xs text-slate-400">Skadeförebyggande 50+ & Direkt API</p>
                 </div>
             </div>
-
-            <div class="flex items-center gap-2">
-                <button onclick="fetchIntervalsData()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 rounded-lg border border-slate-700 flex items-center gap-1.5 transition">
-                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refreshIcon"></i>
-                    <span>Uppdatera Data</span>
-                </button>
-            </div>
         </div>
 
         <div class="max-w-6xl mx-auto flex gap-2 mt-3 border-t border-slate-800/80 pt-2">
@@ -72,7 +65,7 @@
                 </div>
             </div>
 
-            <!-- NYTT: Beredskapskort / Trafikljus (Beslutsstöd) -->
+            <!-- Beredskapskort / Trafikljus (Beslutsstöd) -->
             <div id="readinessBanner" class="bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all">
                 <div class="flex items-center gap-4">
                     <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 shrink-0">
@@ -90,25 +83,39 @@
                 </div>
             </div>
 
-            <!-- KPI-Kort -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- KPI-Kort inklusive ACWR -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
                     <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
                         <i data-lucide="footprints" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-medium text-slate-400">Volym (Senaste 7 Dagarna)</p>
-                        <h3 class="text-xl font-bold text-white" id="kpiWeeklyVol">0.0 km</h3>
+                        <p class="text-xs font-medium text-slate-400">Volym (7d)</p>
+                        <h3 class="text-lg font-bold text-white" id="kpiWeeklyVol">0.0 km</h3>
+                    </div>
+                </div>
+
+                <!-- NYTT: ACWR-Kort -->
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
+                    <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+                        <i data-lucide="trending-up" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Belastningskvot (ACWR)</p>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-lg font-bold text-white" id="kpiAcwr">0.00</h3>
+                            <span id="kpiAcwrBadge" class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-700 text-slate-300">--</span>
+                        </div>
                     </div>
                 </div>
 
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
-                    <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+                    <div class="p-3 bg-sky-500/10 text-sky-400 rounded-xl border border-sky-500/20">
                         <i data-lucide="heart-pulse" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-medium text-slate-400">FatMax-andel (≤124 bpm)</p>
-                        <h3 class="text-xl font-bold text-white" id="kpiFatmaxShare">0%</h3>
+                        <p class="text-xs font-medium text-slate-400">FatMax (&le;124 bpm)</p>
+                        <h3 class="text-lg font-bold text-white" id="kpiFatmaxShare">0%</h3>
                     </div>
                 </div>
 
@@ -117,13 +124,13 @@
                         <i data-lucide="dumbbell" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-medium text-slate-400">Styrke- & Alternativpass</p>
-                        <h3 class="text-xl font-bold text-white" id="kpiAltCount">0 st</h3>
+                        <p class="text-xs font-medium text-slate-400">Styrka & Alternativ</p>
+                        <h3 class="text-lg font-bold text-white" id="kpiAltCount">0 st</h3>
                     </div>
                 </div>
             </div>
 
-            <!-- UTÖKAT: Morgonstatus & Känningar (Alla riskområden) -->
+            <!-- Morgonstatus & Känningar -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="flex items-center justify-between">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -133,7 +140,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-                    <!-- Vad / Hälsena -->
                     <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
                         <div class="flex justify-between font-semibold">
                             <span class="text-slate-300">Vad / Hälsena</span>
@@ -143,7 +149,6 @@
                         <p class="text-[10px] text-slate-500">0 = Perfekt, 10 = Smärta</p>
                     </div>
 
-                    <!-- Knä / ITB -->
                     <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
                         <div class="flex justify-between font-semibold">
                             <span class="text-slate-300">Knä / ITB</span>
@@ -153,7 +158,6 @@
                         <p class="text-[10px] text-slate-500">0 = Mjuk, 10 = Hugg/Värk</p>
                     </div>
 
-                    <!-- Höft / Säte -->
                     <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
                         <div class="flex justify-between font-semibold">
                             <span class="text-slate-300">Höft / Säte</span>
@@ -163,7 +167,6 @@
                         <p class="text-[10px] text-slate-500">0 = Obunden, 10 = Stel/Stram</p>
                     </div>
 
-                    <!-- Fot / Benhinna -->
                     <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
                         <div class="flex justify-between font-semibold">
                             <span class="text-slate-300">Fot / Benhinna</span>
@@ -174,7 +177,6 @@
                     </div>
                 </div>
 
-                <!-- Sömn & Energi -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-700/60">
                     <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
                         <div class="flex justify-between font-semibold">
@@ -194,7 +196,7 @@
                 </div>
 
                 <div class="flex flex-col sm:flex-row gap-3 items-center pt-2">
-                    <input type="text" id="inputWellnessNotes" placeholder="Morgonnoteringar (t.ex. känner mig lite seg i höger vad)..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="inputWellnessNotes" placeholder="Morgonnoteringar..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
                     <button onclick="saveMorningWellness()" class="w-full sm:w-auto px-5 py-2 bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow shrink-0">
                         <i data-lucide="save" class="w-3.5 h-3.5"></i>
                         <span>Spara Status</span>
@@ -408,7 +410,6 @@
             document.getElementById('valReadiness').textContent = `${readiness} / 4`;
         }
 
-        // UTÖKAT TRAFIKJUS-BESLUTSSTÖD (Analyserar alla riskområden)
         function evaluateReadiness() {
             const calf = parseInt(document.getElementById('inputCalf').value, 10);
             const knee = parseInt(document.getElementById('inputKnee').value, 10);
@@ -425,32 +426,29 @@
             const action = document.getElementById('readinessAction');
 
             if (maxPain >= 3 || readiness === 1 || sleep === 1) {
-                // RÖTT LJUS
                 banner.className = "bg-gradient-to-r from-rose-950/80 to-slate-800 border border-rose-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-rose-400";
                 icon.setAttribute('data-lucide', 'shield-alert');
                 title.textContent = "🔴 Rött Ljus: Hög Skaderisk / Belastningsvarning";
                 
                 let source = "Känning över 3/10";
-                if (calf >= 3) source = "Viktig varning i Vad/Hälsena";
+                if (calf >= 3) source = "Varning i Vad/Hälsena";
                 else if (knee >= 3) source = "Varning i Knä/ITB";
-                else if (hip >= 3) source = "Stramhet/Känning i Höft/Säte";
+                else if (hip >= 3) source = "Stramhet i Höft/Säte";
                 else if (foot >= 3) source = "Känning i Fot/Benhinna";
 
                 desc.textContent = `${source} upptäckt. Vila från löpning rekommenderas för att skydda senor och leder.`;
                 action.textContent = "Crosstrainer / Cykel + Rehab";
             } 
             else if (maxPain >= 1 || readiness === 2 || sleep <= 2) {
-                // GULT LJUS
                 banner.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-amber-400";
                 icon.setAttribute('data-lucide', 'shield');
                 title.textContent = "🟡 Gult Ljus: Skadeförebyggande läge (Lätt stelhet)";
-                desc.textContent = "Lättare känning eller trötthet noterad. Lugn jogg eller alternativ träning rekommenderas. Undvik hårda intervaller.";
+                desc.textContent = "Lättare känning eller trötthet noterad. Lugn jogg eller alternativ träning rekommenderas.";
                 action.textContent = "Lugn FatMax / Alternativt pass";
             } 
             else {
-                // GRÖNT LJUS
                 banner.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-emerald-400";
                 icon.setAttribute('data-lucide', 'shield-check');
@@ -556,8 +554,6 @@
             appState.apiKey = apiKey;
             appState.athleteId = athleteId;
 
-            const refreshIcon = document.getElementById('refreshIcon');
-            if (refreshIcon) refreshIcon.classList.add('animate-spin');
             setStatus('Hämtar data...');
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
@@ -579,8 +575,6 @@
             } catch (error) {
                 console.error(error);
                 setStatus('Kommunikationsfel');
-            } finally {
-                if (refreshIcon) refreshIcon.classList.remove('animate-spin');
             }
         }
 
@@ -608,7 +602,6 @@
                 }
                 if (data.comments) {
                     document.getElementById('inputWellnessNotes').value = data.comments;
-                    // Parsa ut eventuella sparade värden ur kommentaren om de finns
                     const calfMatch = data.comments.match(/Vad\/Hälsena:\s*(\d+)/);
                     if (calfMatch) document.getElementById('inputCalf').value = calfMatch[1];
                     const kneeMatch = data.comments.match(/Knä\/ITB:\s*(\d+)/);
@@ -672,13 +665,18 @@
             }
         }
 
+        // BERÄKNING AV ACWR OCH DASHBOARD-DATA
         function processAndRenderDashboard(activities) {
             const sortedActivities = [...activities].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
             const now = new Date();
             const sevenDaysAgo = new Date(now);
             sevenDaysAgo.setDate(now.getDate() - 7);
+            const twentyEightDaysAgo = new Date(now);
+            twentyEightDaysAgo.setDate(now.getDate() - 28);
 
             let weeklyVol = 0;
+            let vol7d = 0;
+            let vol28d = 0;
             let runPassesCount = 0;
             let fatmaxPassesCount = 0;
             let altCount = 0;
@@ -692,7 +690,14 @@
                 const isRun = /run/i.test(act.type || '');
                 const hr = act.average_heartrate || 0;
 
-                if (actDate >= sevenDaysAgo && isRun) weeklyVol += distKm;
+                if (actDate >= sevenDaysAgo && isRun) {
+                    weeklyVol += distKm;
+                    vol7d += distKm;
+                }
+
+                if (actDate >= twentyEightDaysAgo && isRun) {
+                    vol28d += distKm;
+                }
 
                 if (isRun) {
                     runPassesCount++;
@@ -708,7 +713,34 @@
                 }
             });
 
+            // Beräkna ACWR (Akut 7d / Kronisk veckosnitt 28d)
+            const chronicWeekly = vol28d / 4;
+            const acwr = chronicWeekly > 0 ? vol7d / chronicWeekly : 0;
+
             document.getElementById('kpiWeeklyVol').textContent = `${weeklyVol.toFixed(1)} km`;
+            
+            // Uppdatera ACWR-kortet
+            const acwrEl = document.getElementById('kpiAcwr');
+            const acwrBadge = document.getElementById('kpiAcwrBadge');
+            acwrEl.textContent = acwr.toFixed(2);
+
+            if (acwr === 0) {
+                acwrBadge.textContent = 'Ingen data';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-700 text-slate-300';
+            } else if (acwr >= 0.8 && acwr <= 1.3) {
+                acwrBadge.textContent = 'Optimal';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+            } else if (acwr > 1.3 && acwr <= 1.5) {
+                acwrBadge.textContent = 'Hög ökning';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+            } else if (acwr > 1.5) {
+                acwrBadge.textContent = 'Riskzon!';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30';
+            } else {
+                acwrBadge.textContent = 'Låg';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30';
+            }
+
             const fatmaxShare = runPassesCount > 0 ? Math.round((fatmaxPassesCount / runPassesCount) * 100) : 0;
             document.getElementById('kpiFatmaxShare').textContent = `${fatmaxShare}%`;
             document.getElementById('kpiAltCount').textContent = `${altCount} st`;
