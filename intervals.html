@@ -336,7 +336,91 @@
                             <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
                         </button>
                     </div>
+
                 </div>
+<!-- Kategori: Norska Singlar -->
+<div class="col-span-full border-t border-slate-700/80 pt-4 mt-2">
+    <h4 class="text-sm font-bold text-indigo-400 flex items-center gap-2 mb-3">
+        <i data-lucide="flame" class="w-4 h-4"></i> Norska Singlar (Sub-tröskelzon 83-87% HR, vila 30-60s)
+    </h4>
+</div>
+
+<!-- Kort 1: 10 x 3 min -->
+<div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+    <div class="space-y-2">
+        <div class="flex justify-between items-start">
+            <h4 class="font-bold text-white text-sm">10 × 3 min (Korta singlar)</h4>
+            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Norska Singlar</span>
+        </div>
+        <p class="text-xs text-slate-400">Klassisk introduktion för högre tempo utan mjölksyra.</p>
+        <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+            10m Warmup<br>
+            Main 10x: 3m tröskel (83-87%) + 45s stå/joggvila<br>
+            5m Cooldown
+        </div>
+    </div>
+    <button onclick="sendNorwegianSingles10x3()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+    </button>
+</div>
+
+<!-- Kort 2: 6 x 5 min -->
+<div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+    <div class="space-y-2">
+        <div class="flex justify-between items-start">
+            <h4 class="font-bold text-white text-sm">6 × 5 min (Mellanlånga singlar)</h4>
+            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Norska Singlar</span>
+        </div>
+        <p class="text-xs text-slate-400">Bygger snabbt upp den aeroba kapaciteten med stabil puls.</p>
+        <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+            10m Warmup<br>
+            Main 6x: 5m tröskel (83-87%) + 60s vila<br>
+            5m Cooldown
+        </div>
+    </div>
+    <button onclick="sendNorwegianSingles6x5()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+    </button>
+</div>
+
+<!-- Kort 3: 4 x 8 min -->
+<div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+    <div class="space-y-2">
+        <div class="flex justify-between items-start">
+            <h4 class="font-bold text-white text-sm">4 × 8 min (Långa singlar)</h4>
+            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Norska Singlar</span>
+        </div>
+        <p class="text-xs text-slate-400">Totalt 32 minuter i zonen, utmärkt för halvmaraton och maraton.</p>
+        <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+            10m Warmup<br>
+            Main 4x: 8m tröskel (83-87%) + 60s vila<br>
+            5m Cooldown
+        </div>
+    </div>
+    <button onclick="sendNorwegianSingles4x8()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+    </button>
+</div>
+
+<!-- Kort 4: Pyramid-singlar -->
+<div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+    <div class="space-y-2">
+        <div class="flex justify-between items-start">
+            <h4 class="font-bold text-white text-sm">Pyramid (3-4-5-6-5-4-3 min)</h4>
+            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Stege / Variation</span>
+        </div>
+        <p class="text-xs text-slate-400">Varierat pass som mentalt upplevs som kortare.</p>
+        <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+            10m Warmup<br>
+            Main: 3m, 4m, 5m, 6m, 5m, 4m, 3m (Vila 60s)<br>
+            5m Cooldown
+        </div>
+    </div>
+    <button onclick="sendNorwegianPyramid()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+    </button>
+</div>
+
             </div>
         </div>
 
@@ -733,6 +817,30 @@
             const recoveryText = "- 30m Recovery Jog <124 bpm";
             sendWorkoutDirectly(today, "Aterhamtning.txt", recoveryText);
         }
+function sendNorwegianSingles10x3() {
+    const today = new Date().toISOString().substring(0, 10);
+    const text = "- 10m Warmup 60-70% HR\n\nMain Set 10x\n- 3m 83-87% HR\n- 45s Jog/Walk\n\n- 5m Cooldown 60-70% HR";
+    sendWorkoutDirectly(today, "Norska Singlar 10x3m.txt", text);
+}
+
+function sendNorwegianSingles6x5() {
+    const today = new Date().toISOString().substring(0, 10);
+    const text = "- 10m Warmup 60-70% HR\n\nMain Set 6x\n- 5m 83-87% HR\n- 60s Jog/Walk\n\n- 5m Cooldown 60-70% HR";
+    sendWorkoutDirectly(today, "Norska Singlar 6x5m.txt", text);
+}
+
+function sendNorwegianSingles4x8() {
+    const today = new Date().toISOString().substring(0, 10);
+    const text = "- 10m Warmup 60-70% HR\n\nMain Set 4x\n- 8m 83-87% HR\n- 60s Jog/Walk\n\n- 5m Cooldown 60-70% HR";
+    sendWorkoutDirectly(today, "Norska Singlar 4x8m.txt", text);
+}
+
+function sendNorwegianPyramid() {
+    const today = new Date().toISOString().substring(0, 10);
+    const text = "- 10m Warmup 60-70% HR\n\nMain Set 1x\n- 3m 83-87% HR\n- 60s Rest\n- 4m 83-87% HR\n- 60s Rest\n- 5m 83-87% HR\n- 60s Rest\n- 6m 83-87% HR\n- 60s Rest\n- 5m 83-87% HR\n- 60s Rest\n- 4m 83-87% HR\n- 60s Rest\n- 3m 83-87% HR\n\n- 5m Cooldown 60-70% HR";
+    sendWorkoutDirectly(today, "Norsk Pyramid 3-6m.txt", text);
+}
+
     </script>
 </body>
 </html>
