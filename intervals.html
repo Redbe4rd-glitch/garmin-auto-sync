@@ -92,7 +92,7 @@
                         <i data-lucide="heart-pulse" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-medium text-slate-400">FatMax-andel (&le;124 bpm)</p>
+                        <p class="text-xs font-medium text-slate-400">FatMax-andel (≤124 bpm)</p>
                         <h3 class="text-xl font-bold text-white" id="kpiFatmaxShare">0%</h3>
                     </div>
                 </div>
@@ -188,7 +188,7 @@
             <!-- Träningshistorik-Tabell -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Träningshistorik (Senaste 30 Dagar)
+                    <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Träningshistorik
                 </h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs text-slate-300">
@@ -214,212 +214,181 @@
 
         <!-- ================= VYN 2: PASSBIBLIOTEK & FILOSOFI ================= -->
         <div id="viewLibrary" class="space-y-6 hidden">
-            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-6">
                 <div class="flex items-center justify-between border-b border-slate-700 pb-3">
                     <div>
                         <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                            <i data-lucide="book-open" class="w-4 h-4 text-indigo-400"></i> Kategoriserat Passbibliotek (Garmin-historik)
+                            <i data-lucide="book-open" class="w-4 h-4 text-indigo-400"></i> Kategoriserat Passbibliotek & Filosofi
                         </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Dina unika favoritpass med träningsfilosofi och direkt synk till klockan.</p>
+                        <p class="text-xs text-slate-400 mt-0.5">Strukturerade pass uppdelade efter träningsmetodik och direkt synk till klockan.</p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Pass 1: Norsk Tröskel -->
-                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-bold text-white text-sm">Norsk Tröskel (3 x 10 min)</h4>
-                                <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-semibold rounded-full">Tröskelträning / Seiler</span>
+                <!-- SEKTION 1: NORSA SINGLAR -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-amber-400 flex items-center gap-2 uppercase tracking-wider">
+                        <i data-lucide="flame" class="w-4 h-4"></i> Norska Singlar (Sub-tröskel 83-87% HR, vila 30-60s)
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-white text-sm">10 × 3 min (Korta singlar)</h4>
+                                    <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-semibold rounded-full">Norska Singlar</span>
+                                </div>
+                                <p class="text-xs text-slate-400">Klassisk introduktion för högre tempo utan mjölksyra.</p>
+                                <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                    10m Warmup<br>
+                                    Main 10x: 3m tröskel (83-87%) + 45s vila<br>
+                                    5m Cooldown
+                                </div>
                             </div>
-                            <p class="text-xs text-slate-400">Effektivt för att höja mjölksyratröskeln utan att slita ut musklerna.</p>
-                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-                                10m Warmup (60-70%)<br>
-                                Main 3x: 10m tröskel (80-85%) + 2m jogg<br>
-                                5m Cooldown (60-70%)
-                            </div>
+                            <button onclick="sendNorwegianSingles10x3()" class="w-full mt-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                            </button>
                         </div>
-                        <button onclick="sendNorskThresholdToday()" class="w-full mt-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-                        </button>
-                    </div>
 
-                    <!-- Pass 2: Tusingar -->
-                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-bold text-white text-sm">Tusingar (5 x 1000m)</h4>
-                                <span class="px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-semibold rounded-full">Intervall / VO2 Max</span>
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-white text-sm">6 × 5 min (Mellanlånga singlar)</h4>
+                                    <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-semibold rounded-full">Norska Singlar</span>
+                                </div>
+                                <p class="text-xs text-slate-400">Bygger snabbt upp den aeroba kapaciteten med stabil puls.</p>
+                                <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                    10m Warmup<br>
+                                    Main 6x: 5m tröskel (83-87%) + 60s vila<br>
+                                    5m Cooldown
+                                </div>
                             </div>
-                            <p class="text-xs text-slate-400">Klassiska intervaller i 10k-fart med ståvila.</p>
-                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-                                10m Warmup<br>
-                                Main 5x: 1000m i 10k-fart + 90s ståvila<br>
-                                5m Cooldown
-                            </div>
+                            <button onclick="sendNorwegianSingles6x5()" class="w-full mt-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                            </button>
                         </div>
-                        <button onclick="sendThousandIntervalsToday()" class="w-full mt-3 py-2 bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-                        </button>
-                    </div>
 
-                    <!-- Pass 3: Pyramiden -->
-                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-bold text-white text-sm">Pyramiden</h4>
-                                <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Pyramid / Variation</span>
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-white text-sm">4 × 8 min (Långa singlar)</h4>
+                                    <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-semibold rounded-full">Norska Singlar</span>
+                                </div>
+                                <p class="text-xs text-slate-400">Totalt 32 minuter i zonen, utmärkt för halvmaraton och maraton.</p>
+                                <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                    10m Warmup<br>
+                                    Main 4x: 8m tröskel (83-87%) + 60s vila<br>
+                                    5m Cooldown
+                                </div>
                             </div>
-                            <p class="text-xs text-slate-400">Intervallpass med växlande längd (1m upp till 4m och ner igen).</p>
-                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-                                5m Warmup (60-70%)<br>
-                                Main: 1m, 2m, 3m, 4m, 3m, 2m, 1m (70-80%)<br>
-                                5m Cooldown (60-70%)
-                            </div>
+                            <button onclick="sendNorwegianSingles4x8()" class="w-full mt-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                            </button>
                         </div>
-                        <button onclick="sendPyramidToday()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-                        </button>
-                    </div>
 
-                    <!-- Pass 4: Kontrollerat Långpass -->
-                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-bold text-white text-sm">Kontrollerat Långpass</h4>
-                                <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold rounded-full">FatMax / Grund</span>
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-white text-sm">Norsk Pyramid (3-4-5-6-5-4-3 min)</h4>
+                                    <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-semibold rounded-full">Stege / Variation</span>
+                                </div>
+                                <p class="text-xs text-slate-400">Varierat pass som mentalt upplevs som kortare.</p>
+                                <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                    10m Warmup<br>
+                                    Main: 3m, 4m, 5m, 6m, 5m, 4m, 3m (Vila 60s)<br>
+                                    5m Cooldown
+                                </div>
                             </div>
-                            <p class="text-xs text-slate-400">Uppbyggande pass med fokus på zon 2 och integrerade gångpauser.</p>
-                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-                                5m Warmup (60-70%)<br>
-                                Main 6x: 4m löpning (70-80%) + 1m gång<br>
-                                5m Cooldown (60-70%)
-                            </div>
+                            <button onclick="sendNorwegianPyramid()" class="w-full mt-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                            </button>
                         </div>
-                        <button onclick="sendLongRunToday()" class="w-full mt-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-                        </button>
                     </div>
-
-                    <!-- Pass 5: Backintervaller -->
-                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-bold text-white text-sm">Backe (12 x 1 min)</h4>
-                                <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-semibold rounded-full">Styrka & Mekanik</span>
-                            </div>
-                            <p class="text-xs text-slate-400">Styrkebaserad löpning i backe för att stärka upp benmusklerna.</p>
-                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-                                10m Warmup<br>
-                                Main 12x: 1 min uppför + jogg/gå ner<br>
-                                5m Cooldown
-                            </div>
-                        </div>
-                        <button onclick="sendHillIntervalsToday()" class="w-full mt-3 py-2 bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-                        </button>
-                    </div>
-
-                    <!-- Pass 6: Återhämtningsjogg -->
-                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-bold text-white text-sm">Återhämtningsjogg</h4>
-                                <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold rounded-full">Polariserat / Lågintensivt</span>
-                            </div>
-                            <p class="text-xs text-slate-400">Mycket lugn jogg för att påskynda återhämtningen.</p>
-                            <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-                                30m Lugn jogg (under 124 bpm / FatMax)
-                            </div>
-                        </div>
-                        <button onclick="sendRecoveryToday()" class="w-full mt-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                            <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-                        </button>
-                    </div>
-
                 </div>
-<!-- Kategori: Norska Singlar -->
-<div class="col-span-full border-t border-slate-700/80 pt-4 mt-2">
-    <h4 class="text-sm font-bold text-indigo-400 flex items-center gap-2 mb-3">
-        <i data-lucide="flame" class="w-4 h-4"></i> Norska Singlar (Sub-tröskelzon 83-87% HR, vila 30-60s)
-    </h4>
-</div>
 
-<!-- Kort 1: 10 x 3 min -->
-<div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-    <div class="space-y-2">
-        <div class="flex justify-between items-start">
-            <h4 class="font-bold text-white text-sm">10 × 3 min (Korta singlar)</h4>
-            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Norska Singlar</span>
-        </div>
-        <p class="text-xs text-slate-400">Klassisk introduktion för högre tempo utan mjölksyra.</p>
-        <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-            10m Warmup<br>
-            Main 10x: 3m tröskel (83-87%) + 45s stå/joggvila<br>
-            5m Cooldown
-        </div>
-    </div>
-    <button onclick="sendNorwegianSingles10x3()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-    </button>
-</div>
+                <!-- SEKTION 2: VO2 MAX & INTERVALLER -->
+                <div class="space-y-3 pt-2">
+                    <h4 class="text-xs font-bold text-rose-400 flex items-center gap-2 uppercase tracking-wider">
+                        <i data-lucide="zap" class="w-4 h-4"></i> Intervaller & VO2 Max (Polariserat)
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-white text-sm">Tusingar (5 x 1000m)</h4>
+                                    <span class="px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-semibold rounded-full">Intervall / VO2 Max</span>
+                                </div>
+                                <p class="text-xs text-slate-400">Klassiska intervaller i 10k-fart med ståvila.</p>
+                                <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                    10m Warmup<br>
+                                    Main 5x: 1000m i 10k-fart + 90s ståvila<br>
+                                    5m Cooldown
+                                </div>
+                            </div>
+                            <button onclick="sendThousandIntervalsToday()" class="w-full mt-3 py-2 bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                            </button>
+                        </div>
 
-<!-- Kort 2: 6 x 5 min -->
-<div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-    <div class="space-y-2">
-        <div class="flex justify-between items-start">
-            <h4 class="font-bold text-white text-sm">6 × 5 min (Mellanlånga singlar)</h4>
-            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Norska Singlar</span>
-        </div>
-        <p class="text-xs text-slate-400">Bygger snabbt upp den aeroba kapaciteten med stabil puls.</p>
-        <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-            10m Warmup<br>
-            Main 6x: 5m tröskel (83-87%) + 60s vila<br>
-            5m Cooldown
-        </div>
-    </div>
-    <button onclick="sendNorwegianSingles6x5()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-    </button>
-</div>
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-white text-sm">Pyramiden (Klassisk)</h4>
+                                    <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Pyramid / Variation</span>
+                                </div>
+                                <p class="text-xs text-slate-400">Intervallpass med växlande längd (1m upp till 4m och ner igen).</p>
+                                <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                    5m Warmup (60-70%)<br>
+                                    Main: 1m, 2m, 3m, 4m, 3m, 2m, 1m (70-80%)<br>
+                                    5m Cooldown (60-70%)
+                                </div>
+                            </div>
+                            <button onclick="sendPyramidToday()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-<!-- Kort 3: 4 x 8 min -->
-<div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-    <div class="space-y-2">
-        <div class="flex justify-between items-start">
-            <h4 class="font-bold text-white text-sm">4 × 8 min (Långa singlar)</h4>
-            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Norska Singlar</span>
-        </div>
-        <p class="text-xs text-slate-400">Totalt 32 minuter i zonen, utmärkt för halvmaraton och maraton.</p>
-        <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-            10m Warmup<br>
-            Main 4x: 8m tröskel (83-87%) + 60s vila<br>
-            5m Cooldown
-        </div>
-    </div>
-    <button onclick="sendNorwegianSingles4x8()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-    </button>
-</div>
+                <!-- SEKTION 3: FATMAX & GRUNDTRÄNING -->
+                <div class="space-y-3 pt-2">
+                    <h4 class="text-xs font-bold text-emerald-400 flex items-center gap-2 uppercase tracking-wider">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i> FatMax & Skadeförebyggande Grund
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-white text-sm">Kontrollerat Långpass</h4>
+                                    <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold rounded-full">FatMax / Grund</span>
+                                </div>
+                                <p class="text-xs text-slate-400">Uppbyggande pass med fokus på zon 2 och integrerade gångpauser.</p>
+                                <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                    5m Warmup (60-70%)<br>
+                                    Main 6x: 4m löpning (70-80%) + 1m gång<br>
+                                    5m Cooldown (60-70%)
+                                </div>
+                            </div>
+                            <button onclick="sendLongRunToday()" class="w-full mt-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                            </button>
+                        </div>
 
-<!-- Kort 4: Pyramid-singlar -->
-<div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-    <div class="space-y-2">
-        <div class="flex justify-between items-start">
-            <h4 class="font-bold text-white text-sm">Pyramid (3-4-5-6-5-4-3 min)</h4>
-            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold rounded-full">Stege / Variation</span>
-        </div>
-        <p class="text-xs text-slate-400">Varierat pass som mentalt upplevs som kortare.</p>
-        <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-            10m Warmup<br>
-            Main: 3m, 4m, 5m, 6m, 5m, 4m, 3m (Vila 60s)<br>
-            5m Cooldown
-        </div>
-    </div>
-    <button onclick="sendNorwegianPyramid()" class="w-full mt-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-    </button>
-</div>
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="font-bold text-white text-sm">Återhämtningsjogg</h4>
+                                    <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold rounded-full">Polariserat / Lågintensivt</span>
+                                </div>
+                                <p class="text-xs text-slate-400">Mycket lugn jogg för att påskynda återhämtningen.</p>
+                                <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                                    30m Lugn jogg (under 124 bpm / FatMax)
+                                </div>
+                            </div>
+                            <button onclick="sendRecoveryToday()" class="w-full mt-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
             </div>
         </div>
@@ -490,8 +459,10 @@
             statusText.textContent = "Hämtar data...";
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+            
+            // Vi hämtar från 365 dagar tillbaka för komplett historik
             const oldestDate = new Date();
-            oldestDate.setDate(oldestDate.getDate() - 730);
+            oldestDate.setDate(oldestDate.getDate() - 365);
             const oldestStr = oldestDate.toISOString().substring(0, 10);
 
             try {
@@ -782,10 +753,29 @@
             }
         }
 
-        function sendNorskThresholdToday() {
+        /* FUNCTION TRIGGERS FOR WORKOUTS */
+        function sendNorwegianSingles10x3() {
             const today = new Date().toISOString().substring(0, 10);
-            const text = "- 10m Warmup 60-70% HR\n\nMain Set 3x\n- 10m 80-85% HR\n- 2m Jog\n\n- 5m Cooldown 60-70% HR";
-            sendWorkoutDirectly(today, "Norsk Troskel 3x10m.txt", text);
+            const text = "- 10m Warmup 60-70% HR\n\nMain Set 10x\n- 3m 83-87% HR\n- 45s Rest\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Norska Singlar 10x3m.txt", text);
+        }
+
+        function sendNorwegianSingles6x5() {
+            const today = new Date().toISOString().substring(0, 10);
+            const text = "- 10m Warmup 60-70% HR\n\nMain Set 6x\n- 5m 83-87% HR\n- 60s Rest\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Norska Singlar 6x5m.txt", text);
+        }
+
+        function sendNorwegianSingles4x8() {
+            const today = new Date().toISOString().substring(0, 10);
+            const text = "- 10m Warmup 60-70% HR\n\nMain Set 4x\n- 8m 83-87% HR\n- 60s Rest\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Norska Singlar 4x8m.txt", text);
+        }
+
+        function sendNorwegianPyramid() {
+            const today = new Date().toISOString().substring(0, 10);
+            const text = "- 10m Warmup 60-70% HR\n\nMain Set 1x\n- 3m 83-87% HR\n- 60s Rest\n- 4m 83-87% HR\n- 60s Rest\n- 5m 83-87% HR\n- 60s Rest\n- 6m 83-87% HR\n- 60s Rest\n- 5m 83-87% HR\n- 60s Rest\n- 4m 83-87% HR\n- 60s Rest\n- 3m 83-87% HR\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Norsk Pyramid 3-6m.txt", text);
         }
 
         function sendThousandIntervalsToday() {
@@ -796,51 +786,21 @@
 
         function sendPyramidToday() {
             const today = new Date().toISOString().substring(0, 10);
-            const pyramidText = "- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR";
-            sendWorkoutDirectly(today, "Pyramiden.txt", pyramidText);
+            const text = "- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Pyramiden.txt", text);
         }
 
         function sendLongRunToday() {
             const today = new Date().toISOString().substring(0, 10);
-            const longRunText = "- 5m Warmup 60-70% HR\n\nMain Set 6x\n- 4m 70-80% HR\n- 1m Walk\n\n- 5m Cooldown 60-70% HR";
-            sendWorkoutDirectly(today, "Langpass.txt", longRunText);
-        }
-
-        function sendHillIntervalsToday() {
-            const today = new Date().toISOString().substring(0, 10);
-            const text = "- 10m Warmup 60-70% HR\n\nMain Set 12x\n- 1m Hill Up\n- Jog/Walk Down\n\n- 5m Cooldown 60-70% HR";
-            sendWorkoutDirectly(today, "Backintervaller 12x1m.txt", text);
+            const text = "- 5m Warmup 60-70% HR\n\nMain Set 6x\n- 4m 70-80% HR\n- 1m Walk\n\n- 5m Cooldown 60-70% HR";
+            sendWorkoutDirectly(today, "Langpass.txt", text);
         }
 
         function sendRecoveryToday() {
             const today = new Date().toISOString().substring(0, 10);
-            const recoveryText = "- 30m Recovery Jog <124 bpm";
-            sendWorkoutDirectly(today, "Aterhamtning.txt", recoveryText);
+            const text = "- 30m Recovery Jog <124 bpm";
+            sendWorkoutDirectly(today, "Aterhamtning.txt", text);
         }
-function sendNorwegianSingles10x3() {
-    const today = new Date().toISOString().substring(0, 10);
-    const text = "- 10m Warmup 60-70% HR\n\nMain Set 10x\n- 3m 83-87% HR\n- 45s Jog/Walk\n\n- 5m Cooldown 60-70% HR";
-    sendWorkoutDirectly(today, "Norska Singlar 10x3m.txt", text);
-}
-
-function sendNorwegianSingles6x5() {
-    const today = new Date().toISOString().substring(0, 10);
-    const text = "- 10m Warmup 60-70% HR\n\nMain Set 6x\n- 5m 83-87% HR\n- 60s Jog/Walk\n\n- 5m Cooldown 60-70% HR";
-    sendWorkoutDirectly(today, "Norska Singlar 6x5m.txt", text);
-}
-
-function sendNorwegianSingles4x8() {
-    const today = new Date().toISOString().substring(0, 10);
-    const text = "- 10m Warmup 60-70% HR\n\nMain Set 4x\n- 8m 83-87% HR\n- 60s Jog/Walk\n\n- 5m Cooldown 60-70% HR";
-    sendWorkoutDirectly(today, "Norska Singlar 4x8m.txt", text);
-}
-
-function sendNorwegianPyramid() {
-    const today = new Date().toISOString().substring(0, 10);
-    const text = "- 10m Warmup 60-70% HR\n\nMain Set 1x\n- 3m 83-87% HR\n- 60s Rest\n- 4m 83-87% HR\n- 60s Rest\n- 5m 83-87% HR\n- 60s Rest\n- 6m 83-87% HR\n- 60s Rest\n- 5m 83-87% HR\n- 60s Rest\n- 4m 83-87% HR\n- 60s Rest\n- 3m 83-87% HR\n\n- 5m Cooldown 60-70% HR";
-    sendWorkoutDirectly(today, "Norsk Pyramid 3-6m.txt", text);
-}
-
     </script>
 </body>
 </html>
