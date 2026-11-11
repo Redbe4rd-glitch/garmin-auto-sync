@@ -491,7 +491,7 @@
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             const oldestDate = new Date();
-            oldestDate.setDate(oldestDate.getDate() - 30);
+            oldestDate.setDate(oldestDate.getDate() - 730);
             const oldestStr = oldestDate.toISOString().substring(0, 10);
 
             try {
