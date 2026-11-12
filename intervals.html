@@ -299,7 +299,7 @@
             <!-- BLOCK 2: BELASTNING, FYSIOLOGI & LÖPDYNAMIK -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i> Block 2: Belastning, Fysiologi & Löpdynamik
+                    <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i> Block 2: Belastning, Fysiologi & Löpdynamik (Färgkodat för 50+ / Skadeförebyggande)
                 </h3>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="block2Grid">
                     <!-- Fylls dynamiskt -->
@@ -328,7 +328,7 @@
                 </div>
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="scale" class="w-4 h-4 text-emerald-400"></i> GCT-Balans (% Vänster)
+                        <i data-lucide="scale" class="w-4 h-4 text-emerald-400"></i> GCT-Balans (% Vänster / Höger)
                     </h3>
                     <div class="h-52 relative"><canvas id="detailGctBalChart"></canvas></div>
                 </div>
@@ -348,7 +348,7 @@
                                 <th class="p-2.5">Snittpuls</th>
                                 <th class="p-2.5">Kadens</th>
                                 <th class="p-2.5">GCT (ms)</th>
-                                <th class="p-2.5">GCT-Balans</th>
+                                <th class="p-2.5">GCT-Balans (Vä/Hö)</th>
                             </tr>
                         </thead>
                         <tbody id="kmSplitsTableBody" class="divide-y divide-slate-800 font-mono text-[11px]">
@@ -375,10 +375,11 @@
                                 <th class="p-2.5">Maxpuls</th>
                                 <th class="p-2.5">Kadens</th>
                                 <th class="p-2.5">GCT</th>
+                                <th class="p-2.5">GCT-Balans</th>
                             </tr>
                         </thead>
                         <tbody id="intervalsSplitsTableBody" class="divide-y divide-slate-800 font-mono text-[11px]">
-                            <tr><td colspan="8" class="p-4 text-center text-slate-500">Hämtar intervaller...</td></tr>
+                            <tr><td colspan="9" class="p-4 text-center text-slate-500">Hämtar intervaller...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1045,7 +1046,7 @@
             document.getElementById('block1Grid').innerHTML = '';
             document.getElementById('block2Grid').innerHTML = '';
             document.getElementById('kmSplitsTableBody').innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Hämtar...</td></tr>';
-            document.getElementById('intervalsSplitsTableBody').innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-500">Hämtar...</td></tr>';
+            document.getElementById('intervalsSplitsTableBody').innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">Hämtar...</td></tr>';
 
             try {
                 const actRes = await fetch(`https://intervals.icu/api/v1/activity/${activityId}`, {
@@ -1098,6 +1099,31 @@
                 ${descNote}
             `;
 
+            // Färglogik för kadens (Skadeförebyggande 50+: Mål >= 165 spm)
+            const cadenceVal = act.average_cadence ? Math.round(act.average_cadence * 2) : 0;
+            const cadenceColor = cadenceVal >= 165 ? 'text-emerald-400' : 'text-rose-400';
+
+            // Färglogik för GCT (Skadeförebyggande 50+: Mål <= 280 ms)
+            const gctVal = act.avg_stance_time || act.stance_time || 0;
+            const gctColor = (gctVal > 0 && gctVal <= 280) ? 'text-emerald-400' : (gctVal > 280 ? 'text-rose-400' : 'text-white');
+
+            // GCT-balans formatering & färg (50/50 guld, 49-51 grön, annars röd)
+            const balVal = act.avg_stance_time_balance || act.stance_time_balance || 0;
+            let balDisplay = '-';
+            let balColor = 'text-white';
+            if (balVal > 0) {
+                const left = balVal > 50 ? balVal : (100 - balVal); // Beräkna vänsterandel
+                const right = 100 - left;
+                balDisplay = `${left.toFixed(1)}% / ${right.toFixed(1)}% (V/H)`;
+                if (Math.abs(left - 50) < 0.2) {
+                    balColor = 'text-amber-300 font-extrabold'; // Guld för perfekt 50/50
+                } else if (left >= 49 && left <= 51) {
+                    balColor = 'text-emerald-400'; // Grön för ok balans
+                } else {
+                    balColor = 'text-rose-400'; // Röd för obalans
+                }
+            }
+
             // BLOCK 1 DEFINITIONER
             const block1Config = [
                 { key: 'distance', label: 'Distans', icon: 'footprints', color: 'emerald', format: v => (v / 1000).toFixed(2) + ' km' },
@@ -1105,10 +1131,10 @@
                 { key: 'average_speed', label: 'Snittempo', icon: 'gauge', color: 'sky', format: v => formatPace(v) },
                 { key: 'max_speed', label: 'Maxtempo', icon: 'zap', color: 'amber', format: v => formatPace(v) },
                 { key: 'max_heartrate', label: 'Maxpuls', icon: 'activity', color: 'rose', format: v => Math.round(v) + ' bpm' },
-                { key: 'average_cadence', label: 'Snittkadens', icon: 'disc', color: 'indigo', format: v => Math.round(v * 2) + ' spm' },
+                { key: 'average_cadence', label: 'Snittkadens', icon: 'disc', color: 'indigo', customClass: cadenceColor, format: v => `${Math.round(v * 2)} spm` },
                 { key: 'total_elevation_gain', label: 'Höjdmeter (+)', icon: 'trending-up', color: 'emerald', format: v => Math.round(v) + ' m' },
                 { key: 'total_elevation_loss', label: 'Höjdmeter (-)', icon: 'trending-down', color: 'rose', format: v => Math.round(v) + ' m' },
-                { key: 'avg_step_length', label: 'Medelstegslängd', icon: 'maximize-2', color: 'purple', format: v => (v / 1000).toFixed(2) + ' m' }
+                { key: 'avg_step_length', label: 'Medelstegslängd', icon: 'maximize-2', color: 'purple', format: v => v > 2 ? (v / 1000).toFixed(2) + ' m' : (v ? v.toFixed(2) + ' m' : '-') }
             ];
 
             // BLOCK 2 DEFINITIONER
@@ -1120,15 +1146,22 @@
                 { key: 'icu_ctl', label: 'Fitness (CTL)', icon: 'shield', color: 'emerald', format: v => Math.round(v) },
                 { key: 'icu_rpe', label: 'Ansträngning (RPE)', icon: 'sliders', color: 'amber', format: v => v + ' / 10' },
                 { key: 'feel', label: 'Känsla', icon: 'smile', color: 'emerald', format: v => v + ' / 5' },
-                { key: 'avg_stance_time', label: 'GCT (MS)', icon: 'clock', color: 'amber', format: v => Math.round(v) + ' ms' },
-                { key: 'avg_stance_time_balance', label: 'GCT-Balans (Vä/Hö)', icon: 'scale', color: 'emerald', format: v => `${v.toFixed(1)}% / ${(100 - v).toFixed(1)}%` }
+                { key: 'avg_stance_time', label: 'GCT (MS)', icon: 'clock', color: 'amber', customClass: gctColor, format: v => Math.round(v) + ' ms' },
+                { key: 'avg_stance_time_balance', label: 'GCT-Balans (Vä/Hö)', icon: 'scale', color: 'emerald', customClass: balColor, format: () => balDisplay }
             ];
 
             const renderBlockCards = (config, containerId) => {
                 const container = document.getElementById(containerId);
                 container.innerHTML = config.map(item => {
                     const val = act[item.key];
-                    const displayVal = (val !== null && val !== undefined && val !== '') ? item.format(val) : '-';
+                    let displayVal = '-';
+                    if (item.key === 'avg_stance_time_balance') {
+                        displayVal = balDisplay;
+                    } else if (val !== null && val !== undefined && val !== '') {
+                        displayVal = item.format(val);
+                    }
+                    const textClass = item.customClass || 'text-white';
+
                     return `
                         <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
                             <div class="p-2.5 bg-${item.color}-500/10 text-${item.color}-400 rounded-xl border border-${item.color}-500/20 shrink-0">
@@ -1136,7 +1169,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-[11px] font-medium text-slate-400 truncate">${item.label}</p>
-                                <h4 class="text-sm font-bold text-white truncate mt-0.5">${displayVal}</h4>
+                                <h4 class="text-sm font-bold ${textClass} truncate mt-0.5">${displayVal}</h4>
                             </div>
                         </div>
                     `;
@@ -1181,7 +1214,16 @@
                     sampledPace.push(paceMin);
                 }
                 if (gctData) sampledGct.push(gctData[i] > 0 ? gctData[i] : null);
-                if (gctBalData) sampledGctBal.push(gctBalData[i] > 0 ? gctBalData[i] : null);
+                if (gctBalData) {
+                    // Konvertera strömmens balansvärde till vänsterandel i %
+                    const rawBal = gctBalData[i];
+                    if (rawBal > 0) {
+                        const leftPct = rawBal > 50 ? rawBal : (100 - rawBal);
+                        sampledGctBal.push(leftPct);
+                    } else {
+                        sampledGctBal.push(null);
+                    }
+                }
             }
 
             const buildLineChart = (canvasId, label, dataArr, color, reverseY = false) => {
@@ -1219,7 +1261,7 @@
             buildLineChart('detailHrChart', 'Puls (bpm)', sampledHr, '#f43f5e', false);
             buildLineChart('detailPaceChart', 'Tempo (min/km)', sampledPace, '#38bdf8', true);
             buildLineChart('detailGctChart', 'GCT (ms)', sampledGct, '#fbbf24', false);
-            buildLineChart('detailGctBalChart', 'GCT Balans (%)', sampledGctBal, '#10b981', false);
+            buildLineChart('detailGctBalChart', 'GCT Balans (% Vänster)', sampledGctBal, '#10b981', false);
         }
 
         function renderKmSplits(streams) {
@@ -1263,7 +1305,11 @@
                             if (hrData && hrData[j] > 0) { hrSum += hrData[j]; hrCount++; }
                             if (cadData && cadData[j] > 0) { cadSum += cadData[j] * 2; cadCount++; }
                             if (gctData && gctData[j] > 0) { gctSum += gctData[j]; gctCount++; }
-                            if (gctBalData && gctBalData[j] > 0) { balSum += gctBalData[j]; balCount++; }
+                            if (gctBalData && gctBalData[j] > 0) {
+                                const raw = gctBalData[j];
+                                balSum += (raw > 50 ? raw : (100 - raw));
+                                balCount++;
+                            }
                         }
 
                         const avgSpeed = segmentDist / segmentTime;
@@ -1271,13 +1317,17 @@
                             ? `${(distData[i] / 1000).toFixed(2)} km`
                             : `Km ${currentKm}`;
 
+                        const avgLeft = balCount > 0 ? (balSum / balCount) : 0;
+                        const avgRight = avgLeft > 0 ? (100 - avgLeft) : 0;
+                        const balStr = avgLeft > 0 ? `${avgLeft.toFixed(1)}% / ${avgRight.toFixed(1)}%` : '-';
+
                         splits.push({
                             km: labelKm,
                             pace: formatPace(avgSpeed),
                             hr: hrCount > 0 ? Math.round(hrSum / hrCount) + ' bpm' : '-',
                             cad: cadCount > 0 ? Math.round(cadSum / cadCount) + ' spm' : '-',
                             gct: gctCount > 0 ? Math.round(gctSum / gctCount) + ' ms' : '-',
-                            bal: balCount > 0 ? (balSum / balCount).toFixed(1) + '%' : '-'
+                            bal: balStr
                         });
                     }
 
@@ -1303,12 +1353,15 @@
             `).join('');
         }
 
+        // FÖRBÄTTRADE LÖSNINGAR FÖR ATT HÄMTA SPLITS / INTERVALLER FRÅN INTERVALS.ICU API
         function renderIntervalsTable(act) {
             const tbody = document.getElementById('intervalsSplitsTableBody');
-            const intervals = act.icu_intervals || act.laps || act.splits_metric || [];
+            
+            // Intervals.icu kan skicka varv/intervaller under icu_intervals, laps, splits_metric eller intervals
+            const intervals = act.icu_intervals || act.laps || act.splits_metric || act.intervals || [];
 
             if (!intervals.length) {
-                tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-500">Inga separata varv eller intervaller registrerade för detta pass.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">Inga separata varv eller intervaller registrerade för detta pass.</td></tr>';
                 return;
             }
 
@@ -1325,6 +1378,14 @@
                 const maxHr = iv.max_heartrate ? `${Math.round(iv.max_heartrate)} bpm` : '-';
                 const cad = iv.average_cadence ? `${Math.round(iv.average_cadence * 2)} spm` : '-';
                 const gct = iv.avg_stance_time ? `${Math.round(iv.avg_stance_time)} ms` : '-';
+                
+                const balRaw = iv.avg_stance_time_balance || iv.stance_time_balance || 0;
+                let balStr = '-';
+                if (balRaw > 0) {
+                    const l = balRaw > 50 ? balRaw : (100 - balRaw);
+                    const r = 100 - l;
+                    balStr = `${l.toFixed(1)}% / ${r.toFixed(1)}%`;
+                }
 
                 return `
                     <tr class="border-b border-slate-800 hover:bg-slate-800/40">
@@ -1336,6 +1397,7 @@
                         <td class="p-2.5 text-slate-400">${maxHr}</td>
                         <td class="p-2.5 text-slate-300">${cad}</td>
                         <td class="p-2.5 text-amber-400">${gct}</td>
+                        <td class="p-2.5 text-emerald-400">${balStr}</td>
                     </tr>
                 `;
             }).join('');
