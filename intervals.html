@@ -501,7 +501,8 @@
             apiKey: localStorage.getItem('icu_api_key') || '',
             athleteId: localStorage.getItem('icu_athlete_id') || '',
             latestAcwr: 0,
-            activities: []
+            activities: [],
+            currentStreams: null
         };
 
         let volumeChartInstance = null;
@@ -540,11 +541,11 @@
             if (!leftPct || leftPct <= 0) return { text: '-', color: 'text-white' };
             const left = leftPct;
             const right = 100 - left;
-            let color = 'text-rose-400'; // Röd under 50% (eller kraftig obalans)
+            let color = 'text-rose-400';
             if (Math.abs(left - 50) < 0.05) {
-                color = 'text-amber-300 font-extrabold'; // Guld för 50/50
+                color = 'text-amber-300 font-extrabold';
             } else if (left > 50) {
-                color = 'text-emerald-400'; // Grön över 50%
+                color = 'text-emerald-400';
             }
             return {
                 text: `${left.toFixed(1)}% / ${right.toFixed(1)}%`,
@@ -562,6 +563,11 @@
                 return { label: 'Tröskel / Tempo', minCadence: 165, maxGct: 270 };
             }
             return { label: 'Distans / FatMax', minCadence: 160, maxGct: 285 };
+        }
+
+        function getGctColorClass(gctVal, maxGct) {
+            if (!gctVal || gctVal <= 0) return 'text-white';
+            return gctVal <= maxGct ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold';
         }
 
         function setStatus(message) {
@@ -1086,10 +1092,7 @@
             if (balData) {
                 let sum = 0, count = 0;
                 for (let v of balData) {
-                    if (v > 0) {
-                        sum += v;
-                        count++;
-                    }
+                    if (v > 0) { sum += v; count++; }
                 }
                 if (count > 0) avgBal = sum / count;
             }
@@ -1100,7 +1103,7 @@
                 const len = Math.min(velData.length, cadData.length);
                 for (let i = 0; i < len; i++) {
                     const v = velData[i];
-                    const c = cadData[i] * 2; // spm
+                    const c = cadData[i] * 2;
                     if (v > 1.2 && c > 100) {
                         const stepM = v / (c / 60);
                         if (stepM > 0.4 && stepM < 2.5) {
@@ -1141,6 +1144,7 @@
 
                 const act = actRes.ok ? await actRes.json() : appState.activities.find(a => String(a.id) === String(activityId));
                 const streams = streamRes.ok ? await streamRes.json() : null;
+                appState.currentStreams = streams;
                 const streamStats = computeStreamAverages(streams);
 
                 if (act) {
@@ -1154,12 +1158,12 @@
                             intervals = Array.isArray(ivData) ? ivData : (ivData.icu_intervals || []);
                         }
                     }
-                    renderIntervalsTable(intervals);
+                    renderIntervalsTable(intervals, act, streams);
                 }
 
                 if (streams) {
                     renderDetailCharts(streams);
-                    renderKmSplits(streams);
+                    renderKmSplits(streams, act);
                 } else {
                     document.getElementById('kmSplitsTableBody').innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Ingen GPS/strömningsdata tillgänglig för detta pass.</td></tr>';
                 }
@@ -1195,25 +1199,20 @@
                 ${descNote}
             `;
 
-            // Kadens & Färg (baserat på passtyp)
             const cadenceVal = act.average_cadence ? Math.round(act.average_cadence * 2) : 0;
             const cadenceColor = cadenceVal >= targets.minCadence ? 'text-emerald-400' : (cadenceVal > 0 ? 'text-rose-400' : 'text-white');
 
-            // GCT (hämta från objekt eller beräkna från ström)
             const gctVal = act.avg_stance_time || act.stance_time || streamStats.avgGct || 0;
-            const gctColor = (gctVal > 0 && gctVal <= targets.maxGct) ? 'text-emerald-400' : (gctVal > targets.maxGct ? 'text-rose-400' : 'text-white');
+            const gctColor = getGctColorClass(gctVal, targets.maxGct);
 
-            // GCT-balans (Vänster / Höger: Grön > 50%, Röd < 50%, Guld = 50/50)
             const balVal = act.avg_stance_time_balance || act.stance_time_balance || streamStats.avgBal || 0;
             const balInfo = formatBalancePair(balVal);
 
-            // Steglängd (hämta från objekt eller beräkna från fart + kadens)
             let stepLenVal = act.avg_step_length || act.step_length || streamStats.avgStepLen || 0;
             if (!stepLenVal && act.average_speed > 0 && cadenceVal > 0) {
                 stepLenVal = act.average_speed / (cadenceVal / 60);
             }
 
-            // BLOCK 1 DEFINITIONER
             const block1Config = [
                 { label: 'Distans', icon: 'footprints', color: 'emerald', value: act.distance ? (act.distance / 1000).toFixed(2) + ' km' : '-' },
                 { label: 'Medelpuls', icon: 'heart', color: 'rose', value: act.average_heartrate ? Math.round(act.average_heartrate) + ' bpm' : '-' },
@@ -1226,7 +1225,6 @@
                 { label: 'Medelstegslängd', icon: 'maximize-2', color: 'purple', value: stepLenVal > 0 ? (stepLenVal > 3 ? (stepLenVal / 1000).toFixed(2) + ' m' : stepLenVal.toFixed(2) + ' m') : '-' }
             ];
 
-            // BLOCK 2 DEFINITIONER
             const block2Config = [
                 { label: 'Kalorier', icon: 'flame', color: 'amber', value: act.calories ? Math.round(act.calories) + ' kcal' : '-' },
                 { label: 'Training Load', icon: 'bar-chart-3', color: 'indigo', value: act.icu_training_load ? Math.round(act.icu_training_load) : '-' },
@@ -1259,6 +1257,50 @@
 
             renderBlockCards(block1Config, 'block1Grid');
             renderBlockCards(block2Config, 'block2Grid');
+        }
+
+        function extractStatFromStreams(streams, startTime, endTime, streamName) {
+            if (!streams) return null;
+            const getStream = (type) => {
+                if (Array.isArray(streams)) {
+                    const found = streams.find(s => s.type === type);
+                    return found ? found.data : null;
+                }
+                return streams[type] || null;
+            };
+
+            const timeArr = getStream('time');
+            const targetArr = getStream(streamName);
+            if (!timeArr || !targetArr) return null;
+
+            let sum = 0, count = 0;
+            for (let i = 0; i < timeArr.length; i++) {
+                const t = timeArr[i];
+                if (t >= startTime && t <= endTime) {
+                    const val = targetArr[i];
+                    if (val !== null && val !== undefined && val > 0) {
+                        sum += val;
+                        count++;
+                    }
+                }
+            }
+            return count > 0 ? sum / count : null;
+        }
+
+        function determineIntervalType(iv, avgSpeed) {
+            const label = (iv.label || iv.name || '').toLowerCase();
+            const type = (iv.type || '').toUpperCase();
+
+            if (type === 'RECOVERY' || label.includes('vila') || label.includes('rest') || label.includes('cooldown')) {
+                return { text: 'Vila / Gång', badge: 'bg-blue-500/20 text-blue-400 border border-blue-500/30', isRunning: false };
+            }
+            if (avgSpeed < 1.4 && iv.distance < 100) {
+                return { text: 'Stillastående', badge: 'bg-slate-700 text-slate-400', isRunning: false };
+            }
+            if (avgSpeed < 2.0 && (label.includes('walk') || label.includes('gång'))) {
+                return { text: 'Gång', badge: 'bg-sky-500/20 text-sky-400 border border-sky-500/30', isRunning: false };
+            }
+            return { text: iv.label || iv.name || 'Löpning', badge: 'bg-amber-500/20 text-amber-400 border border-amber-500/30', isRunning: true };
         }
 
         function renderDetailCharts(streams) {
@@ -1338,8 +1380,9 @@
             buildLineChart('detailGctBalChart', 'GCT Balans (% Vänster)', sampledGctBal, '#10b981', false);
         }
 
-        function renderKmSplits(streams) {
+        function renderKmSplits(streams, act) {
             const tbody = document.getElementById('kmSplitsTableBody');
+            const targets = getWorkoutTargets(act);
             const getStream = (type) => {
                 if (Array.isArray(streams)) {
                     const found = streams.find(s => s.type === type);
@@ -1390,6 +1433,9 @@
                             ? `${(distData[i] / 1000).toFixed(2)} km`
                             : `Km ${currentKm}`;
 
+                        const avgGct = gctCount > 0 ? gctSum / gctCount : 0;
+                        const gctClass = getGctColorClass(avgGct, targets.maxGct);
+
                         const avgLeft = balCount > 0 ? (balSum / balCount) : 0;
                         const balInfo = formatBalancePair(avgLeft);
 
@@ -1398,7 +1444,8 @@
                             pace: formatPace(avgSpeed),
                             hr: hrCount > 0 ? Math.round(hrSum / hrCount) + ' bpm' : '-',
                             cad: cadCount > 0 ? Math.round(cadSum / cadCount) + ' spm' : '-',
-                            gct: gctCount > 0 ? Math.round(gctSum / gctCount) + ' ms' : '-',
+                            gctText: avgGct > 0 ? Math.round(avgGct) + ' ms' : '-',
+                            gctClass,
                             balText: balInfo.text,
                             balColor: balInfo.color
                         });
@@ -1420,14 +1467,15 @@
                     <td class="p-2.5 text-sky-400">${s.pace}</td>
                     <td class="p-2.5 text-rose-400">${s.hr}</td>
                     <td class="p-2.5 text-slate-300">${s.cad}</td>
-                    <td class="p-2.5 text-amber-400">${s.gct}</td>
+                    <td class="p-2.5 ${s.gctClass}">${s.gctText}</td>
                     <td class="p-2.5 ${s.balColor}">${s.balText}</td>
                 </tr>
             `).join('');
         }
 
-        function renderIntervalsTable(intervals) {
+        function renderIntervalsTable(intervals, act, streams) {
             const tbody = document.getElementById('intervalsSplitsTableBody');
+            const targets = getWorkoutTargets(act);
 
             if (!intervals || !intervals.length) {
                 tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">Inga separata varv eller intervaller registrerade för detta pass.</td></tr>';
@@ -1435,19 +1483,36 @@
             }
 
             tbody.innerHTML = intervals.map((iv, idx) => {
-                const label = iv.label || iv.name || (iv.type === 'WORK' ? `Intervall ${idx + 1}` : (iv.type === 'RECOVERY' ? 'Vila' : `Varv ${idx + 1}`));
-                const typeBadge = iv.type === 'WORK'
-                    ? `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px]">${label}</span>`
-                    : `<span class="text-slate-300">${label}</span>`;
+                const avgSpeed = iv.average_speed || (iv.distance && iv.moving_time ? iv.distance / iv.moving_time : (iv.distance && iv.time ? iv.distance / iv.time : 0));
+                const typeInfo = determineIntervalType(iv, avgSpeed);
+                const typeBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold ${typeInfo.badge}">${typeInfo.text}</span>`;
 
                 const dist = iv.distance ? `${(iv.distance / 1000).toFixed(2)} km` : '-';
                 const time = formatDuration(iv.moving_time || iv.elapsed_time || iv.time);
-                const pace = formatPace(iv.average_speed || (iv.distance && iv.moving_time ? iv.distance / iv.moving_time : 0));
+                const pace = formatPace(avgSpeed);
                 const avgHr = iv.average_heartrate ? `${Math.round(iv.average_heartrate)} bpm` : '-';
                 const maxHr = iv.max_heartrate ? `${Math.round(iv.max_heartrate)} bpm` : '-';
                 const cad = iv.average_cadence ? `${Math.round(iv.average_cadence * 2)} spm` : '-';
-                const gct = iv.avg_stance_time ? `${Math.round(iv.avg_stance_time)} ms` : '-';
                 
+                // Hämta GCT från intervallen eller beräkna från start_index / end_index / tid i strömmar
+                let gctVal = iv.avg_stance_time || iv.stance_time || 0;
+                if (!gctVal && streams && (iv.start_index !== undefined && iv.end_index !== undefined)) {
+                    const gctStream = streams.find(s => s.type === 'stance_time');
+                    if (gctStream && gctStream.data) {
+                        let sum = 0, count = 0;
+                        for (let i = iv.start_index; i <= iv.end_index && i < gctStream.data.length; i++) {
+                            if (gctStream.data[i] > 0) { sum += gctStream.data[i]; count++; }
+                        }
+                        if (count > 0) gctVal = sum / count;
+                    }
+                }
+                if (!gctVal && streams && (iv.start_time !== undefined && iv.end_time !== undefined)) {
+                    gctVal = extractStatFromStreams(streams, iv.start_time, iv.end_time, 'stance_time');
+                }
+
+                const gctText = gctVal > 0 ? Math.round(gctVal) + ' ms' : '-';
+                const gctClass = typeInfo.isRunning ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
+
                 const balRaw = iv.avg_stance_time_balance || iv.stance_time_balance || 0;
                 const balInfo = formatBalancePair(balRaw);
 
@@ -1460,7 +1525,7 @@
                         <td class="p-2.5 text-rose-400">${avgHr}</td>
                         <td class="p-2.5 text-slate-400">${maxHr}</td>
                         <td class="p-2.5 text-slate-300">${cad}</td>
-                        <td class="p-2.5 text-amber-400">${gct}</td>
+                        <td class="p-2.5 ${gctClass}">${gctText}</td>
                         <td class="p-2.5 ${balInfo.color}">${balInfo.text}</td>
                     </tr>
                 `;
