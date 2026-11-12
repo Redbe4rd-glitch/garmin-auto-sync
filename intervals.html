@@ -65,7 +65,7 @@
                 </div>
             </div>
 
-            <!-- Beredskapskort / Trafikljus (Beslutsstöd) -->
+            <!-- Beredskapskort / Trafikljus -->
             <div id="readinessBanner" class="bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all">
                 <div class="flex items-center gap-4">
                     <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 shrink-0">
@@ -95,7 +95,6 @@
                     </div>
                 </div>
 
-                <!-- NYTT: ACWR-Kort -->
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
                     <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
                         <i data-lucide="trending-up" class="w-6 h-6"></i>
@@ -114,7 +113,7 @@
                         <i data-lucide="heart-pulse" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-medium text-slate-400">FatMax (&le;124 bpm)</p>
+                        <p class="text-xs font-medium text-slate-400">FatMax (≤124 bpm)</p>
                         <h3 class="text-lg font-bold text-white" id="kpiFatmaxShare">0%</h3>
                     </div>
                 </div>
@@ -373,6 +372,7 @@
         const appState = {
             apiKey: localStorage.getItem('icu_api_key') || '',
             athleteId: localStorage.getItem('icu_athlete_id') || '',
+            latestAcwr: 0
         };
 
         let volumeChartInstance = null;
@@ -591,7 +591,11 @@
                     headers: { 'Authorization': authHeader }
                 });
 
-                if (!response.ok) return;
+                if (!response.ok) {
+                    // Om ingen wellness finns ännu för dagen, kör en auto-sparande om vi har beräknat ACWR
+                    autoSaveAcwrToIntervals();
+                    return;
+                }
 
                 const data = await response.json();
                 if (typeof data.sleepQuality === 'number') {
@@ -611,10 +615,46 @@
                     const footMatch = data.comments.match(/Fot\/Benhinna:\s*(\d+)/);
                     if (footMatch) document.getElementById('inputFoot').value = footMatch[1];
                 }
+
+                // Kolla om [ACWR] redan finns sparat i kommentaren. Om inte, spara ner det automatiskt!
+                if (!data.comments || !data.comments.includes('[ACWR]')) {
+                    autoSaveAcwrToIntervals(data.comments || '');
+                }
+
                 updateWellnessDisplay();
                 evaluateReadiness();
             } catch (error) {
-                console.log('Ingen tidigare morgonstatus sparad för idag ännu.');
+                console.log('Kunde inte läsa dagens wellness:', error);
+            }
+        }
+
+        // AUTOMATISK SPARNING AV ACWR VID SIDLADDNING OM DET SAKNAS
+        async function autoSaveAcwrToIntervals(existingComments = '') {
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            if (!apiKey || !athleteId || appState.latestAcwr === 0) return;
+
+            const todayStr = toLocalDateString();
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+
+            // Lägg till ACWR-taggen i kommentaren utan att skriva över existerande anteckningar
+            const acwrTag = `[ACWR: ${appState.latestAcwr.toFixed(2)}]`;
+            const updatedComments = existingComments ? `${existingComments} ${acwrTag}` : acwrTag;
+
+            const payload = {
+                id: todayStr,
+                comments: updatedComments
+            };
+
+            try {
+                await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/wellness/${todayStr}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                console.log('✅ ACWR sparades automatiskt till Intervals.icu för idag:', appState.latestAcwr.toFixed(2));
+            } catch (error) {
+                console.error('Kunde inte autospara ACWR:', error);
             }
         }
 
@@ -636,7 +676,10 @@
             const readiness = document.getElementById('inputReadiness').value;
             const notes = document.getElementById('inputWellnessNotes').value;
 
-            const commentText = `[Känningar] Vad/Hälsena: ${calf}/10, Knä/ITB: ${knee}/10, Höft/Säte: ${hip}/10, Fot/Benhinna: ${foot}/10. ${notes}`.trim();
+            // Inkludera alltid ACWR vid manuell sparad morgonstatus också
+            const acwrStr = appState.latestAcwr > 0 ? ` [ACWR: ${appState.latestAcwr.toFixed(2)}]` : '';
+            const commentText = `[Känningar] Vad/Hälsena: ${calf}/10, Knä/ITB: ${knee}/10, Höft/Säte: ${hip}/10, Fot/Benhinna: ${foot}/10. ${notes}${acwrStr}`.trim();
+            
             const payload = {
                 id: todayStr,
                 sleepQuality: parseInt(sleep, 10),
@@ -654,7 +697,7 @@
                 });
 
                 if (response.ok) {
-                    alert('✅ Morgonstatus sparad till Intervals.icu!');
+                    alert('✅ Morgonstatus & ACWR sparade till Intervals.icu!');
                     evaluateReadiness();
                 } else {
                     alert(`Kunde inte spara morgonstatus (${response.status})`);
@@ -665,7 +708,6 @@
             }
         }
 
-        // BERÄKNING AV ACWR OCH DASHBOARD-DATA
         function processAndRenderDashboard(activities) {
             const sortedActivities = [...activities].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
             const now = new Date();
@@ -713,13 +755,12 @@
                 }
             });
 
-            // Beräkna ACWR (Akut 7d / Kronisk veckosnitt 28d)
             const chronicWeekly = vol28d / 4;
             const acwr = chronicWeekly > 0 ? vol7d / chronicWeekly : 0;
+            appState.latestAcwr = acwr; // Spara undan globalt så auto-sparfunktionen kommer åt det
 
             document.getElementById('kpiWeeklyVol').textContent = `${weeklyVol.toFixed(1)} km`;
             
-            // Uppdatera ACWR-kortet
             const acwrEl = document.getElementById('kpiAcwr');
             const acwrBadge = document.getElementById('kpiAcwrBadge');
             acwrEl.textContent = acwr.toFixed(2);
@@ -747,6 +788,9 @@
 
             renderTable(sortedActivities);
             renderCharts(sortedActivities, hrLowCount, hrMidCount, hrHighCount);
+
+            // Efter att aktiviteter har hämtats och ACWR har räknats ut: kolla om det behöver autosparas till dagens wellness
+            fetchTodayWellness();
         }
 
         function renderTable(activities) {
@@ -894,7 +938,6 @@
 
             if (appState.apiKey && appState.athleteId) {
                 fetchIntervalsData();
-                fetchTodayWellness();
             }
         });
     </script>
