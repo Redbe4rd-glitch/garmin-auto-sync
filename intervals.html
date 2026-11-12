@@ -47,10 +47,15 @@
             <button onclick="switchTab('library')" id="tabBtnLibrary" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5">
                 <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Passbibliotek & Filosofi
             </button>
+            <button onclick="switchTab('detail')" id="tabBtnDetail" class="hidden px-4 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition flex items-center gap-1.5">
+                <i data-lucide="activity" class="w-3.5 h-3.5"></i> Passdetaljer
+            </button>
         </div>
     </header>
 
     <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
+        
+        <!-- ================= VYN 1: DASHBOARD ================= -->
         <div id="viewDashboard" class="space-y-6">
             
             <!-- API Status & Settings -->
@@ -220,11 +225,14 @@
                 </div>
             </div>
 
-            <!-- Tabell -->
+            <!-- Tabell (Klickbara rader!) -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
-                <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Träningshistorik (Senaste 90 Dagar)
-                </h3>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Träningshistorik (Senaste 90 Dagar)
+                    </h3>
+                    <span class="text-[11px] text-indigo-400">Klicka på ett pass för djupanalys →</span>
+                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs text-slate-300">
                         <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px]">
@@ -235,16 +243,18 @@
                                 <th class="p-2.5">Distans</th>
                                 <th class="p-2.5">Tid</th>
                                 <th class="p-2.5">Medelpuls</th>
+                                <th class="p-2.5 text-right">Detaljer</th>
                             </tr>
                         </thead>
                         <tbody id="activitiesTableBody" class="divide-y divide-slate-800 font-mono text-[11px]">
-                            <tr><td colspan="6" class="p-4 text-center text-slate-500">Hämtar historik...</td></tr>
+                            <tr><td colspan="7" class="p-4 text-center text-slate-500">Hämtar historik...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
+        <!-- ================= VYN 2: PASSBIBLIOTEK ================= -->
         <div id="viewLibrary" class="space-y-6 hidden">
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-700 pb-3">
@@ -257,6 +267,137 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="workoutLibraryGrid"></div>
             </div>
+        </div>
+
+        <!-- ================= VYN 3: PASSDETALJER (DJUPANALYS) ================= -->
+        <div id="viewDetail" class="space-y-6 hidden">
+            
+            <!-- Toppnavigering & Sammanfattning -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-700/80 pb-4">
+                    <div class="flex items-center gap-3">
+                        <button onclick="switchTab('dashboard')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-700 text-xs font-semibold text-slate-200 rounded-xl border border-slate-700 flex items-center gap-1.5 transition">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> Tillbaka
+                        </button>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span id="detailDate" class="text-xs font-mono text-indigo-400">----</span>
+                                <span id="detailTypeBadge" class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Run</span>
+                            </div>
+                            <h2 id="detailTitle" class="text-xl font-bold text-white mt-0.5">Laddar aktivitet...</h2>
+                        </div>
+                    </div>
+                    <div id="detailLoadingBadge" class="text-xs text-amber-400 flex items-center gap-1.5">
+                        <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Hämtar strömmar och intervaller...
+                    </div>
+                </div>
+
+                <!-- Pass-sammanfattning (Nyckeltal i kortform) -->
+                <div id="detailSummaryBox" class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 leading-relaxed">
+                    Hämtar sammanfattning...
+                </div>
+            </div>
+
+            <!-- ALLA MÄTVÄRDEN (Kort-rutnät för att kunna sålla bort oviktiga) -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="grid" class="w-4 h-4 text-indigo-400"></i> Alla Mätvärden (Rådata & Nyckeltal från Intervals.icu)
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Här visas samtliga tillgängliga fält för passet inklusive deras API-namn så att du enkelt kan välja ut dina favoriter.</p>
+                    </div>
+                </div>
+                <div id="allMetricsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    <!-- Fylls dynamiskt via JS -->
+                </div>
+            </div>
+
+            <!-- DIAGRAM OVER TID/DISTANS (Puls, Tempo, GCT, GCT-balans) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Puls -->
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="heart" class="w-4 h-4 text-rose-400"></i> Puls (bpm)
+                    </h3>
+                    <div class="h-52 relative"><canvas id="detailHrChart"></canvas></div>
+                </div>
+
+                <!-- Tempo -->
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="gauge" class="w-4 h-4 text-sky-400"></i> Tempo (min/km)
+                    </h3>
+                    <div class="h-52 relative"><canvas id="detailPaceChart"></canvas></div>
+                </div>
+
+                <!-- GCT (Markontakttid) -->
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="footprints" class="w-4 h-4 text-amber-400"></i> Markontakttid / GCT (ms)
+                    </h3>
+                    <div class="h-52 relative"><canvas id="detailGctChart"></canvas></div>
+                </div>
+
+                <!-- GCT-balans -->
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="scale" class="w-4 h-4 text-emerald-400"></i> GCT-Balans (% Vänster)
+                    </h3>
+                    <div class="h-52 relative"><canvas id="detailGctBalChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- RUTA 1: VÄRDEN PER KILOMETER -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="milestone" class="w-4 h-4 text-indigo-400"></i> Värden per Kilometer (1 km-splits)
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px]">
+                            <tr>
+                                <th class="p-2.5">Km</th>
+                                <th class="p-2.5">Tempo</th>
+                                <th class="p-2.5">Snittpuls</th>
+                                <th class="p-2.5">Kadens</th>
+                                <th class="p-2.5">GCT (ms)</th>
+                                <th class="p-2.5">GCT-Balans</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kmSplitsTableBody" class="divide-y divide-slate-800 font-mono text-[11px]">
+                            <tr><td colspan="6" class="p-4 text-center text-slate-500">Beräknar kilometertider...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- RUTA 2: ALLA SPLITS / INTERVALLER -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="timer" class="w-4 h-4 text-amber-400"></i> Alla Splits / Intervaller (Klockans varv & intervallblock)
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-300">
+                        <thead class="bg-slate-900/60 text-slate-400 uppercase text-[10px]">
+                            <tr>
+                                <th class="p-2.5"># / Typ</th>
+                                <th class="p-2.5">Distans</th>
+                                <th class="p-2.5">Tid</th>
+                                <th class="p-2.5">Tempo</th>
+                                <th class="p-2.5">Snittpuls</th>
+                                <th class="p-2.5">Maxpuls</th>
+                                <th class="p-2.5">Kadens</th>
+                                <th class="p-2.5">GCT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="intervalsSplitsTableBody" class="divide-y divide-slate-800 font-mono text-[11px]">
+                            <tr><td colspan="8" class="p-4 text-center text-slate-500">Hämtar intervaller...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -372,11 +513,13 @@
         const appState = {
             apiKey: localStorage.getItem('icu_api_key') || '',
             athleteId: localStorage.getItem('icu_athlete_id') || '',
-            latestAcwr: 0
+            latestAcwr: 0,
+            activities: []
         };
 
         let volumeChartInstance = null;
         let zoneChartInstance = null;
+        let detailChartInstances = {};
 
         function toLocalDateString(date = new Date()) {
             const offset = date.getTimezoneOffset() * 60000;
@@ -387,6 +530,23 @@
             const d = new Date();
             d.setDate(d.getDate() - days);
             return d;
+        }
+
+        function formatPace(speedMs) {
+            if (!speedMs || speedMs <= 0.1) return '-';
+            const secPerKm = 1000 / speedMs;
+            const mins = Math.floor(secPerKm / 60);
+            const secs = Math.round(secPerKm % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs} /km`;
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return '-';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.round(seconds % 60);
+            if (h > 0) return `${h}h ${m}m ${s}s`;
+            return `${m}m ${s < 10 ? '0' : ''}${s}s`;
         }
 
         function setStatus(message) {
@@ -519,27 +679,38 @@
             localStorage.setItem('icu_athlete_id', athleteId);
             closeSettingsModal();
             fetchIntervalsData();
-            fetchTodayWellness();
         }
 
         function switchTab(tab) {
             const dash = document.getElementById('viewDashboard');
             const lib = document.getElementById('viewLibrary');
+            const detail = document.getElementById('viewDetail');
+            
             const btnDash = document.getElementById('tabBtnDashboard');
             const btnLib = document.getElementById('tabBtnLibrary');
+            const btnDetail = document.getElementById('tabBtnDetail');
+
+            dash.classList.add('hidden');
+            lib.classList.add('hidden');
+            detail.classList.add('hidden');
+
+            btnDash.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
+            btnLib.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
 
             if (tab === 'dashboard') {
                 dash.classList.remove('hidden');
-                lib.classList.add('hidden');
+                btnDetail.classList.add('hidden');
                 btnDash.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
-                btnLib.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
-            } else {
-                dash.classList.add('hidden');
+            } else if (tab === 'library') {
                 lib.classList.remove('hidden');
+                btnDetail.classList.add('hidden');
                 btnLib.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
-                btnDash.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
+            } else if (tab === 'detail') {
+                detail.classList.remove('hidden');
+                btnDetail.classList.remove('hidden');
             }
             if (window.lucide) lucide.createIcons();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         async function fetchIntervalsData() {
@@ -570,7 +741,8 @@
                 }
 
                 const data = await response.json();
-                processAndRenderDashboard(Array.isArray(data) ? data : []);
+                appState.activities = Array.isArray(data) ? data : [];
+                processAndRenderDashboard(appState.activities);
                 setStatus('Ansluten via API');
             } catch (error) {
                 console.error(error);
@@ -615,7 +787,6 @@
                     if (footMatch) document.getElementById('inputFoot').value = footMatch[1];
                 }
 
-                // Kolla om ACWR finns sparat som custom field eller i kommentarer
                 if (!data.acwr && appState.latestAcwr > 0) {
                     autoSaveAcwrToIntervals(data);
                 }
@@ -627,7 +798,6 @@
             }
         }
 
-        // AUTOMATISK SPARNING AV ACWR TILL CUSTOM FIELD VID SIDLADDNING
         async function autoSaveAcwrToIntervals(existingWellness = {}) {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
@@ -648,7 +818,6 @@
                     headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                console.log('✅ ACWR sparat som Custom Field till Intervals.icu:', appState.latestAcwr.toFixed(2));
             } catch (error) {
                 console.error('Kunde inte autospara ACWR:', error);
             }
@@ -783,8 +952,6 @@
 
             renderTable(sortedActivities);
             renderCharts(sortedActivities, hrLowCount, hrMidCount, hrHighCount);
-
-            // Kolla och autospara ACWR till Intervals.icu
             fetchTodayWellness();
         }
 
@@ -795,7 +962,7 @@
             countBadge.textContent = `${activities.length} Pass Hämtade`;
 
             if (!activities.length) {
-                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Inga aktiviteter hittades.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">Inga aktiviteter hittades.</td></tr>';
                 return;
             }
 
@@ -808,13 +975,14 @@
                 const hr = act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm` : '-';
 
                 return `
-                    <tr class="border-b border-slate-800 hover:bg-slate-800/40">
+                    <tr onclick="openActivityDetail('${act.id}')" class="border-b border-slate-800 hover:bg-indigo-950/40 cursor-pointer transition group">
                         <td class="p-2.5 text-slate-400">${date}</td>
-                        <td class="p-2.5 font-bold text-white">${name}</td>
+                        <td class="p-2.5 font-bold text-white group-hover:text-indigo-300 transition">${name}</td>
                         <td class="p-2.5 text-indigo-400">${type}</td>
                         <td class="p-2.5">${distKm}</td>
                         <td class="p-2.5">${durMin}</td>
                         <td class="p-2.5 text-rose-400">${hr}</td>
+                        <td class="p-2.5 text-right text-slate-500 group-hover:text-indigo-400">Öppna →</td>
                     </tr>
                 `;
             }).join('');
@@ -874,6 +1042,347 @@
                     plugins: { legend: { labels: { color: '#f8fafc', font: { size: 10 } } } }
                 }
             });
+        }
+
+        /* ================= PASSDETALJER & DJUPANALYS ================= */
+        async function openActivityDetail(activityId) {
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+
+            switchTab('detail');
+
+            const loadingBadge = document.getElementById('detailLoadingBadge');
+            loadingBadge.classList.remove('hidden');
+
+            // Nollställ vyer under laddning
+            document.getElementById('detailTitle').textContent = 'Laddar pass...';
+            document.getElementById('detailSummaryBox').textContent = 'Hämtar fullständig data från Intervals.icu...';
+            document.getElementById('allMetricsGrid').innerHTML = '';
+            document.getElementById('kmSplitsTableBody').innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Hämtar...</td></tr>';
+            document.getElementById('intervalsSplitsTableBody').innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-500">Hämtar...</td></tr>';
+
+            try {
+                // 1. Hämta fullständig detaljdata för aktiviteten (inklusive alla mätvärden & intervaller)
+                const actRes = await fetch(`https://intervals.icu/api/v1/activity/${activityId}`, {
+                    headers: { 'Authorization': authHeader }
+                });
+                const act = actRes.ok ? await actRes.json() : appState.activities.find(a => String(a.id) === String(activityId));
+
+                if (act) {
+                    renderActivityOverviewAndCards(act);
+                    renderIntervalsTable(act);
+                }
+
+                // 2. Hämta strömmar (sekund-för-sekund data) för diagram och 1 km-splits
+                const streamTypes = 'time,distance,heartrate,velocity_smooth,cadence,stance_time,stance_time_balance';
+                const streamRes = await fetch(`https://intervals.icu/api/v1/activity/${activityId}/streams.json?types=${streamTypes}`, {
+                    headers: { 'Authorization': authHeader }
+                });
+
+                if (streamRes.ok) {
+                    const streams = await streamRes.json();
+                    renderDetailCharts(streams);
+                    renderKmSplits(streams);
+                } else {
+                    document.getElementById('kmSplitsTableBody').innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Ingen GPS/strömningsdata tillgänglig för detta pass.</td></tr>';
+                }
+
+            } catch (err) {
+                console.error("Fel vid hämtning av passdetaljer:", err);
+                document.getElementById('detailSummaryBox').textContent = 'Kunde inte hämta fullständig data för aktiviteten.';
+            } finally {
+                loadingBadge.classList.add('hidden');
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function renderActivityOverviewAndCards(act) {
+            const date = String(act.start_date_local || '').slice(0, 16).replace('T', ' ');
+            document.getElementById('detailDate').textContent = date;
+            document.getElementById('detailTypeBadge').textContent = act.type || 'Aktivitet';
+            document.getElementById('detailTitle').textContent = act.name || 'Träningspass';
+
+            // Sammanfattningstext
+            const distStr = act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '0 km';
+            const durStr = formatDuration(act.moving_time);
+            const paceStr = formatPace(act.average_speed);
+            const hrStr = act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm (max ${act.max_heartrate || '-'})` : 'ingen pulsdata';
+            const loadStr = act.icu_training_load ? `Träningsbelastning (Load): ${Math.round(act.icu_training_load)}` : '';
+            const descNote = act.description ? `<br><span class="text-slate-400 italic mt-1 block">"${act.description}"</span>` : '';
+
+            document.getElementById('detailSummaryBox').innerHTML = `
+                Ett pass på <strong>${distStr}</strong> under <strong>${durStr}</strong> med ett snittempo på <strong>${paceStr}</strong> och en medelpuls på <strong>${hrStr}</strong>. ${loadStr}
+                ${descNote}
+            `;
+
+            // ALLA MÄTVÄRDEN SOM KORT (inklusive exakta API-nycklar så du lätt kan rensa)
+            const metricLabels = {
+                distance: { label: 'Distans', format: v => (v / 1000).toFixed(2) + ' km' },
+                moving_time: { label: 'Rörelsetid', format: v => formatDuration(v) },
+                elapsed_time: { label: 'Total tid', format: v => formatDuration(v) },
+                average_speed: { label: 'Snittempo', format: v => formatPace(v) },
+                max_speed: { label: 'Maxtempo', format: v => formatPace(v) },
+                average_heartrate: { label: 'Medelpuls', format: v => Math.round(v) + ' bpm' },
+                max_heartrate: { label: 'Maxpuls', format: v => Math.round(v) + ' bpm' },
+                average_cadence: { label: 'Snittkadens', format: v => Math.round(v * 2) + ' spm' },
+                max_cadence: { label: 'Maxkadens', format: v => Math.round(v * 2) + ' spm' },
+                avg_stance_time: { label: 'Markontakttid (GCT)', format: v => Math.round(v) + ' ms' },
+                avg_stance_time_balance: { label: 'GCT-Balans (V)', format: v => v.toFixed(1) + ' %' },
+                avg_vertical_oscillation: { label: 'Vertikal svängning', format: v => (v / 10).toFixed(1) + ' cm' },
+                avg_vertical_ratio: { label: 'Vertikal kvot', format: v => v.toFixed(1) + ' %' },
+                avg_step_length: { label: 'Steglängd', format: v => (v / 1000).toFixed(2) + ' m' },
+                total_elevation_gain: { label: 'Höjdmeter (+)', format: v => Math.round(v) + ' m' },
+                total_elevation_loss: { label: 'Höjdmeter (-)', format: v => Math.round(v) + ' m' },
+                calories: { label: 'Kalorier', format: v => Math.round(v) + ' kcal' },
+                icu_training_load: { label: 'Training Load', format: v => Math.round(v) },
+                trimp: { label: 'TRIMP', format: v => Math.round(v) },
+                icu_intensity: { label: 'Intensitet (IF)', format: v => v.toFixed(1) + ' %' },
+                icu_efficiency_factor: { label: 'Efficiency Factor (EF)', format: v => v.toFixed(2) },
+                decoupling: { label: 'Pulsdrift (Decoupling)', format: v => v.toFixed(1) + ' %' },
+                icu_atl: { label: 'Fatigue (ATL)', format: v => Math.round(v) },
+                icu_ctl: { label: 'Fitness (CTL)', format: v => Math.round(v) },
+                icu_rpe: { label: 'Ansträngning (RPE)', format: v => v + ' / 10' },
+                feel: { label: 'Känsla (Feel)', format: v => v + ' / 5' },
+                average_temp: { label: 'Temperatur', format: v => v.toFixed(1) + ' °C' },
+                device_name: { label: 'Enhet / Klocka', format: v => v },
+                gear_name: { label: 'Skor / Utrustning', format: v => v }
+            };
+
+            const grid = document.getElementById('allMetricsGrid');
+            const cardsHtml = [];
+
+            // 1. Rendera alla kända, snyggt formaterade nyckeltal som har ett värde
+            Object.entries(metricLabels).forEach(([key, meta]) => {
+                const val = act[key];
+                if (val !== null && val !== undefined && val !== '') {
+                    cardsHtml.push(`
+                        <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3 flex flex-col justify-between">
+                            <div>
+                                <span class="text-[11px] font-medium text-slate-300 block">${meta.label}</span>
+                                <span class="text-[9px] font-mono text-slate-500 block">(${key})</span>
+                            </div>
+                            <span class="text-sm font-bold text-white mt-1.5">${meta.format(val)}</span>
+                        </div>
+                    `);
+                }
+            });
+
+            // 2. Rendera även eventuella övriga siffervärden/strängar från API:et som inte fanns i listan ovan
+            const ignoredKeys = new Set(['id', 'athlete_id', 'name', 'description', 'type', 'start_date', 'start_date_local', 'timezone', 'icu_intervals', 'icu_groups', 'stream_types', 'icu_zone_times', 'icu_hr_zone_times']);
+            Object.entries(act).forEach(([key, val]) => {
+                if (!metricLabels[key] && !ignoredKeys.has(key) && val !== null && val !== undefined && val !== '' && typeof val !== 'object') {
+                    cardsHtml.push(`
+                        <div class="bg-slate-900/40 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+                            <div>
+                                <span class="text-[11px] font-medium text-slate-400 block truncate" title="${key}">${key}</span>
+                                <span class="text-[9px] font-mono text-slate-600 block">raw field</span>
+                            </div>
+                            <span class="text-xs font-bold text-slate-200 mt-1.5 truncate">${val}</span>
+                        </div>
+                    `);
+                }
+            });
+
+            grid.innerHTML = cardsHtml.join('');
+        }
+
+        function renderDetailCharts(streams) {
+            // Hitta strömmar i arrayen (Intervals returnerar en lista av objekt med { type, data })
+            const getStream = (type) => {
+                if (Array.isArray(streams)) {
+                    const found = streams.find(s => s.type === type);
+                    return found ? found.data : null;
+                }
+                return streams[type] || null;
+            };
+
+            const timeData = getStream('time') || [];
+            const hrData = getStream('heartrate');
+            const velData = getStream('velocity_smooth');
+            const gctData = getStream('stance_time');
+            const gctBalData = getStream('stance_time_balance');
+
+            // Skapa etiketter (minuter) och sampla ner lite om passet är långt för snabb prestanda
+            const step = Math.max(1, Math.floor(timeData.length / 300));
+            const labels = [];
+            const sampledHr = [];
+            const sampledPace = [];
+            const sampledGct = [];
+            const sampledGctBal = [];
+
+            for (let i = 0; i < timeData.length; i += step) {
+                const mins = Math.floor(timeData[i] / 60);
+                const secs = timeData[i] % 60;
+                labels.push(`${mins}:${secs < 10 ? '0' : ''}${secs}`);
+
+                if (hrData) sampledHr.push(hrData[i]);
+                if (velData) {
+                    const v = velData[i];
+                    // Konvertera m/s till decimala minuter per km (filtrera bort stillastående > 12 min/km)
+                    const paceMin = (v && v > 1.3) ? Number((1000 / v / 60).toFixed(2)) : null;
+                    sampledPace.push(paceMin);
+                }
+                if (gctData) sampledGct.push(gctData[i] > 0 ? gctData[i] : null);
+                if (gctBalData) sampledGctBal.push(gctBalData[i] > 0 ? gctBalData[i] : null);
+            }
+
+            const buildLineChart = (canvasId, label, dataArr, color, reverseY = false) => {
+                const ctx = document.getElementById(canvasId);
+                if (!ctx) return;
+                if (detailChartInstances[canvasId]) detailChartInstances[canvasId].destroy();
+
+                detailChartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label,
+                            data: dataArr || [],
+                            borderColor: color,
+                            backgroundColor: color + '20',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: true,
+                            tension: 0.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: '#64748b', maxTicksLimit: 8, font: { size: 10 } }, grid: { display: false } },
+                            y: { reverse: reverseY, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } }
+                        }
+                    }
+                });
+            };
+
+            buildLineChart('detailHrChart', 'Puls (bpm)', sampledHr, '#f43f5e', false);
+            buildLineChart('detailPaceChart', 'Tempo (min/km)', sampledPace, '#38bdf8', true);
+            buildLineChart('detailGctChart', 'GCT (ms)', sampledGct, '#fbbf24', false);
+            buildLineChart('detailGctBalChart', 'GCT Balans (%)', sampledGctBal, '#10b981', false);
+        }
+
+        // BERÄKNA VÄRDEN PER KILOMETER (1 KM-SPLITS)
+        function renderKmSplits(streams) {
+            const tbody = document.getElementById('kmSplitsTableBody');
+            const getStream = (type) => {
+                if (Array.isArray(streams)) {
+                    const found = streams.find(s => s.type === type);
+                    return found ? found.data : null;
+                }
+                return streams[type] || null;
+            };
+
+            const timeData = getStream('time');
+            const distData = getStream('distance');
+            const hrData = getStream('heartrate');
+            const cadData = getStream('cadence');
+            const gctData = getStream('stance_time');
+            const gctBalData = getStream('stance_time_balance');
+
+            if (!timeData || !distData || distData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Saknar distansström för att räkna ut kilometertider.</td></tr>';
+                return;
+            }
+
+            const splits = [];
+            let currentKm = 1;
+            let startIdx = 0;
+
+            for (let i = 1; i < distData.length; i++) {
+                if (distData[i] >= currentKm * 1000 || i === distData.length - 1) {
+                    const segmentDist = distData[i] - distData[startIdx];
+                    const segmentTime = timeData[i] - timeData[startIdx];
+
+                    if (segmentDist > 50) {
+                        let hrSum = 0, hrCount = 0;
+                        let cadSum = 0, cadCount = 0;
+                        let gctSum = 0, gctCount = 0;
+                        let balSum = 0, balCount = 0;
+
+                        for (let j = startIdx; j <= i; j++) {
+                            if (hrData && hrData[j] > 0) { hrSum += hrData[j]; hrCount++; }
+                            if (cadData && cadData[j] > 0) { cadSum += cadData[j] * 2; cadCount++; }
+                            if (gctData && gctData[j] > 0) { gctSum += gctData[j]; gctCount++; }
+                            if (gctBalData && gctBalData[j] > 0) { balSum += gctBalData[j]; balCount++; }
+                        }
+
+                        const avgSpeed = segmentDist / segmentTime;
+                        const labelKm = (i === distData.length - 1 && distData[i] < currentKm * 1000)
+                            ? `${(distData[i] / 1000).toFixed(2)} km`
+                            : `Km ${currentKm}`;
+
+                        splits.push({
+                            km: labelKm,
+                            pace: formatPace(avgSpeed),
+                            hr: hrCount > 0 ? Math.round(hrSum / hrCount) + ' bpm' : '-',
+                            cad: cadCount > 0 ? Math.round(cadSum / cadCount) + ' spm' : '-',
+                            gct: gctCount > 0 ? Math.round(gctSum / gctCount) + ' ms' : '-',
+                            bal: balCount > 0 ? (balSum / balCount).toFixed(1) + '%' : '-'
+                        });
+                    }
+
+                    startIdx = i;
+                    currentKm++;
+                }
+            }
+
+            if (splits.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">För kort distans för kilometersplits.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = splits.map(s => `
+                <tr class="border-b border-slate-800 hover:bg-slate-800/40">
+                    <td class="p-2.5 font-bold text-white">${s.km}</td>
+                    <td class="p-2.5 text-sky-400">${s.pace}</td>
+                    <td class="p-2.5 text-rose-400">${s.hr}</td>
+                    <td class="p-2.5 text-slate-300">${s.cad}</td>
+                    <td class="p-2.5 text-amber-400">${s.gct}</td>
+                    <td class="p-2.5 text-emerald-400">${s.bal}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ALLA SPLITS / INTERVALLER (Från klockans varv / Intervals.icu icu_intervals)
+        function renderIntervalsTable(act) {
+            const tbody = document.getElementById('intervalsSplitsTableBody');
+            const intervals = act.icu_intervals || [];
+
+            if (!intervals.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-500">Inga separata varv eller intervaller registrerade för detta pass.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = intervals.map((iv, idx) => {
+                const label = iv.label || (iv.type === 'WORK' ? `Intervall ${idx + 1}` : (iv.type === 'RECOVERY' ? 'Vila' : `Varv ${idx + 1}`));
+                const typeBadge = iv.type === 'WORK'
+                    ? `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px]">${label}</span>`
+                    : `<span class="text-slate-300">${label}</span>`;
+
+                const dist = iv.distance ? `${(iv.distance / 1000).toFixed(2)} km` : '-';
+                const time = formatDuration(iv.moving_time || iv.elapsed_time);
+                const pace = formatPace(iv.average_speed);
+                const avgHr = iv.average_heartrate ? `${Math.round(iv.average_heartrate)} bpm` : '-';
+                const maxHr = iv.max_heartrate ? `${Math.round(iv.max_heartrate)} bpm` : '-';
+                const cad = iv.average_cadence ? `${Math.round(iv.average_cadence * 2)} spm` : '-';
+                const gct = iv.avg_stance_time ? `${Math.round(iv.avg_stance_time)} ms` : '-';
+
+                return `
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/40">
+                        <td class="p-2.5 font-bold">${typeBadge}</td>
+                        <td class="p-2.5 text-white">${dist}</td>
+                        <td class="p-2.5 text-slate-300">${time}</td>
+                        <td class="p-2.5 text-sky-400 font-semibold">${pace}</td>
+                        <td class="p-2.5 text-rose-400">${avgHr}</td>
+                        <td class="p-2.5 text-slate-400">${maxHr}</td>
+                        <td class="p-2.5 text-slate-300">${cad}</td>
+                        <td class="p-2.5 text-amber-400">${gct}</td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         async function sendWorkoutById(workoutId) {
