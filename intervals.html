@@ -40,12 +40,15 @@
             </div>
         </div>
 
-        <div class="max-w-6xl mx-auto flex gap-2 mt-3 border-t border-slate-800/80 pt-2">
+        <div class="max-w-6xl mx-auto flex flex-wrap gap-2 mt-3 border-t border-slate-800/80 pt-2">
             <button onclick="switchTab('dashboard')" id="tabBtnDashboard" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5">
                 <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> Dashboard & Hälsa
             </button>
             <button onclick="switchTab('library')" id="tabBtnLibrary" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5">
                 <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Passbibliotek & Filosofi
+            </button>
+            <button onclick="switchTab('schedule')" id="tabBtnSchedule" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i> AI Veckoschema
             </button>
             <button onclick="switchTab('detail')" id="tabBtnDetail" class="hidden px-4 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white transition flex items-center gap-1.5">
                 <i data-lucide="activity" class="w-3.5 h-3.5"></i> Passdetaljer
@@ -291,7 +294,6 @@
 
         <!-- ================= VYN 2: PASSBIBLIOTEK ================= -->
         <div id="viewLibrary" class="space-y-6 hidden">
-            <!-- Befintligt passbibliotek -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-700 pb-3">
                     <div>
@@ -304,7 +306,6 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="workoutLibraryGrid"></div>
             </div>
 
-            <!-- SEKTION: SKAPA & SKICKA EGET PASS MED DATUMVÄLJARE -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="border-b border-slate-700 pb-3">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -338,7 +339,35 @@ Main Set 4x
             </div>
         </div>
 
-        <!-- ================= VYN 3: PASSDETALJER (DJUPANALYS) ================= -->
+        <!-- ================= VYN 3: AI VECKOSCHEMA ================= -->
+        <div id="viewSchedule" class="space-y-6 hidden">
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-700 pb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="calendar-days" class="w-4 h-4 text-indigo-400"></i> AI Veckoschema-generator
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Genererar ett komplett schema för innevarande vecka baserat på dina zoner, dagsform och skadeförebyggande status.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="generateAiWeeklySchedule()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i> Generera Veckoschema
+                        </button>
+                        <button id="sendWholeScheduleBtn" onclick="sendWholeScheduleToIntervals()" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
+                            <i data-lucide="send" class="w-4 h-4"></i> Skicka hela veckan till klockan
+                        </button>
+                    </div>
+                </div>
+
+                <div id="weeklyScheduleContainer" class="grid grid-cols-1 md:grid-cols-7 gap-3">
+                    <div class="col-span-full py-12 text-center text-slate-500 text-xs">
+                        Klicka på <strong>"Generera Veckoschema"</strong> för att skapa veckans träningsplan.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= VYN 4: PASSDETALJER (DJUPANALYS) ================= -->
         <div id="viewDetail" class="space-y-6 hidden">
             
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
@@ -573,6 +602,26 @@ Main Set 4x
                 workout: "- 10m Warmup Z1-Z2\n\nMain Set 1x\n- 3m Tröskel\n- 60s Rest\n- 4m Tröskel\n- 60s Rest\n- 5m Tröskel\n- 60s Rest\n- 6m Tröskel\n- 60s Rest\n- 5m Tröskel\n- 60s Rest\n- 4m Tröskel\n- 60s Rest\n- 3m Tröskel\n\n- 5m Cooldown Z1",
                 filename: 'Norsk Pyramid 3-6m.txt',
                 color: 'indigo'
+            },
+            {
+                id: 'rest',
+                title: 'Vila / Återhämtning',
+                tag: 'Vila',
+                tagClass: 'bg-slate-700 text-slate-300',
+                description: 'Fullständig återhämtning.',
+                workout: '- Vilodag / Ingen aktivitet',
+                filename: 'Vila.txt',
+                color: 'slate'
+            },
+            {
+                id: 'strength',
+                title: 'Styrka & Rehab',
+                tag: 'Styrka',
+                tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+                description: 'Styrketräning och skadeförebyggande rehab för vader och säte.',
+                workout: '- 30m Core & Säte\n- Vadstyrka / Tåhävningar',
+                filename: 'Styrka_Rehab.txt',
+                color: 'emerald'
             }
         ];
 
@@ -612,7 +661,8 @@ Main Set 4x
             selectedMonth: null,
             selectedWeekRange: null,
             currentChartBuckets: [],
-            aiRecommendation: null
+            aiRecommendation: null,
+            generatedWeeklySchedule: []
         };
 
         let volumeChartInstance = null;
@@ -1101,12 +1151,6 @@ Main Set 4x
             const action = document.getElementById('readinessAction');
             const sendBtn = document.getElementById('sendAiRecBtn');
 
-            let recommendation = {
-                title: "Tröskel / Kvalitet OK",
-                workoutId: "norsk-threshold",
-                workoutName: "Norsk Tröskel (3 x 10 min)"
-            };
-
             if (maxPain >= 3 || readiness === 1 || sleep === 1) {
                 banner.className = "bg-gradient-to-r from-rose-950/80 to-slate-800 border border-rose-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-rose-400";
@@ -1141,7 +1185,6 @@ Main Set 4x
                 title.textContent = "🟢 Grönt Ljus: Kroppen i utmärkt balans";
                 desc.textContent = "Inga påtagliga känningar eller belastningstoppar loggade. Redo för planerad träning och formutveckling.";
                 
-                // AI-motor för att variera baserat på ACWR / träningshistorik
                 if (appState.latestAcwr > 1.3) {
                     action.textContent = "Rekommendation: Lugnt FatMax-pass (Hög belastning kvot)";
                     appState.aiRecommendation = workoutLibrary.find(w => w.id === 'long-run');
@@ -1152,6 +1195,107 @@ Main Set 4x
                 sendBtn.classList.remove('hidden');
             }
             if (window.lucide) lucide.createIcons();
+        }
+
+        // VECKOSCHEMA GENERATOR LOGIK
+        function generateAiWeeklySchedule() {
+            const container = document.getElementById('weeklyScheduleContainer');
+            const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
+            const startOfWeek = getStartOfWeek(new Date());
+            const dayNames = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
+
+            const calf = parseInt(document.getElementById('inputCalf').value, 10);
+            const isInjured = calf >= 3;
+
+            // Standardmall för balanserad träningsvecka för löpare över 50 med vadfokus
+            let scheduleTemplate = [
+                { dayIdx: 0, workoutId: 'rest' },                               // Måndag: Vila
+                { dayIdx: 1, workoutId: isInjured ? 'strength' : 'norsk-threshold' }, // Tisdag: Tröskel eller Styrka
+                { dayIdx: 2, workoutId: 'strength' },                           // Onsdag: Styrka & Rehab
+                { dayIdx: 3, workoutId: isInjured ? 'long-run' : 'norwegian-10x3' }, // Torsdag: Kortare intervaller / Fatmax
+                { dayIdx: 4, workoutId: 'rest' },                               // Fredag: Vila
+                { dayIdx: 5, workoutId: 'long-run' },                           // Lördag: Långpass (Fatmax)
+                { dayIdx: 6, workoutId: 'norwegian-pyramid' }                   // Söndag: Varierat pass / Pyramid
+            ];
+
+            appState.generatedWeeklySchedule = scheduleTemplate.map((item, idx) => {
+                const dateObj = new Date(startOfWeek);
+                dateObj.setDate(startOfWeek.getDate() + idx);
+                const dateStr = toLocalDateString(dateObj);
+                const workout = workoutLibrary.find(w => w.id === item.workoutId);
+
+                return {
+                    dayName: dayNames[idx],
+                    dateStr,
+                    workout
+                };
+            });
+
+            container.innerHTML = appState.generatedWeeklySchedule.map(item => `
+                <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3.5 space-y-2 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center text-[11px] text-indigo-400 font-bold">
+                            <span>${item.dayName}</span>
+                            <span class="font-mono text-slate-400">${item.dateStr.slice(5)}</span>
+                        </div>
+                        <h4 class="font-bold text-white text-xs mt-1">${item.workout.title}</h4>
+                        <span class="inline-block mt-1 px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.workout.tagClass}">${item.workout.tag}</span>
+                    </div>
+                    <div class="text-[10px] text-slate-300 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800/80 line-clamp-3">
+                        ${item.workout.workout.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            `).join('');
+
+            sendWholeBtn.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async function sendWholeScheduleToIntervals() {
+            if (!appState.generatedWeeklySchedule.length) {
+                alert('Generera ett schema först.');
+                return;
+            }
+
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            if (!apiKey || !athleteId) {
+                openSettingsModal();
+                return;
+            }
+
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+            let successCount = 0;
+
+            for (let item of appState.generatedWeeklySchedule) {
+                if (item.workout.id === 'rest') continue; // Hoppa över vilodagar
+
+                const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
+                const payload = {
+                    category: 'WORKOUT',
+                    start_date_local: `${item.dateStr}T00:00:00`,
+                    type: 'Run',
+                    name: item.workout.title,
+                    filename: item.workout.filename,
+                    description: item.workout.workout
+                };
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok || response.status === 201) {
+                        successCount++;
+                    }
+                } catch (e) {
+                    console.error('Kunde inte skicka pass för', item.dateStr, e);
+                }
+            }
+
+            alert(`✅ ${successCount} pass har skickats till Intervals.icu och lagts in på rätt datum i din klockkalender!`);
+            fetchIntervalsData();
         }
 
         async function sendAiRecommendedWorkout() {
@@ -1228,18 +1372,22 @@ Main Set 4x
         function switchTab(tab) {
             const dash = document.getElementById('viewDashboard');
             const lib = document.getElementById('viewLibrary');
+            const schedule = document.getElementById('viewSchedule');
             const detail = document.getElementById('viewDetail');
             
             const btnDash = document.getElementById('tabBtnDashboard');
             const btnLib = document.getElementById('tabBtnLibrary');
+            const btnSchedule = document.getElementById('tabBtnSchedule');
             const btnDetail = document.getElementById('tabBtnDetail');
 
             dash.classList.add('hidden');
             lib.classList.add('hidden');
+            schedule.classList.add('hidden');
             detail.classList.add('hidden');
 
             btnDash.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
             btnLib.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
+            btnSchedule.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
 
             if (tab === 'dashboard') {
                 dash.classList.remove('hidden');
@@ -1249,6 +1397,10 @@ Main Set 4x
                 lib.classList.remove('hidden');
                 btnDetail.classList.add('hidden');
                 btnLib.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
+            } else if (tab === 'schedule') {
+                schedule.classList.remove('hidden');
+                btnDetail.classList.add('hidden');
+                btnSchedule.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
             } else if (tab === 'detail') {
                 detail.classList.remove('hidden');
                 btnDetail.classList.remove('hidden');
@@ -1269,10 +1421,10 @@ Main Set 4x
             appState.apiKey = apiKey;
             appState.athleteId = athleteId;
 
-            setStatus('Hämtar data (1100 dagar)...');
+            setStatus('Hämtar data (3000 dagar)...');
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
-            const oldestStr = toLocalDateString(daysAgo(1100));
+            const oldestStr = toLocalDateString(daysAgo(3000));
 
             try {
                 const response = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/activities?oldest=${oldestStr}`, {
@@ -1286,7 +1438,7 @@ Main Set 4x
 
                 const data = await response.json();
                 appState.activities = Array.isArray(data) ? data : [];
-                document.getElementById('dataCountBadge').textContent = `${appState.activities.length} Pass Hämtade (1100d)`;
+                document.getElementById('dataCountBadge').textContent = `${appState.activities.length} Pass Hämtade (3000d)`;
                 
                 computeCurrentAcwr(appState.activities);
                 updateDashboardPeriodView();
