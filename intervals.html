@@ -592,7 +592,6 @@
                 });
 
                 if (!response.ok) {
-                    // Om ingen wellness finns ännu för dagen, kör en auto-sparande om vi har beräknat ACWR
                     autoSaveAcwrToIntervals();
                     return;
                 }
@@ -616,9 +615,9 @@
                     if (footMatch) document.getElementById('inputFoot').value = footMatch[1];
                 }
 
-                // Kolla om [ACWR] redan finns sparat i kommentaren. Om inte, spara ner det automatiskt!
-                if (!data.comments || !data.comments.includes('[ACWR]')) {
-                    autoSaveAcwrToIntervals(data.comments || '');
+                // Kolla om ACWR finns sparat som custom field eller i kommentarer
+                if (!data.acwr && appState.latestAcwr > 0) {
+                    autoSaveAcwrToIntervals(data);
                 }
 
                 updateWellnessDisplay();
@@ -628,8 +627,8 @@
             }
         }
 
-        // AUTOMATISK SPARNING AV ACWR VID SIDLADDNING OM DET SAKNAS
-        async function autoSaveAcwrToIntervals(existingComments = '') {
+        // AUTOMATISK SPARNING AV ACWR TILL CUSTOM FIELD VID SIDLADDNING
+        async function autoSaveAcwrToIntervals(existingWellness = {}) {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
             if (!apiKey || !athleteId || appState.latestAcwr === 0) return;
@@ -637,13 +636,10 @@
             const todayStr = toLocalDateString();
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
 
-            // Lägg till ACWR-taggen i kommentaren utan att skriva över existerande anteckningar
-            const acwrTag = `[ACWR: ${appState.latestAcwr.toFixed(2)}]`;
-            const updatedComments = existingComments ? `${existingComments} ${acwrTag}` : acwrTag;
-
             const payload = {
                 id: todayStr,
-                comments: updatedComments
+                acwr: parseFloat(appState.latestAcwr.toFixed(2)),
+                ...existingWellness
             };
 
             try {
@@ -652,7 +648,7 @@
                     headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                console.log('✅ ACWR sparades automatiskt till Intervals.icu för idag:', appState.latestAcwr.toFixed(2));
+                console.log('✅ ACWR sparat som Custom Field till Intervals.icu:', appState.latestAcwr.toFixed(2));
             } catch (error) {
                 console.error('Kunde inte autospara ACWR:', error);
             }
@@ -676,15 +672,14 @@
             const readiness = document.getElementById('inputReadiness').value;
             const notes = document.getElementById('inputWellnessNotes').value;
 
-            // Inkludera alltid ACWR vid manuell sparad morgonstatus också
-            const acwrStr = appState.latestAcwr > 0 ? ` [ACWR: ${appState.latestAcwr.toFixed(2)}]` : '';
-            const commentText = `[Känningar] Vad/Hälsena: ${calf}/10, Knä/ITB: ${knee}/10, Höft/Säte: ${hip}/10, Fot/Benhinna: ${foot}/10. ${notes}${acwrStr}`.trim();
+            const commentText = `[Känningar] Vad/Hälsena: ${calf}/10, Knä/ITB: ${knee}/10, Höft/Säte: ${hip}/10, Fot/Benhinna: ${foot}/10. ${notes}`.trim();
             
             const payload = {
                 id: todayStr,
                 sleepQuality: parseInt(sleep, 10),
                 readiness: parseInt(readiness, 10),
-                comments: commentText
+                comments: commentText,
+                acwr: appState.latestAcwr > 0 ? parseFloat(appState.latestAcwr.toFixed(2)) : undefined
             };
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
@@ -757,7 +752,7 @@
 
             const chronicWeekly = vol28d / 4;
             const acwr = chronicWeekly > 0 ? vol7d / chronicWeekly : 0;
-            appState.latestAcwr = acwr; // Spara undan globalt så auto-sparfunktionen kommer åt det
+            appState.latestAcwr = acwr;
 
             document.getElementById('kpiWeeklyVol').textContent = `${weeklyVol.toFixed(1)} km`;
             
@@ -789,7 +784,7 @@
             renderTable(sortedActivities);
             renderCharts(sortedActivities, hrLowCount, hrMidCount, hrHighCount);
 
-            // Efter att aktiviteter har hämtats och ACWR har räknats ut: kolla om det behöver autosparas till dagens wellness
+            // Kolla och autospara ACWR till Intervals.icu
             fetchTodayWellness();
         }
 
