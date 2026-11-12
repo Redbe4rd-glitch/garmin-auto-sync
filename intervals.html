@@ -35,7 +35,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight text-white">Garmin Hub (Intervals.icu)</h1>
-                    <p class="text-xs text-slate-400">Skadeförebyggande 50+ & Direkt API</p>
+                    <p class="text-xs text-slate-400">Aktivitus-profil: AT 142 bpm | FatMax 124 bpm</p>
                 </div>
             </div>
         </div>
@@ -101,7 +101,6 @@
                     </button>
                 </div>
 
-                <!-- Årsväljare (visas i månadsläge) & Breadcrumb/Tillbaka-knapp vid inzoomning -->
                 <div class="flex items-center gap-3">
                     <div id="drilldownBanner" class="hidden flex items-center gap-2 bg-indigo-500/15 border border-indigo-500/30 px-3 py-1 rounded-xl">
                         <span id="drilldownLabel" class="text-xs font-semibold text-indigo-300">Vald period</span>
@@ -183,7 +182,7 @@
                 </div>
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Pulszonsfördelning (Vald period)
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Pulszonsfördelning (Aktivitus)
                     </h3>
                     <div class="h-56 relative flex justify-center"><canvas id="hrZoneChart"></canvas></div>
                 </div>
@@ -351,7 +350,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="heart" class="w-4 h-4 text-rose-400"></i> Puls (bpm)
+                        <i data-lucide="heart" class="w-4 h-4 text-rose-400"></i> Puls (bpm) med Aktivitus Trösklar
                     </h3>
                     <div class="h-52 relative"><canvas id="detailHrChart"></canvas></div>
                 </div>
@@ -461,8 +460,8 @@
                 title: 'Norsk Tröskel (3 x 10 min)',
                 tag: 'Tröskelträning / Seiler',
                 tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-                description: 'Effektivt för att höja mjölksyratröskeln utan att slita ut musklerna.',
-                workout: "- 10m Warmup 60-70% HR\n\nMain Set 3x\n- 10m 80-85% HR\n- 2m Jog\n\n- 5m Cooldown 60-70% HR",
+                description: 'Målpuls kring anaerob tröskel (142 bpm) för att höja mjölksyratröskeln.',
+                workout: "- 10m Warmup Z1-Z2 (upp till 124 bpm)\n\nMain Set 3x\n- 10m AT-tröskel (137-142 bpm / ~4:15-4:35 min/km)\n- 2m Jog (Z1-Z2)\n\n- 5m Cooldown Z1",
                 filename: 'Norsk Troskel 3x10m.txt',
                 color: 'amber'
             },
@@ -471,8 +470,8 @@
                 title: 'Tusingar (5 x 1000m)',
                 tag: 'Intervall / VO2 Max',
                 tagClass: 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
-                description: 'Klassiska intervaller i 10k-fart med ståvila.',
-                workout: "- 10m Warmup 60-70% HR\n\nMain Set 5x\n- 1000m 10k Pace\n- 90s Rest\n\n- 5m Cooldown 60-70% HR",
+                description: 'Klassiska intervaller i Z5 (145-153 bpm) med ståvila.',
+                workout: "- 10m Warmup Z1-Z2\n\nMain Set 5x\n- 1000m Z5 Pace (3:46-4:00 min/km)\n- 90s Rest\n\n- 5m Cooldown Z1",
                 filename: 'Tusingar 5x1k.txt',
                 color: 'rose'
             },
@@ -481,28 +480,28 @@
                 title: 'Pyramiden',
                 tag: 'Pyramid / Variation',
                 tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Intervallpass med växlande längd (1m upp till 4m och ner igen).',
-                workout: "- 5m Warmup 60-70% HR\n\nMain Set 1x\n- 1m 70-80% HR\n- 30s 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 4m 70-80% HR\n- 1m 50-60% HR\n- 3m 70-80% HR\n- 1m 50-60% HR\n- 2m 70-80% HR\n- 1m 50-60% HR\n- 1m 70-80% HR\n- 30s 50-60% HR\n\n- 5m Cooldown 60-70% HR",
+                description: 'Intervallpass med växlande längd i tröskelzon.',
+                workout: "- 5m Warmup Z1-Z2\n\nMain Set 1x\n- 1m Z4 (137-142 bpm)\n- 30s Jog\n- 2m Z4\n- 1m Jog\n- 3m Z4\n- 1m Jog\n- 4m Z4\n- 1m Jog\n- 3m Z4\n- 1m Jog\n- 2m Z4\n- 30s Jog\n- 1m Z4\n\n- 5m Cooldown Z1",
                 filename: 'Pyramiden.txt',
                 color: 'indigo'
             },
             {
                 id: 'long-run',
-                title: 'Kontrollerat Långpass',
-                tag: 'FatMax / Grund',
+                title: 'Kontrollerat Långpass (FatMax)',
+                tag: 'FatMax / Z2 LSD',
                 tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-                description: 'Uppbyggande pass med fokus på zon 2 och integrerade gångpauser.',
-                workout: "- 5m Warmup 60-70% HR\n\nMain Set 6x\n- 4m 70-80% HR\n- 1m Walk\n\n- 5m Cooldown 60-70% HR",
+                description: 'Långpass i zonen för maximal fettförbränning (100-124 bpm / 5:20-7:07 min/km).',
+                workout: "- 5m Warmup Z1\n\nMain Set 6x\n- 4m FatMax Z2 (100-124 bpm)\n- 1m Walk\n\n- 5m Cooldown Z1",
                 filename: 'Langpass.txt',
                 color: 'emerald'
             },
             {
                 id: 'norwegian-10x3',
-                title: '10 × 3 min (Korta singlar)',
+                title: '10 × 3 min (Norska singlar)',
                 tag: 'Norska Singlar',
                 tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Klassisk introduktion för högre tempo utan mjölksyra.',
-                workout: "- 10m Warmup 60-70% HR\n\nMain Set 10x\n- 3m 83-87% HR\n- 45s Jog/Walk\n\n- 5m Cooldown 60-70% HR",
+                description: 'Effektivt för att samla minuter strax under anaerob tröskel (137-142 bpm).',
+                workout: "- 10m Warmup Z1-Z2\n\nMain Set 10x\n- 3m Tröskel (137-142 bpm)\n- 45s Jog/Walk\n\n- 5m Cooldown Z1",
                 filename: 'Norska Singlar 10x3m.txt',
                 color: 'indigo'
             },
@@ -511,8 +510,8 @@
                 title: '6 × 5 min (Mellanlånga singlar)',
                 tag: 'Norska Singlar',
                 tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Bygger snabbt upp den aeroba kapaciteten med stabil puls.',
-                workout: "- 10m Warmup 60-70% HR\n\nMain Set 6x\n- 5m 83-87% HR\n- 60s Jog/Walk\n\n- 5m Cooldown 60-70% HR",
+                description: 'Stabil tröskelträning i zon Z4- / Z4+.',
+                workout: "- 10m Warmup Z1-Z2\n\nMain Set 6x\n- 5m Tröskel (137-142 bpm)\n- 60s Jog/Walk\n\n- 5m Cooldown Z1",
                 filename: 'Norska Singlar 6x5m.txt',
                 color: 'indigo'
             },
@@ -521,8 +520,8 @@
                 title: '4 × 8 min (Långa singlar)',
                 tag: 'Norska Singlar',
                 tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Totalt 32 minuter i zonen, utmärkt för halvmaraton och maraton.',
-                workout: "- 10m Warmup 60-70% HR\n\nMain Set 4x\n- 8m 83-87% HR\n- 60s Jog/Walk\n\n- 5m Cooldown 60-70% HR",
+                description: 'Totalt 32 minuter nära AT (142 bpm), utmärkt för uthållighet.',
+                workout: "- 10m Warmup Z1-Z2\n\nMain Set 4x\n- 8m AT-nivå (137-142 bpm)\n- 60s Jog/Walk\n\n- 5m Cooldown Z1",
                 filename: 'Norska Singlar 4x8m.txt',
                 color: 'indigo'
             },
@@ -531,106 +530,36 @@
                 title: 'Pyramid (3-4-5-6-5-4-3 min)',
                 tag: 'Stege / Variation',
                 tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Varierat pass som mentalt upplevs som kortare.',
-                workout: "- 10m Warmup 60-70% HR\n\nMain Set 1x\n- 3m 83-87% HR\n- 60s Rest\n- 4m 83-87% HR\n- 60s Rest\n- 5m 83-87% HR\n- 60s Rest\n- 6m 83-87% HR\n- 60s Rest\n- 5m 83-87% HR\n- 60s Rest\n- 4m 83-87% HR\n- 60s Rest\n- 3m 83-87% HR\n\n- 5m Cooldown 60-70% HR",
+                description: 'Varierat tröskelpass nära AT.',
+                workout: "- 10m Warmup Z1-Z2\n\nMain Set 1x\n- 3m Tröskel\n- 60s Rest\n- 4m Tröskel\n- 60s Rest\n- 5m Tröskel\n- 60s Rest\n- 6m Tröskel\n- 60s Rest\n- 5m Tröskel\n- 60s Rest\n- 4m Tröskel\n- 60s Rest\n- 3m Tröskel\n\n- 5m Cooldown Z1",
                 filename: 'Norsk Pyramid 3-6m.txt',
                 color: 'indigo'
             }
         ];
 
-        // Komplett färgschema och kategorisering för alla aktivitetstyper
+        // Färgkoder och etiketter för aktivitetstyper
         const ACTIVITY_CATEGORIES = {
-            run: {
-                key: 'run',
-                label: 'Löpning',
-                hex: '#6366f1', // Indigo
-                badgeClass: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30',
-                borderClass: 'border-indigo-500/50',
-                dotClass: 'bg-indigo-500'
-            },
-            walk: {
-                key: 'walk',
-                label: 'Promenad',
-                hex: '#38bdf8', // Sky
-                badgeClass: 'bg-sky-500/15 text-sky-400 border border-sky-500/30',
-                borderClass: 'border-sky-500/50',
-                dotClass: 'bg-sky-400'
-            },
-            strength: {
-                key: 'strength',
-                label: 'Styrketräning',
-                hex: '#10b981', // Emerald
-                badgeClass: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
-                borderClass: 'border-emerald-500/50',
-                dotClass: 'bg-emerald-500'
-            },
-            ride: {
-                key: 'ride',
-                label: 'Cykel',
-                hex: '#f59e0b', // Amber
-                badgeClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
-                borderClass: 'border-amber-500/50',
-                dotClass: 'bg-amber-500'
-            },
-            cardio: {
-                key: 'cardio',
-                label: 'Crosstrainer / Cardio',
-                hex: '#f43f5e', // Rose
-                badgeClass: 'bg-rose-500/15 text-rose-400 border border-rose-500/30',
-                borderClass: 'border-rose-500/50',
-                dotClass: 'bg-rose-500'
-            },
-            swim: {
-                key: 'swim',
-                label: 'Simning',
-                hex: '#14b8a6', // Teal
-                badgeClass: 'bg-teal-500/15 text-teal-400 border border-teal-500/30',
-                borderClass: 'border-teal-500/50',
-                dotClass: 'bg-teal-500'
-            },
-            mobility: {
-                key: 'mobility',
-                label: 'Rörlighet / Yoga',
-                hex: '#a855f7', // Purple
-                badgeClass: 'bg-purple-500/15 text-purple-400 border border-purple-500/30',
-                borderClass: 'border-purple-500/50',
-                dotClass: 'bg-purple-500'
-            },
-            other: {
-                key: 'other',
-                label: 'Övrigt',
-                hex: '#94a3b8', // Slate
-                badgeClass: 'bg-slate-700/60 text-slate-300 border border-slate-600',
-                borderClass: 'border-slate-500/50',
-                dotClass: 'bg-slate-400'
-            }
+            run: { key: 'run', label: 'Löpning', hex: '#6366f1', badgeClass: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30', borderClass: 'border-indigo-500/50', dotClass: 'bg-indigo-500' },
+            walk: { key: 'walk', label: 'Promenad', hex: '#38bdf8', badgeClass: 'bg-sky-500/15 text-sky-400 border border-sky-500/30', borderClass: 'border-sky-500/50', dotClass: 'bg-sky-400' },
+            strength: { key: 'strength', label: 'Styrketräning', hex: '#10b981', badgeClass: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30', borderClass: 'border-emerald-500/50', dotClass: 'bg-emerald-500' },
+            ride: { key: 'ride', label: 'Cykel', hex: '#f59e0b', badgeClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/30', borderClass: 'border-amber-500/50', dotClass: 'bg-amber-500' },
+            cardio: { key: 'cardio', label: 'Crosstrainer / Cardio', hex: '#f43f5e', badgeClass: 'bg-rose-500/15 text-rose-400 border border-rose-500/30', borderClass: 'border-rose-500/50', dotClass: 'bg-rose-500' },
+            swim: { key: 'swim', label: 'Simning', hex: '#14b8a6', badgeClass: 'bg-teal-500/15 text-teal-400 border border-teal-500/30', borderClass: 'border-teal-500/50', dotClass: 'bg-teal-500' },
+            mobility: { key: 'mobility', label: 'Rörlighet / Yoga', hex: '#a855f7', badgeClass: 'bg-purple-500/15 text-purple-400 border border-purple-500/30', borderClass: 'border-purple-500/50', dotClass: 'bg-purple-500' },
+            other: { key: 'other', label: 'Övrigt', hex: '#94a3b8', badgeClass: 'bg-slate-700/60 text-slate-300 border border-slate-600', borderClass: 'border-slate-500/50', dotClass: 'bg-slate-400' }
         };
 
         function classifyActivity(act) {
             const type = (act.type || '').toLowerCase();
             const name = (act.name || '').toLowerCase();
 
-            if (type.includes('run') || type.includes('trail') || name.includes('löpning')) {
-                return ACTIVITY_CATEGORIES.run;
-            }
-            if (type.includes('walk') || type.includes('hike') || name.includes('promenad') || name.includes('gång')) {
-                return ACTIVITY_CATEGORIES.walk;
-            }
-            if (type.includes('weight') || type.includes('strength') || type.includes('workout') || name.includes('styrka') || name.includes('gym') || name.includes('rehab')) {
-                return ACTIVITY_CATEGORIES.strength;
-            }
-            if (type.includes('ride') || type.includes('cycling') || type.includes('bike') || name.includes('cykel') || name.includes('spinning')) {
-                return ACTIVITY_CATEGORIES.ride;
-            }
-            if (type.includes('elliptical') || type.includes('row') || type.includes('stair') || type.includes('cardio') || name.includes('crosstrainer') || name.includes('rodd')) {
-                return ACTIVITY_CATEGORIES.cardio;
-            }
-            if (type.includes('swim') || name.includes('sim')) {
-                return ACTIVITY_CATEGORIES.swim;
-            }
-            if (type.includes('yoga') || type.includes('stretch') || type.includes('pilates') || name.includes('yoga') || name.includes('rörlighet')) {
-                return ACTIVITY_CATEGORIES.mobility;
-            }
+            if (type.includes('run') || type.includes('trail') || name.includes('löpning')) return ACTIVITY_CATEGORIES.run;
+            if (type.includes('walk') || type.includes('hike') || name.includes('promenad') || name.includes('gång')) return ACTIVITY_CATEGORIES.walk;
+            if (type.includes('weight') || type.includes('strength') || type.includes('workout') || name.includes('styrka') || name.includes('gym') || name.includes('rehab')) return ACTIVITY_CATEGORIES.strength;
+            if (type.includes('ride') || type.includes('cycling') || type.includes('bike') || name.includes('cykel') || name.includes('spinning')) return ACTIVITY_CATEGORIES.ride;
+            if (type.includes('elliptical') || type.includes('row') || type.includes('stair') || type.includes('cardio') || name.includes('crosstrainer') || name.includes('rodd')) return ACTIVITY_CATEGORIES.cardio;
+            if (type.includes('swim') || name.includes('sim')) return ACTIVITY_CATEGORIES.swim;
+            if (type.includes('yoga') || type.includes('stretch') || type.includes('pilates') || name.includes('yoga') || name.includes('rörlighet')) return ACTIVITY_CATEGORIES.mobility;
             return ACTIVITY_CATEGORIES.other;
         }
 
@@ -640,12 +569,11 @@
             latestAcwr: 0,
             activities: [],
             currentStreams: null,
-            // Tidsperiod- & navigeringstillstånd
-            periodMode: 'currentWeek', // 'currentWeek' | 'last4Weeks' | 'months'
+            periodMode: 'currentWeek',
             selectedYear: new Date().getFullYear(),
-            selectedMonth: null,       // 0-11 när en månad klickats i månadsvy
-            selectedWeekRange: null,   // { start: Date, end: Date, label: string } när en vecka klickats
-            currentChartBuckets: []    // Sparar klickbara staplars datumintervall
+            selectedMonth: null,
+            selectedWeekRange: null,
+            currentChartBuckets: []
         };
 
         let volumeChartInstance = null;
@@ -667,7 +595,7 @@
             const d = new Date(date);
             d.setHours(0, 0, 0, 0);
             const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Måndag som startdag
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
             d.setDate(diff);
             return d;
         }
@@ -720,6 +648,7 @@
             };
         }
 
+        // Baserat på dina Aktivitus-trösklar (FatMax 124 bpm, AT 142 bpm, Max 153 bpm)
         function getWorkoutTargets(act) {
             const name = (act.name || '').toLowerCase();
             const hr = act.average_heartrate || 0;
@@ -729,12 +658,12 @@
                 return { label: cat.label, minCadence: 0, maxGct: 0 };
             }
             if (name.includes('intervall') || name.includes('tusing') || name.includes('vo2') || hr > 142) {
-                return { label: 'Intervall / VO2', minCadence: 170, maxGct: 255 };
+                return { label: 'Intervall / VO2 (Z5)', minCadence: 170, maxGct: 255 };
             }
             if (name.includes('tröskel') || name.includes('troskel') || name.includes('tempo') || name.includes('singlar') || (hr >= 125 && hr <= 142)) {
-                return { label: 'Tröskel / Tempo', minCadence: 165, maxGct: 270 };
+                return { label: 'Tröskel / AT (Z4)', minCadence: 165, maxGct: 270 };
             }
-            return { label: 'Distans / FatMax', minCadence: 160, maxGct: 285 };
+            return { label: 'Distans / FatMax (Z2)', minCadence: 160, maxGct: 285 };
         }
 
         function getGctColorClass(gctVal, maxGct) {
@@ -768,10 +697,8 @@
 
         function resetDrilldown() {
             if (appState.selectedWeekRange && appState.periodMode === 'months' && appState.selectedMonth !== null) {
-                // Från specifik vecka i en månad -> tillbaka till månadens veckor
                 appState.selectedWeekRange = null;
             } else {
-                // Tillbaka till rotläget för valt läge
                 appState.selectedWeekRange = null;
                 appState.selectedMonth = null;
             }
@@ -806,14 +733,14 @@
 
             const drillBanner = document.getElementById('drilldownBanner');
             const drillLabel = document.getElementById('drilldownLabel');
-            const monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
+            const monthNamesFull = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
 
             if (appState.selectedWeekRange) {
                 drillBanner.classList.remove('hidden');
                 drillLabel.textContent = appState.selectedWeekRange.label;
             } else if (appState.periodMode === 'months' && appState.selectedMonth !== null) {
                 drillBanner.classList.remove('hidden');
-                drillLabel.textContent = `${monthNames[appState.selectedMonth]} ${appState.selectedYear}`;
+                drillLabel.textContent = `${monthNamesFull[appState.selectedMonth]} ${appState.selectedYear}`;
             } else {
                 drillBanner.classList.add('hidden');
             }
@@ -832,7 +759,6 @@
             const monthNamesFull = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
             const dayNames = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
 
-            // 1. OM EN SPECIFIK VECKA ÄR VALD (via klick i 4-veckorsvy eller månadsvy)
             if (appState.selectedWeekRange) {
                 filterStart = new Date(appState.selectedWeekRange.start);
                 filterEnd = new Date(appState.selectedWeekRange.end);
@@ -853,9 +779,7 @@
                         type: 'day'
                     });
                 }
-            }
-            // 2. INNEVARANDE VECKA
-            else if (appState.periodMode === 'currentWeek') {
+            } else if (appState.periodMode === 'currentWeek') {
                 filterStart = getStartOfWeek(now);
                 filterEnd = getEndOfWeek(filterStart);
                 const weekNum = getISOWeekNumber(filterStart);
@@ -876,12 +800,10 @@
                         type: 'day'
                     });
                 }
-            }
-            // 3. SENASTE 4 VECKORNA
-            else if (appState.periodMode === 'last4Weeks') {
+            } else if (appState.periodMode === 'last4Weeks') {
                 const currentWeekStart = getStartOfWeek(now);
                 filterStart = new Date(currentWeekStart);
-                filterStart.setDate(currentWeekStart.getDate() - 21); // 3 veckor bakåt + innevarande = 4 veckor
+                filterStart.setDate(currentWeekStart.getDate() - 21);
                 filterEnd = getEndOfWeek(currentWeekStart);
                 periodLabel = 'Senaste 4 veckorna';
                 chartTitle = 'Aktivitetstid per vecka – Senaste 4 veckorna (min)';
@@ -900,9 +822,7 @@
                         detailLabel: `Vecka ${wNum} (${toLocalDateString(wStart)} – ${toLocalDateString(wEnd)})`
                     });
                 }
-            }
-            // 4. MÅNADSVY (ANtingen hela året eller en vald månad uppdelad i veckor)
-            else if (appState.periodMode === 'months') {
+            } else if (appState.periodMode === 'months') {
                 const year = appState.selectedYear;
 
                 if (appState.selectedMonth !== null) {
@@ -913,13 +833,11 @@
                     chartTitle = `Aktivitetstid per vecka – ${periodLabel} (min)`;
                     isClickable = true;
 
-                    // Dela upp månaden i veckor (måndag-söndag som överlappar månaden)
                     let cursor = getStartOfWeek(filterStart);
                     while (cursor <= filterEnd) {
                         const wStart = new Date(cursor);
                         const wEnd = getEndOfWeek(wStart);
                         const wNum = getISOWeekNumber(wStart);
-                        // Klipp visningsintervallet till månadens gränser för filtrering
                         const clampedStart = wStart < filterStart ? new Date(filterStart) : wStart;
                         const clampedEnd = wEnd > filterEnd ? new Date(filterEnd) : wEnd;
 
@@ -955,20 +873,18 @@
 
             appState.currentChartBuckets = buckets;
 
-            // Filtrera aktiviteter för vald period
             const filteredActivities = appState.activities.filter(act => {
                 const d = new Date(act.start_date_local);
                 return d >= filterStart && d <= filterEnd;
             }).sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
 
-            // Uppdatera KPI-kort för vald period
             let periodRunKm = 0;
             let runPassesCount = 0;
             let fatmaxPassesCount = 0;
             let altCount = 0;
-            let hrLowCount = 0;
-            let hrMidCount = 0;
-            let hrHighCount = 0;
+            let zone1Count = 0; // Upp till 124 bpm (Lågintensiv / Z1-Z2)
+            let zone2Count = 0; // 125-142 bpm (Medelintensiv / Z3-Z4)
+            let zone3Count = 0; // >142 bpm (Högintensiv / Z5)
 
             filteredActivities.forEach(act => {
                 const cat = classifyActivity(act);
@@ -984,9 +900,9 @@
                 }
 
                 if (hr > 0) {
-                    if (hr <= 124) hrLowCount++;
-                    else if (hr <= 145) hrMidCount++;
-                    else hrHighCount++;
+                    if (hr <= 124) zone1Count++;       // Lågintensiv (<=124 bpm)
+                    else if (hr <= 142) zone2Count++;  // Medelintensiv (125-142 bpm)
+                    else zone3Count++;                 // Högintensiv (>142 bpm)
                 }
             });
 
@@ -997,7 +913,6 @@
             document.getElementById('kpiFatmaxShare').textContent = `${fatmaxShare}%`;
             document.getElementById('kpiAltCount').textContent = `${altCount} st`;
 
-            // Uppdatera rubriker & tabell
             document.getElementById('barChartTitle').textContent = chartTitle;
             const clickHint = document.getElementById('barChartClickHint');
             if (isClickable) {
@@ -1008,15 +923,13 @@
 
             document.getElementById('tablePeriodTitle').textContent = `Träningshistorik – ${periodLabel} (${filteredActivities.length} pass)`;
             renderTable(filteredActivities);
-            renderPeriodCharts(filteredActivities, buckets, hrLowCount, hrMidCount, hrHighCount, isClickable);
+            renderPeriodCharts(filteredActivities, buckets, zone1Count, zone2Count, zone3Count, isClickable);
 
             if (window.lucide) lucide.createIcons();
         }
 
-        function renderPeriodCharts(activities, buckets, hrLow, hrMid, hrHigh, isClickable) {
+        function renderPeriodCharts(activities, buckets, z1Count, z2Count, z3Count, isClickable) {
             const labels = buckets.map(b => b.label);
-
-            // Initiera serier för alla kategorier som finns i ACTIVITY_CATEGORIES
             const categoryKeys = Object.keys(ACTIVITY_CATEGORIES);
             const dataByCat = {};
             const activeCategories = new Set();
@@ -1040,7 +953,6 @@
                 }
             });
 
-            // Bygg legend för de kategorier som har aktiviteter (eller basuppsättning)
             const legendEl = document.getElementById('activityLegend');
             const keysToShow = activeCategories.size > 0 ? Array.from(activeCategories) : ['run', 'walk', 'strength'];
             legendEl.innerHTML = keysToShow.map(k => {
@@ -1105,13 +1017,14 @@
                 }
             });
 
+            // Aktivitusteaser utifrån Aktivitus pulszonsmodell: Låg (<=124), Medel (125-142), Hög (>142)
             const zoneCtx = document.getElementById('hrZoneChart');
             if (zoneChartInstance) zoneChartInstance.destroy();
             zoneChartInstance = new Chart(zoneCtx.getContext('2d'), {
                 type: 'doughnut',
                 data: {
-                    labels: ['FatMax (<=124)', 'Mellan (125-145)', 'Tröskel (>145)'],
-                    datasets: [{ data: [hrLow, hrMid, hrHigh], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'] }]
+                    labels: ['Lågintensiv (<=124 bpm)', 'Medelintensiv (125-142 bpm)', 'Högintensiv (>142 bpm)'],
+                    datasets: [{ data: [z1Count, z2Count, z3Count], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'] }]
                 },
                 options: {
                     responsive: true,
@@ -1433,9 +1346,7 @@
                     headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-            } catch (error) {
-                // Tyst hantering om wellness-posten ännu inte finns
-            }
+            } catch (error) {}
         }
 
         async function saveMorningWellness() {
@@ -1652,7 +1563,6 @@
                 ? `Mål (${targets.label}): Kadens ≥ ${targets.minCadence} spm | GCT ≤ ${targets.maxGct} ms`
                 : `Aktivitetstyp: ${cat.label}`;
 
-            // Färgmatchade ramar runt blocken baserat på aktivitetstyp
             const b1Container = document.getElementById('block1Container');
             const b2Container = document.getElementById('block2Container');
             b1Container.className = `bg-slate-800/60 border-2 ${cat.borderClass} rounded-2xl p-5 space-y-4 transition-all`;
@@ -1803,6 +1713,8 @@
             const sampledGct = [];
             const sampledGctBal = [];
             const targetLineData = [];
+            const atLineData = [];      // Anaerob tröskel (142 bpm)
+            const fatmaxLineData = [];  // FatMax (124 bpm)
 
             for (let i = 0; i < timeData.length; i += step) {
                 const mins = Math.floor(timeData[i] / 60);
@@ -1820,6 +1732,8 @@
                     sampledGctBal.push(gctBalData[i] > 0 ? gctBalData[i] : null);
                 }
                 targetLineData.push(maxGctTarget);
+                atLineData.push(142);      // AT-tröskel från test
+                fatmaxLineData.push(124);  // FatMax-tröskel från test
             }
 
             const buildLineChart = (canvasId, label, dataArr, color, reverseY = false, hasData = true, extraDatasets = []) => {
@@ -1853,6 +1767,28 @@
                 });
             };
 
+            // Lägg till Aktivitus trösklar (AT 142 och FatMax 124) som referenslinjer i pulsgrafen
+            const hrExtra = [
+                {
+                    label: 'Anaerob Tröskel (AT: 142 bpm)',
+                    data: atLineData,
+                    borderColor: '#ef4444', // Röd
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                    pointRadius: 0,
+                    fill: false
+                },
+                {
+                    label: 'FatMax / Aerob tröskel (124 bpm)',
+                    data: fatmaxLineData,
+                    borderColor: '#10b981', // Grön
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                    pointRadius: 0,
+                    fill: false
+                }
+            ];
+
             const gctExtra = maxGctTarget > 0 ? [{
                 label: `Max GCT-mål (${maxGctTarget} ms)`,
                 data: targetLineData,
@@ -1863,7 +1799,7 @@
                 fill: false
             }] : [];
 
-            buildLineChart('detailHrChart', 'Puls (bpm)', sampledHr, '#f43f5e', false, true);
+            buildLineChart('detailHrChart', 'Puls (bpm)', sampledHr, '#f43f5e', false, true, hrExtra);
             buildLineChart('detailPaceChart', 'Tempo (min/km)', sampledPace, '#38bdf8', true, true);
             buildLineChart('detailGctChart', 'GCT (ms)', sampledGct, '#fbbf24', false, hasGct, gctExtra);
             buildLineChart('detailGctBalChart', 'GCT Balans (% Vänster)', sampledGctBal, '#10b981', false, hasGctBal);
