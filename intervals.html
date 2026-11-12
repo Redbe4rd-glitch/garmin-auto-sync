@@ -1203,7 +1203,7 @@
             const cadenceColor = cadenceVal >= targets.minCadence ? 'text-emerald-400' : (cadenceVal > 0 ? 'text-rose-400' : 'text-white');
 
             const gctVal = act.avg_stance_time || act.stance_time || streamStats.avgGct || 0;
-            const gctColor = getGctColorClass(gctVal, targets.maxGct);
+            const gctColor = gctVal > 0 ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
 
             const balVal = act.avg_stance_time_balance || act.stance_time_balance || streamStats.avgBal || 0;
             const balInfo = formatBalancePair(balVal);
@@ -1300,11 +1300,12 @@
             if (avgSpeed < 2.0 && (label.includes('walk') || label.includes('gång'))) {
                 return { text: 'Gång', badge: 'bg-sky-500/20 text-sky-400 border border-sky-500/30', isRunning: false };
             }
-            return { text: iv.label || iv.name || 'Löpning', badge: 'bg-amber-500/20 text-amber-400 border border-amber-500/30', isRunning: true };
+            return { text: iv.label || iv.name || 'Löpning', badge: 'bg-amber-500/20 text-amber-400 border border-amber-500/20', isRunning: true };
         }
 
         function renderDetailCharts(streams) {
             const getStream = (type) => {
+                if (!streams) return null;
                 if (Array.isArray(streams)) {
                     const found = streams.find(s => s.type === type);
                     return found ? found.data : null;
@@ -1317,6 +1318,9 @@
             const velData = getStream('velocity_smooth');
             const gctData = getStream('stance_time');
             const gctBalData = getStream('stance_time_balance');
+
+            const hasGct = gctData && gctData.some(v => v > 0);
+            const hasGctBal = gctBalData && gctBalData.some(v => v > 0);
 
             const step = Math.max(1, Math.floor(timeData.length / 300));
             const labels = [];
@@ -1342,10 +1346,28 @@
                 }
             }
 
-            const buildLineChart = (canvasId, label, dataArr, color, reverseY = false) => {
+            const buildLineChart = (canvasId, label, dataArr, color, reverseY = false, hasData = true) => {
                 const ctx = document.getElementById(canvasId);
                 if (!ctx) return;
                 if (detailChartInstances[canvasId]) detailChartInstances[canvasId].destroy();
+
+                if (!hasData) {
+                    // Visa tomt diagram om data saknas
+                    detailChartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
+                        type: 'line',
+                        data: { labels: ['0:00'], datasets: [{ label, data: [null], borderColor: color }] },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } },
+                                y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } }
+                            }
+                        }
+                    });
+                    return;
+                }
 
                 detailChartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
                     type: 'line',
@@ -1374,16 +1396,17 @@
                 });
             };
 
-            buildLineChart('detailHrChart', 'Puls (bpm)', sampledHr, '#f43f5e', false);
-            buildLineChart('detailPaceChart', 'Tempo (min/km)', sampledPace, '#38bdf8', true);
-            buildLineChart('detailGctChart', 'GCT (ms)', sampledGct, '#fbbf24', false);
-            buildLineChart('detailGctBalChart', 'GCT Balans (% Vänster)', sampledGctBal, '#10b981', false);
+            buildLineChart('detailHrChart', 'Puls (bpm)', sampledHr, '#f43f5e', false, true);
+            buildLineChart('detailPaceChart', 'Tempo (min/km)', sampledPace, '#38bdf8', true, true);
+            buildLineChart('detailGctChart', 'GCT (ms)', sampledGct, '#fbbf24', false, hasGct);
+            buildLineChart('detailGctBalChart', 'GCT Balans (% Vänster)', sampledGctBal, '#10b981', false, hasGctBal);
         }
 
         function renderKmSplits(streams, act) {
             const tbody = document.getElementById('kmSplitsTableBody');
             const targets = getWorkoutTargets(act);
             const getStream = (type) => {
+                if (!streams) return null;
                 if (Array.isArray(streams)) {
                     const found = streams.find(s => s.type === type);
                     return found ? found.data : null;
@@ -1434,7 +1457,7 @@
                             : `Km ${currentKm}`;
 
                         const avgGct = gctCount > 0 ? gctSum / gctCount : 0;
-                        const gctClass = getGctColorClass(avgGct, targets.maxGct);
+                        const gctClass = avgGct > 0 ? getGctColorClass(avgGct, targets.maxGct) : 'text-slate-400';
 
                         const avgLeft = balCount > 0 ? (balSum / balCount) : 0;
                         const balInfo = formatBalancePair(avgLeft);
@@ -1494,7 +1517,6 @@
                 const maxHr = iv.max_heartrate ? `${Math.round(iv.max_heartrate)} bpm` : '-';
                 const cad = iv.average_cadence ? `${Math.round(iv.average_cadence * 2)} spm` : '-';
                 
-                // Hämta GCT från intervallen eller beräkna från start_index / end_index / tid i strömmar
                 let gctVal = iv.avg_stance_time || iv.stance_time || 0;
                 if (!gctVal && streams && (iv.start_index !== undefined && iv.end_index !== undefined)) {
                     const gctStream = streams.find(s => s.type === 'stance_time');
@@ -1511,7 +1533,7 @@
                 }
 
                 const gctText = gctVal > 0 ? Math.round(gctVal) + ' ms' : '-';
-                const gctClass = typeInfo.isRunning ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
+                const gctClass = (typeInfo.isRunning && gctVal > 0) ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
 
                 const balRaw = iv.avg_stance_time_balance || iv.stance_time_balance || 0;
                 const balInfo = formatBalancePair(balRaw);
