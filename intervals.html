@@ -69,21 +69,26 @@
                 </div>
             </div>
 
-            <!-- Beredskapskort / Trafikljus -->
+            <!-- Beredskapskort / Trafikljus & AI-Coach Rekommendation -->
             <div id="readinessBanner" class="bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all">
                 <div class="flex items-center gap-4">
                     <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 shrink-0">
                         <i data-lucide="shield-check" class="w-8 h-8" id="readinessIcon"></i>
                     </div>
                     <div>
-                        <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Skadeförebyggande Status & Beredskap</span>
+                        <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-400">AI-Coach & Skadeförebyggande Status</span>
                         <h3 id="readinessTitle" class="text-base font-bold text-white">Grönt Ljus: Kroppen i utmärkt balans</h3>
                         <p id="readinessDesc" class="text-xs text-slate-300 mt-0.5">Inga påtagliga känningar eller belastningstoppar loggade. Redo för planerad träning.</p>
                     </div>
                 </div>
-                <div class="md:text-right shrink-0 bg-slate-900/50 md:bg-transparent p-3 md:p-0 rounded-xl w-full md:w-auto">
-                    <span class="text-xs text-slate-400 block">Rekommenderad fokus:</span>
-                    <div id="readinessAction" class="text-sm font-bold text-emerald-300">Tröskel / Kvalitet OK</div>
+                <div class="md:text-right shrink-0 bg-slate-900/50 md:bg-transparent p-3 md:p-0 rounded-xl w-full md:w-auto space-y-2">
+                    <div>
+                        <span class="text-[10px] text-slate-400 block uppercase font-bold">Dagens AI-Rekommendation:</span>
+                        <div id="readinessAction" class="text-xs font-bold text-emerald-300">Tröskel / Kvalitet OK</div>
+                    </div>
+                    <button id="sendAiRecBtn" onclick="sendAiRecommendedWorkout()" class="hidden w-full px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-lg flex items-center justify-center gap-1.5 transition">
+                        <i data-lucide="send" class="w-3 h-3"></i> Skicka pass till klockan
+                    </button>
                 </div>
             </div>
 
@@ -299,7 +304,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="workoutLibraryGrid"></div>
             </div>
 
-            <!-- NY SEKTION: SKAPA & SKICKA EGET PASS MED DATUMVÄLJARE -->
+            <!-- SEKTION: SKAPA & SKICKA EGET PASS MED DATUMVÄLJARE -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="border-b border-slate-700 pb-3">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -606,7 +611,8 @@ Main Set 4x
             selectedYear: new Date().getFullYear(),
             selectedMonth: null,
             selectedWeekRange: null,
-            currentChartBuckets: []
+            currentChartBuckets: [],
+            aiRecommendation: null
         };
 
         let volumeChartInstance = null;
@@ -1093,6 +1099,13 @@ Main Set 4x
             const title = document.getElementById('readinessTitle');
             const desc = document.getElementById('readinessDesc');
             const action = document.getElementById('readinessAction');
+            const sendBtn = document.getElementById('sendAiRecBtn');
+
+            let recommendation = {
+                title: "Tröskel / Kvalitet OK",
+                workoutId: "norsk-threshold",
+                workoutName: "Norsk Tröskel (3 x 10 min)"
+            };
 
             if (maxPain >= 3 || readiness === 1 || sleep === 1) {
                 banner.className = "bg-gradient-to-r from-rose-950/80 to-slate-800 border border-rose-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
@@ -1107,7 +1120,9 @@ Main Set 4x
                 else if (foot >= 3) source = "Känning i Fot/Benhinna";
 
                 desc.textContent = `${source} upptäckt. Vila från löpning rekommenderas för att skydda senor och leder.`;
-                action.textContent = "Crosstrainer / Cykel + Rehab";
+                action.textContent = "Rekommendation: Alternativ träning / Rehab / Vila";
+                sendBtn.classList.add('hidden');
+                appState.aiRecommendation = null;
             } 
             else if (maxPain >= 1 || readiness === 2 || sleep <= 2) {
                 banner.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
@@ -1115,17 +1130,37 @@ Main Set 4x
                 icon.setAttribute('data-lucide', 'shield');
                 title.textContent = "🟡 Gult Ljus: Skadeförebyggande läge (Lätt stelhet)";
                 desc.textContent = "Lättare känning eller trötthet noterad. Lugn jogg eller alternativ träning rekommenderas.";
-                action.textContent = "Lugn FatMax / Alternativt pass";
+                action.textContent = "Rekommendation: Kontrollerat Långpass (FatMax)";
+                sendBtn.classList.remove('hidden');
+                appState.aiRecommendation = workoutLibrary.find(w => w.id === 'long-run');
             } 
             else {
                 banner.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-emerald-400";
                 icon.setAttribute('data-lucide', 'shield-check');
                 title.textContent = "🟢 Grönt Ljus: Kroppen i utmärkt balans";
-                desc.textContent = "Inga påtagliga känningar eller belastningstoppar loggade. Redo för planerad träning.";
-                action.textContent = "Tröskel / Kvalitet OK";
+                desc.textContent = "Inga påtagliga känningar eller belastningstoppar loggade. Redo för planerad träning och formutveckling.";
+                
+                // AI-motor för att variera baserat på ACWR / träningshistorik
+                if (appState.latestAcwr > 1.3) {
+                    action.textContent = "Rekommendation: Lugnt FatMax-pass (Hög belastning kvot)";
+                    appState.aiRecommendation = workoutLibrary.find(w => w.id === 'long-run');
+                } else {
+                    action.textContent = "Rekommendation: Norsk Tröskel (Optimal för syreupptag)";
+                    appState.aiRecommendation = workoutLibrary.find(w => w.id === 'norsk-threshold');
+                }
+                sendBtn.classList.remove('hidden');
             }
             if (window.lucide) lucide.createIcons();
+        }
+
+        async function sendAiRecommendedWorkout() {
+            if (!appState.aiRecommendation) {
+                alert('Ingen aktiv träningsrekommendation tillgänglig för dagsformen.');
+                return;
+            }
+            const rec = appState.aiRecommendation;
+            await sendWorkoutDirectly(toLocalDateString(), rec.filename, rec.workout);
         }
 
         function renderWorkoutCards() {
@@ -1234,10 +1269,10 @@ Main Set 4x
             appState.apiKey = apiKey;
             appState.athleteId = athleteId;
 
-            setStatus('Hämtar data (3000 dagar)...');
+            setStatus('Hämtar data (1100 dagar)...');
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
-            const oldestStr = toLocalDateString(daysAgo(3000));
+            const oldestStr = toLocalDateString(daysAgo(1100));
 
             try {
                 const response = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/activities?oldest=${oldestStr}`, {
@@ -1251,7 +1286,7 @@ Main Set 4x
 
                 const data = await response.json();
                 appState.activities = Array.isArray(data) ? data : [];
-                document.getElementById('dataCountBadge').textContent = `${appState.activities.length} Pass Hämtade (3000d)`;
+                document.getElementById('dataCountBadge').textContent = `${appState.activities.length} Pass Hämtade (1100d)`;
                 
                 computeCurrentAcwr(appState.activities);
                 updateDashboardPeriodView();
@@ -1987,7 +2022,6 @@ Main Set 4x
             await sendWorkoutDirectly(toLocalDateString(), workout.filename, workout.workout);
         }
 
-        // NY FUNKTION: Skickar ett anpassat pass till valt datum
         async function sendCustomWorkout() {
             const nameInput = document.getElementById('customWorkoutName');
             const dateInput = document.getElementById('customWorkoutDate');
@@ -2005,7 +2039,6 @@ Main Set 4x
             const filename = name.replace(/\s+/g, '_') + '.txt';
             await sendWorkoutDirectly(workoutDate, filename, text);
 
-            // Rensa fälten efter lyckad skickning
             nameInput.value = '';
             textInput.value = '';
         }
@@ -2059,7 +2092,6 @@ Main Set 4x
             const wellnessDate = document.getElementById('wellnessDate');
             if (wellnessDate) wellnessDate.textContent = todayStr;
 
-            // Förvälj dagens datum i datumväljaren för egna pass
             const customDateInput = document.getElementById('customWorkoutDate');
             if (customDateInput) customDateInput.value = todayStr;
 
