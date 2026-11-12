@@ -202,9 +202,16 @@
             <!-- Grafer -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
-                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i> Veckoöversikt (Löpdistans km)
-                    </h3>
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i> Aktivitets tid per dag (min)
+                        </h3>
+                        <div class="flex items-center gap-3 text-[10px] text-slate-400">
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500"></span> Löpning</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-500"></span> Promenad</span>
+                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Styrka/Annat</span>
+                        </div>
+                    </div>
                     <div class="h-56 relative"><canvas id="weeklyVolumeChart"></canvas></div>
                 </div>
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
@@ -288,7 +295,7 @@
             </div>
 
             <!-- BLOCK 1: HUVUDMÄTVÄRDEN -->
-            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+            <div id="block1Container" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4 transition-all">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <i data-lucide="compass" class="w-4 h-4 text-indigo-400"></i> Block 1: Grundläggande Prestanda & Rymd
                 </h3>
@@ -296,7 +303,7 @@
             </div>
 
             <!-- BLOCK 2: BELASTNING, FYSIOLOGI & LÖPDYNAMIK -->
-            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+            <div id="block2Container" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4 transition-all">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
                         <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i> Block 2: Belastning, Fysiologi & Löpdynamik
@@ -322,7 +329,7 @@
                 </div>
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="footprints" class="w-4 h-4 text-amber-400"></i> Markontakttid / GCT (ms)
+                        <i data-lucide="footprints" class="w-4 h-4 text-amber-400"></i> Markontakttid / GCT (ms) med Mållinje
                     </h3>
                     <div class="h-52 relative"><canvas id="detailGctChart"></canvas></div>
                 </div>
@@ -553,16 +560,24 @@
             };
         }
 
-        function getWorkoutTargets(act) {
+        function getWorkoutCategoryDetails(act) {
             const name = (act.name || '').toLowerCase();
+            const type = (act.type || '').toLowerCase();
             const hr = act.average_heartrate || 0;
+
+            if (type.includes('walk') || name.includes('promenad')) {
+                return { label: 'Promenad', colorName: 'sky', borderColor: 'border-sky-500/40', minCadence: 120, maxGct: 320 };
+            }
+            if (!type.includes('run') && !type.includes('löpning')) {
+                return { label: 'Styrka / Alternativ', colorName: 'emerald', borderColor: 'border-emerald-500/40', minCadence: 0, maxGct: 0 };
+            }
             if (name.includes('intervall') || name.includes('tusing') || name.includes('vo2') || hr > 142) {
-                return { label: 'Intervall / VO2', minCadence: 170, maxGct: 255 };
+                return { label: 'Intervall / VO2', colorName: 'rose', borderColor: 'border-rose-500/40', minCadence: 170, maxGct: 255 };
             }
             if (name.includes('tröskel') || name.includes('troskel') || name.includes('tempo') || name.includes('singlar') || (hr >= 125 && hr <= 142)) {
-                return { label: 'Tröskel / Tempo', minCadence: 165, maxGct: 270 };
+                return { label: 'Tröskel / Tempo', colorName: 'amber', borderColor: 'border-amber-500/40', minCadence: 165, maxGct: 270 };
             }
-            return { label: 'Distans / FatMax', minCadence: 160, maxGct: 285 };
+            return { label: 'Distans / FatMax', colorName: 'indigo', borderColor: 'border-indigo-500/40', minCadence: 160, maxGct: 285 };
         }
 
         function getGctColorClass(gctVal, maxGct) {
@@ -820,26 +835,26 @@
         }
 
         async function autoSaveAcwrToIntervals() {
-            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
-            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
-            if (!apiKey || !athleteId || appState.latestAcwr === 0) return;
-
-            const todayStr = toLocalDateString();
-            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
-
-            const payload = {
-                id: todayStr,
-                acwr: parseFloat(appState.latestAcwr.toFixed(2))
-            };
-
             try {
+                const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+                const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+                if (!apiKey || !athleteId || appState.latestAcwr === 0) return;
+
+                const todayStr = toLocalDateString();
+                const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+
+                const payload = {
+                    id: todayStr,
+                    acwr: parseFloat(appState.latestAcwr.toFixed(2))
+                };
+
                 await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/wellness/${todayStr}`, {
                     method: 'PUT',
                     headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
             } catch (error) {
-                console.error('Kunde inte autospara ACWR:', error);
+                console.log('Auto-sparande av ACWR hoppades över (wellness saknas för dagen).');
             }
         }
 
@@ -1012,7 +1027,6 @@
 
         function renderCharts(activities, hrLow, hrMid, hrHigh) {
             const labels = [];
-            const values = [];
             const dateMap = {};
 
             for (let i = 6; i >= 0; i--) {
@@ -1020,14 +1034,35 @@
                 d.setDate(d.getDate() - i);
                 const key = toLocalDateString(d);
                 labels.push(key.slice(5));
-                values.push(0);
-                dateMap[key] = labels.length - 1;
+                dateMap[key] = i;
             }
+
+            const runData = new Array(7).fill(0);
+            const walkData = new Array(7).fill(0);
+            const otherData = new Array(7).fill(0);
 
             activities.forEach(act => {
                 const dateStr = String(act.start_date_local || '').slice(0, 10);
-                if (dateMap[dateStr] !== undefined && /run/i.test(act.type || '')) {
-                    values[dateMap[dateStr]] += act.distance ? act.distance / 1000 : 0;
+                if (dateMap[dateStr] !== undefined) {
+                    const idx = 6 - (new Date().setHours(0,0,0,0) - new Date(dateStr).setHours(0,0,0,0)) / (1000 * 60 * 60 * 24);
+                    // Beräkna minuter
+                    const mins = act.moving_time ? act.moving_time / 60 : 0;
+                    const type = (act.type || '').toLowerCase();
+                    const name = (act.name || '').toLowerCase();
+
+                    // Säkerställ rätt index inom 0-6
+                    const diffDays = Math.round((new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24));
+                    const arrayIdx = 6 - diffDays;
+
+                    if (arrayIdx >= 0 && arrayIdx < 7) {
+                        if (type.includes('walk') || name.includes('promenad')) {
+                            walkData[arrayIdx] += mins;
+                        } else if (type.includes('run') || type.includes('löpning')) {
+                            runData[arrayIdx] += mins;
+                        } else {
+                            otherData[arrayIdx] += mins;
+                        }
+                    }
                 }
             });
 
@@ -1037,15 +1072,19 @@
                 type: 'bar',
                 data: {
                     labels,
-                    datasets: [{ label: 'Löpning (km)', data: values, backgroundColor: '#6366f1', borderRadius: 6 }]
+                    datasets: [
+                        { label: 'Löpning', data: runData, backgroundColor: '#6366f1', borderRadius: 4 },
+                        { label: 'Promenad', data: walkData, backgroundColor: '#38bdf8', borderRadius: 4 },
+                        { label: 'Styrka / Annat', data: otherData, backgroundColor: '#10b981', borderRadius: 4 }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                        x: { stacked: true, ticks: { color: '#94a3b8' }, grid: { display: false } },
+                        y: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
                     }
                 }
             });
@@ -1162,7 +1201,7 @@
                 }
 
                 if (streams) {
-                    renderDetailCharts(streams);
+                    renderDetailCharts(streams, act);
                     renderKmSplits(streams, act);
                 } else {
                     document.getElementById('kmSplitsTableBody').innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Ingen GPS/strömningsdata tillgänglig för detta pass.</td></tr>';
@@ -1183,9 +1222,15 @@
             document.getElementById('detailTypeBadge').textContent = act.type || 'Aktivitet';
             document.getElementById('detailTitle').textContent = act.name || 'Träningspass';
 
-            const targets = getWorkoutTargets(act);
-            document.getElementById('detailWorkoutCategoryBadge').textContent = targets.label;
-            document.getElementById('dynamicTargetsHint').textContent = `Mål (${targets.label}): Kadens ≥ ${targets.minCadence} spm | GCT ≤ ${targets.maxGct} ms`;
+            const cat = getWorkoutCategoryDetails(act);
+            document.getElementById('detailWorkoutCategoryBadge').textContent = cat.label;
+            document.getElementById('dynamicTargetsHint').textContent = `Mål (${cat.label}): Kadens ≥ ${cat.minCadence} spm | GCT ≤ ${cat.maxGct} ms`;
+
+            // Färgmatchade ramar runt blocken
+            const b1Container = document.getElementById('block1Container');
+            const b2Container = document.getElementById('block2Container');
+            b1Container.className = `bg-slate-800/60 border ${cat.borderColor} rounded-2xl p-5 space-y-4 transition-all`;
+            b2Container.className = `bg-slate-800/60 border ${cat.borderColor} rounded-2xl p-5 space-y-4 transition-all`;
 
             const distStr = act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '0 km';
             const durStr = formatDuration(act.moving_time);
@@ -1200,10 +1245,10 @@
             `;
 
             const cadenceVal = act.average_cadence ? Math.round(act.average_cadence * 2) : 0;
-            const cadenceColor = cadenceVal >= targets.minCadence ? 'text-emerald-400' : (cadenceVal > 0 ? 'text-rose-400' : 'text-white');
+            const cadenceColor = cadenceVal >= cat.minCadence ? 'text-emerald-400' : (cadenceVal > 0 ? 'text-rose-400' : 'text-white');
 
             const gctVal = act.avg_stance_time || act.stance_time || streamStats.avgGct || 0;
-            const gctColor = gctVal > 0 ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
+            const gctColor = gctVal > 0 ? getGctColorClass(gctVal, cat.maxGct) : 'text-slate-400';
 
             const balVal = act.avg_stance_time_balance || act.stance_time_balance || streamStats.avgBal || 0;
             const balInfo = formatBalancePair(balVal);
@@ -1303,7 +1348,7 @@
             return { text: iv.label || iv.name || 'Löpning', badge: 'bg-amber-500/20 text-amber-400 border border-amber-500/20', isRunning: true };
         }
 
-        function renderDetailCharts(streams) {
+        function renderDetailCharts(streams, act) {
             const getStream = (type) => {
                 if (!streams) return null;
                 if (Array.isArray(streams)) {
@@ -1319,6 +1364,9 @@
             const gctData = getStream('stance_time');
             const gctBalData = getStream('stance_time_balance');
 
+            const cat = getWorkoutCategoryDetails(act);
+            const maxGctTarget = cat.maxGct;
+
             const hasGct = gctData && gctData.some(v => v > 0);
             const hasGctBal = gctBalData && gctBalData.some(v => v > 0);
 
@@ -1328,6 +1376,7 @@
             const sampledPace = [];
             const sampledGct = [];
             const sampledGctBal = [];
+            const targetLineData = [];
 
             for (let i = 0; i < timeData.length; i += step) {
                 const mins = Math.floor(timeData[i] / 60);
@@ -1344,50 +1393,32 @@
                 if (gctBalData) {
                     sampledGctBal.push(gctBalData[i] > 0 ? gctBalData[i] : null);
                 }
+                targetLineData.push(maxGctTarget);
             }
 
-            const buildLineChart = (canvasId, label, dataArr, color, reverseY = false, hasData = true) => {
+            const buildLineChart = (canvasId, label, dataArr, color, reverseY = false, hasData = true, extraDatasets = []) => {
                 const ctx = document.getElementById(canvasId);
                 if (!ctx) return;
                 if (detailChartInstances[canvasId]) detailChartInstances[canvasId].destroy();
 
-                if (!hasData) {
-                    // Visa tomt diagram om data saknas
-                    detailChartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
-                        type: 'line',
-                        data: { labels: ['0:00'], datasets: [{ label, data: [null], borderColor: color }] },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } },
-                                y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } }
-                            }
-                        }
-                    });
-                    return;
-                }
+                const datasets = [{
+                    label,
+                    data: dataArr || [],
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.2
+                }, ...extraDatasets];
 
                 detailChartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
                     type: 'line',
-                    data: {
-                        labels,
-                        datasets: [{
-                            label,
-                            data: dataArr || [],
-                            borderColor: color,
-                            backgroundColor: color + '20',
-                            borderWidth: 1.5,
-                            pointRadius: 0,
-                            fill: true,
-                            tension: 0.2
-                        }]
-                    },
+                    data: { labels, datasets },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
+                        plugins: { legend: { display: extraDatasets.length > 0 } },
                         scales: {
                             x: { ticks: { color: '#64748b', maxTicksLimit: 8, font: { size: 10 } }, grid: { display: false } },
                             y: { reverse: reverseY, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } }
@@ -1396,15 +1427,25 @@
                 });
             };
 
+            const gctExtra = maxGctTarget > 0 ? [{
+                label: `Max GCT-mål (${maxGctTarget} ms)`,
+                data: targetLineData,
+                borderColor: '#ef4444',
+                borderWidth: 1.5,
+                borderDash: [4, 4],
+                pointRadius: 0,
+                fill: false
+            }] : [];
+
             buildLineChart('detailHrChart', 'Puls (bpm)', sampledHr, '#f43f5e', false, true);
             buildLineChart('detailPaceChart', 'Tempo (min/km)', sampledPace, '#38bdf8', true, true);
-            buildLineChart('detailGctChart', 'GCT (ms)', sampledGct, '#fbbf24', false, hasGct);
+            buildLineChart('detailGctChart', 'GCT (ms)', sampledGct, '#fbbf24', false, hasGct, gctExtra);
             buildLineChart('detailGctBalChart', 'GCT Balans (% Vänster)', sampledGctBal, '#10b981', false, hasGctBal);
         }
 
         function renderKmSplits(streams, act) {
             const tbody = document.getElementById('kmSplitsTableBody');
-            const targets = getWorkoutTargets(act);
+            const cat = getWorkoutCategoryDetails(act);
             const getStream = (type) => {
                 if (!streams) return null;
                 if (Array.isArray(streams)) {
@@ -1457,7 +1498,7 @@
                             : `Km ${currentKm}`;
 
                         const avgGct = gctCount > 0 ? gctSum / gctCount : 0;
-                        const gctClass = avgGct > 0 ? getGctColorClass(avgGct, targets.maxGct) : 'text-slate-400';
+                        const gctClass = avgGct > 0 ? getGctColorClass(avgGct, cat.maxGct) : 'text-slate-400';
 
                         const avgLeft = balCount > 0 ? (balSum / balCount) : 0;
                         const balInfo = formatBalancePair(avgLeft);
@@ -1498,7 +1539,7 @@
 
         function renderIntervalsTable(intervals, act, streams) {
             const tbody = document.getElementById('intervalsSplitsTableBody');
-            const targets = getWorkoutTargets(act);
+            const cat = getWorkoutCategoryDetails(act);
 
             if (!intervals || !intervals.length) {
                 tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">Inga separata varv eller intervaller registrerade för detta pass.</td></tr>';
@@ -1533,7 +1574,7 @@
                 }
 
                 const gctText = gctVal > 0 ? Math.round(gctVal) + ' ms' : '-';
-                const gctClass = (typeInfo.isRunning && gctVal > 0) ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
+                const gctClass = (typeInfo.isRunning && gctVal > 0) ? getGctColorClass(gctVal, cat.maxGct) : 'text-slate-400';
 
                 const balRaw = iv.avg_stance_time_balance || iv.stance_time_balance || 0;
                 const balInfo = formatBalancePair(balRaw);
