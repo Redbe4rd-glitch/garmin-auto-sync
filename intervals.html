@@ -58,7 +58,7 @@
         <!-- ================= VYN 1: DASHBOARD ================= -->
         <div id="viewDashboard" class="space-y-6">
             
-            <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 flex justify-between items-center gap-4">
+            <div class="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-4">
                 <div class="text-xs text-slate-300 flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span class="font-bold text-white">API-Status:</span> <span id="statusText">Väntar på anrop...</span>
@@ -87,6 +87,41 @@
                 </div>
             </div>
 
+            <!-- TIDSPERIODVÄLJARE FÖR DASHBOARD -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="setPeriodMode('currentWeek')" id="btnPeriodCurrentWeek" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-indigo-600 text-white transition">
+                        Innevarande vecka
+                    </button>
+                    <button onclick="setPeriodMode('last4Weeks')" id="btnPeriodLast4Weeks" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 text-slate-400 hover:text-white transition">
+                        Senaste 4 veckorna
+                    </button>
+                    <button onclick="setPeriodMode('months')" id="btnPeriodMonths" class="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 text-slate-400 hover:text-white transition">
+                        Månader
+                    </button>
+                </div>
+
+                <!-- Årsväljare (visas i månadsläge) & Breadcrumb/Tillbaka-knapp vid inzoomning -->
+                <div class="flex items-center gap-3">
+                    <div id="drilldownBanner" class="hidden flex items-center gap-2 bg-indigo-500/15 border border-indigo-500/30 px-3 py-1 rounded-xl">
+                        <span id="drilldownLabel" class="text-xs font-semibold text-indigo-300">Vald period</span>
+                        <button onclick="resetDrilldown()" class="text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 rounded-lg flex items-center gap-1 transition">
+                            <i data-lucide="arrow-up-left" class="w-3 h-3"></i> Tillbaka
+                        </button>
+                    </div>
+
+                    <div id="yearSelectorGroup" class="hidden flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-xl px-2 py-1">
+                        <button onclick="changeSelectedYear(-1)" class="p-1 text-slate-400 hover:text-white transition" title="Föregående år">
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>
+                        <span id="selectedYearDisplay" class="text-xs font-bold text-white px-2 font-mono">2026</span>
+                        <button onclick="changeSelectedYear(1)" class="p-1 text-slate-400 hover:text-white transition" title="Nästa år">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- KPI-Kort inklusive ACWR -->
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
@@ -94,7 +129,7 @@
                         <i data-lucide="footprints" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-medium text-slate-400">Volym (7d)</p>
+                        <p class="text-xs font-medium text-slate-400" id="kpiVolLabel">Löpvolym (Vald period)</p>
                         <h3 class="text-lg font-bold text-white" id="kpiWeeklyVol">0.0 km</h3>
                     </div>
                 </div>
@@ -104,7 +139,7 @@
                         <i data-lucide="trending-up" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-medium text-slate-400">Belastningskvot (ACWR)</p>
+                        <p class="text-xs font-medium text-slate-400">Belastningskvot (ACWR Idag)</p>
                         <div class="flex items-center gap-2">
                             <h3 class="text-lg font-bold text-white" id="kpiAcwr">0.00</h3>
                             <span id="kpiAcwrBadge" class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-700 text-slate-300">--</span>
@@ -130,6 +165,27 @@
                         <p class="text-xs font-medium text-slate-400">Styrka & Alternativ</p>
                         <h3 class="text-lg font-bold text-white" id="kpiAltCount">0 st</h3>
                     </div>
+                </div>
+            </div>
+
+            <!-- Grafer -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i>
+                            <span id="barChartTitle">Aktivitetstid per dag (min)</span>
+                        </h3>
+                        <span id="barChartClickHint" class="text-[10px] text-indigo-400 hidden">Klicka på en stapel för att filtrera →</span>
+                    </div>
+                    <div id="activityLegend" class="flex flex-wrap items-center gap-3 text-[10px] text-slate-300"></div>
+                    <div class="h-56 relative"><canvas id="weeklyVolumeChart"></canvas></div>
+                </div>
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Pulszonsfördelning (Vald period)
+                    </h3>
+                    <div class="h-56 relative flex justify-center"><canvas id="hrZoneChart"></canvas></div>
                 </div>
             </div>
 
@@ -199,34 +255,12 @@
                 </div>
             </div>
 
-            <!-- Grafer -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i> Aktivitets tid per dag (min)
-                        </h3>
-                        <div class="flex items-center gap-3 text-[10px] text-slate-400">
-                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500"></span> Löpning</span>
-                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-500"></span> Promenad</span>
-                            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Styrka/Annat</span>
-                        </div>
-                    </div>
-                    <div class="h-56 relative"><canvas id="weeklyVolumeChart"></canvas></div>
-                </div>
-                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
-                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Pulszonsfördelning
-                    </h3>
-                    <div class="h-56 relative flex justify-center"><canvas id="hrZoneChart"></canvas></div>
-                </div>
-            </div>
-
             <!-- Tabell -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                 <div class="flex items-center justify-between">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> Träningshistorik (Senaste 90 Dagar)
+                        <i data-lucide="history" class="w-4 h-4 text-indigo-400"></i>
+                        <span id="tablePeriodTitle">Träningshistorik (Vald period)</span>
                     </h3>
                     <span class="text-[11px] text-indigo-400">Klicka på ett pass för djupanalys →</span>
                 </div>
@@ -504,12 +538,114 @@
             }
         ];
 
+        // Komplett färgschema och kategorisering för alla aktivitetstyper
+        const ACTIVITY_CATEGORIES = {
+            run: {
+                key: 'run',
+                label: 'Löpning',
+                hex: '#6366f1', // Indigo
+                badgeClass: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30',
+                borderClass: 'border-indigo-500/50',
+                dotClass: 'bg-indigo-500'
+            },
+            walk: {
+                key: 'walk',
+                label: 'Promenad',
+                hex: '#38bdf8', // Sky
+                badgeClass: 'bg-sky-500/15 text-sky-400 border border-sky-500/30',
+                borderClass: 'border-sky-500/50',
+                dotClass: 'bg-sky-400'
+            },
+            strength: {
+                key: 'strength',
+                label: 'Styrketräning',
+                hex: '#10b981', // Emerald
+                badgeClass: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
+                borderClass: 'border-emerald-500/50',
+                dotClass: 'bg-emerald-500'
+            },
+            ride: {
+                key: 'ride',
+                label: 'Cykel',
+                hex: '#f59e0b', // Amber
+                badgeClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
+                borderClass: 'border-amber-500/50',
+                dotClass: 'bg-amber-500'
+            },
+            cardio: {
+                key: 'cardio',
+                label: 'Crosstrainer / Cardio',
+                hex: '#f43f5e', // Rose
+                badgeClass: 'bg-rose-500/15 text-rose-400 border border-rose-500/30',
+                borderClass: 'border-rose-500/50',
+                dotClass: 'bg-rose-500'
+            },
+            swim: {
+                key: 'swim',
+                label: 'Simning',
+                hex: '#14b8a6', // Teal
+                badgeClass: 'bg-teal-500/15 text-teal-400 border border-teal-500/30',
+                borderClass: 'border-teal-500/50',
+                dotClass: 'bg-teal-500'
+            },
+            mobility: {
+                key: 'mobility',
+                label: 'Rörlighet / Yoga',
+                hex: '#a855f7', // Purple
+                badgeClass: 'bg-purple-500/15 text-purple-400 border border-purple-500/30',
+                borderClass: 'border-purple-500/50',
+                dotClass: 'bg-purple-500'
+            },
+            other: {
+                key: 'other',
+                label: 'Övrigt',
+                hex: '#94a3b8', // Slate
+                badgeClass: 'bg-slate-700/60 text-slate-300 border border-slate-600',
+                borderClass: 'border-slate-500/50',
+                dotClass: 'bg-slate-400'
+            }
+        };
+
+        function classifyActivity(act) {
+            const type = (act.type || '').toLowerCase();
+            const name = (act.name || '').toLowerCase();
+
+            if (type.includes('run') || type.includes('trail') || name.includes('löpning')) {
+                return ACTIVITY_CATEGORIES.run;
+            }
+            if (type.includes('walk') || type.includes('hike') || name.includes('promenad') || name.includes('gång')) {
+                return ACTIVITY_CATEGORIES.walk;
+            }
+            if (type.includes('weight') || type.includes('strength') || type.includes('workout') || name.includes('styrka') || name.includes('gym') || name.includes('rehab')) {
+                return ACTIVITY_CATEGORIES.strength;
+            }
+            if (type.includes('ride') || type.includes('cycling') || type.includes('bike') || name.includes('cykel') || name.includes('spinning')) {
+                return ACTIVITY_CATEGORIES.ride;
+            }
+            if (type.includes('elliptical') || type.includes('row') || type.includes('stair') || type.includes('cardio') || name.includes('crosstrainer') || name.includes('rodd')) {
+                return ACTIVITY_CATEGORIES.cardio;
+            }
+            if (type.includes('swim') || name.includes('sim')) {
+                return ACTIVITY_CATEGORIES.swim;
+            }
+            if (type.includes('yoga') || type.includes('stretch') || type.includes('pilates') || name.includes('yoga') || name.includes('rörlighet')) {
+                return ACTIVITY_CATEGORIES.mobility;
+            }
+            return ACTIVITY_CATEGORIES.other;
+        }
+
         const appState = {
             apiKey: localStorage.getItem('icu_api_key') || '',
             athleteId: localStorage.getItem('icu_athlete_id') || '',
             latestAcwr: 0,
             activities: [],
-            currentStreams: null
+            currentStreams: null,
+            // Tidsperiod- & navigeringstillstånd
+            periodMode: 'currentWeek', // 'currentWeek' | 'last4Weeks' | 'months'
+            selectedYear: new Date().getFullYear(),
+            selectedMonth: null,       // 0-11 när en månad klickats i månadsvy
+            selectedWeekRange: null,   // { start: Date, end: Date, label: string } när en vecka klickats
+            currentChartBuckets: []    // Sparar klickbara staplars datumintervall
         };
 
         let volumeChartInstance = null;
@@ -525,6 +661,30 @@
             const d = new Date();
             d.setDate(d.getDate() - days);
             return d;
+        }
+
+        function getStartOfWeek(date) {
+            const d = new Date(date);
+            d.setHours(0, 0, 0, 0);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Måndag som startdag
+            d.setDate(diff);
+            return d;
+        }
+
+        function getEndOfWeek(startOfWeek) {
+            const d = new Date(startOfWeek);
+            d.setDate(d.getDate() + 6);
+            d.setHours(23, 59, 59, 999);
+            return d;
+        }
+
+        function getISOWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         }
 
         function formatPace(speedMs) {
@@ -560,28 +720,25 @@
             };
         }
 
-        function getWorkoutCategoryDetails(act) {
+        function getWorkoutTargets(act) {
             const name = (act.name || '').toLowerCase();
-            const type = (act.type || '').toLowerCase();
             const hr = act.average_heartrate || 0;
+            const cat = classifyActivity(act);
 
-            if (type.includes('walk') || name.includes('promenad')) {
-                return { label: 'Promenad', colorName: 'sky', borderColor: 'border-sky-500/40', minCadence: 120, maxGct: 320 };
-            }
-            if (!type.includes('run') && !type.includes('löpning')) {
-                return { label: 'Styrka / Alternativ', colorName: 'emerald', borderColor: 'border-emerald-500/40', minCadence: 0, maxGct: 0 };
+            if (cat.key !== 'run') {
+                return { label: cat.label, minCadence: 0, maxGct: 0 };
             }
             if (name.includes('intervall') || name.includes('tusing') || name.includes('vo2') || hr > 142) {
-                return { label: 'Intervall / VO2', colorName: 'rose', borderColor: 'border-rose-500/40', minCadence: 170, maxGct: 255 };
+                return { label: 'Intervall / VO2', minCadence: 170, maxGct: 255 };
             }
             if (name.includes('tröskel') || name.includes('troskel') || name.includes('tempo') || name.includes('singlar') || (hr >= 125 && hr <= 142)) {
-                return { label: 'Tröskel / Tempo', colorName: 'amber', borderColor: 'border-amber-500/40', minCadence: 165, maxGct: 270 };
+                return { label: 'Tröskel / Tempo', minCadence: 165, maxGct: 270 };
             }
-            return { label: 'Distans / FatMax', colorName: 'indigo', borderColor: 'border-indigo-500/40', minCadence: 160, maxGct: 285 };
+            return { label: 'Distans / FatMax', minCadence: 160, maxGct: 285 };
         }
 
         function getGctColorClass(gctVal, maxGct) {
-            if (!gctVal || gctVal <= 0) return 'text-white';
+            if (!gctVal || gctVal <= 0 || !maxGct) return 'text-white';
             return gctVal <= maxGct ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold';
         }
 
@@ -589,6 +746,382 @@
             const statusText = document.getElementById('statusText');
             if (statusText) statusText.textContent = message;
         }
+
+        // ================= PERIODVÄLJARE & NAVIGATION =================
+
+        function setPeriodMode(mode) {
+            appState.periodMode = mode;
+            appState.selectedMonth = null;
+            appState.selectedWeekRange = null;
+            if (mode === 'months') {
+                appState.selectedYear = new Date().getFullYear();
+            }
+            updateDashboardPeriodView();
+        }
+
+        function changeSelectedYear(delta) {
+            appState.selectedYear += delta;
+            appState.selectedMonth = null;
+            appState.selectedWeekRange = null;
+            updateDashboardPeriodView();
+        }
+
+        function resetDrilldown() {
+            if (appState.selectedWeekRange && appState.periodMode === 'months' && appState.selectedMonth !== null) {
+                // Från specifik vecka i en månad -> tillbaka till månadens veckor
+                appState.selectedWeekRange = null;
+            } else {
+                // Tillbaka till rotläget för valt läge
+                appState.selectedWeekRange = null;
+                appState.selectedMonth = null;
+            }
+            updateDashboardPeriodView();
+        }
+
+        function updatePeriodButtonsUI() {
+            const modes = [
+                { id: 'btnPeriodCurrentWeek', mode: 'currentWeek' },
+                { id: 'btnPeriodLast4Weeks', mode: 'last4Weeks' },
+                { id: 'btnPeriodMonths', mode: 'months' }
+            ];
+
+            modes.forEach(item => {
+                const btn = document.getElementById(item.id);
+                if (!btn) return;
+                if (appState.periodMode === item.mode) {
+                    btn.className = 'px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-indigo-600 text-white transition shadow';
+                } else {
+                    btn.className = 'px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 text-slate-400 hover:text-white transition';
+                }
+            });
+
+            const yearGroup = document.getElementById('yearSelectorGroup');
+            const yearDisplay = document.getElementById('selectedYearDisplay');
+            if (appState.periodMode === 'months') {
+                yearGroup.classList.remove('hidden');
+                yearDisplay.textContent = appState.selectedYear;
+            } else {
+                yearGroup.classList.add('hidden');
+            }
+
+            const drillBanner = document.getElementById('drilldownBanner');
+            const drillLabel = document.getElementById('drilldownLabel');
+            const monthNames = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
+
+            if (appState.selectedWeekRange) {
+                drillBanner.classList.remove('hidden');
+                drillLabel.textContent = appState.selectedWeekRange.label;
+            } else if (appState.periodMode === 'months' && appState.selectedMonth !== null) {
+                drillBanner.classList.remove('hidden');
+                drillLabel.textContent = `${monthNames[appState.selectedMonth]} ${appState.selectedYear}`;
+            } else {
+                drillBanner.classList.add('hidden');
+            }
+        }
+
+        function updateDashboardPeriodView() {
+            updatePeriodButtonsUI();
+
+            const now = new Date();
+            let filterStart, filterEnd, periodLabel;
+            let buckets = [];
+            let chartTitle = '';
+            let isClickable = false;
+
+            const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+            const monthNamesFull = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
+            const dayNames = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
+
+            // 1. OM EN SPECIFIK VECKA ÄR VALD (via klick i 4-veckorsvy eller månadsvy)
+            if (appState.selectedWeekRange) {
+                filterStart = new Date(appState.selectedWeekRange.start);
+                filterEnd = new Date(appState.selectedWeekRange.end);
+                periodLabel = appState.selectedWeekRange.label;
+                chartTitle = `Aktivitetstid per dag – ${periodLabel} (min)`;
+                isClickable = false;
+
+                for (let i = 0; i < 7; i++) {
+                    const dStart = new Date(filterStart);
+                    dStart.setDate(filterStart.getDate() + i);
+                    dStart.setHours(0, 0, 0, 0);
+                    const dEnd = new Date(dStart);
+                    dEnd.setHours(23, 59, 59, 999);
+                    buckets.push({
+                        label: `${dayNames[i]} ${dStart.getDate()}/${dStart.getMonth() + 1}`,
+                        start: dStart,
+                        end: dEnd,
+                        type: 'day'
+                    });
+                }
+            }
+            // 2. INNEVARANDE VECKA
+            else if (appState.periodMode === 'currentWeek') {
+                filterStart = getStartOfWeek(now);
+                filterEnd = getEndOfWeek(filterStart);
+                const weekNum = getISOWeekNumber(filterStart);
+                periodLabel = `Innevarande vecka (v.${weekNum})`;
+                chartTitle = `Aktivitetstid per dag – v.${weekNum} (min)`;
+                isClickable = false;
+
+                for (let i = 0; i < 7; i++) {
+                    const dStart = new Date(filterStart);
+                    dStart.setDate(filterStart.getDate() + i);
+                    dStart.setHours(0, 0, 0, 0);
+                    const dEnd = new Date(dStart);
+                    dEnd.setHours(23, 59, 59, 999);
+                    buckets.push({
+                        label: `${dayNames[i]} ${dStart.getDate()}/${dStart.getMonth() + 1}`,
+                        start: dStart,
+                        end: dEnd,
+                        type: 'day'
+                    });
+                }
+            }
+            // 3. SENASTE 4 VECKORNA
+            else if (appState.periodMode === 'last4Weeks') {
+                const currentWeekStart = getStartOfWeek(now);
+                filterStart = new Date(currentWeekStart);
+                filterStart.setDate(currentWeekStart.getDate() - 21); // 3 veckor bakåt + innevarande = 4 veckor
+                filterEnd = getEndOfWeek(currentWeekStart);
+                periodLabel = 'Senaste 4 veckorna';
+                chartTitle = 'Aktivitetstid per vecka – Senaste 4 veckorna (min)';
+                isClickable = true;
+
+                for (let w = 0; w < 4; w++) {
+                    const wStart = new Date(filterStart);
+                    wStart.setDate(filterStart.getDate() + w * 7);
+                    const wEnd = getEndOfWeek(wStart);
+                    const wNum = getISOWeekNumber(wStart);
+                    buckets.push({
+                        label: `v.${wNum} (${wStart.getDate()}/${wStart.getMonth() + 1})`,
+                        start: wStart,
+                        end: wEnd,
+                        type: 'week',
+                        detailLabel: `Vecka ${wNum} (${toLocalDateString(wStart)} – ${toLocalDateString(wEnd)})`
+                    });
+                }
+            }
+            // 4. MÅNADSVY (ANtingen hela året eller en vald månad uppdelad i veckor)
+            else if (appState.periodMode === 'months') {
+                const year = appState.selectedYear;
+
+                if (appState.selectedMonth !== null) {
+                    const m = appState.selectedMonth;
+                    filterStart = new Date(year, m, 1, 0, 0, 0, 0);
+                    filterEnd = new Date(year, m + 1, 0, 23, 59, 59, 999);
+                    periodLabel = `${monthNamesFull[m]} ${year}`;
+                    chartTitle = `Aktivitetstid per vecka – ${periodLabel} (min)`;
+                    isClickable = true;
+
+                    // Dela upp månaden i veckor (måndag-söndag som överlappar månaden)
+                    let cursor = getStartOfWeek(filterStart);
+                    while (cursor <= filterEnd) {
+                        const wStart = new Date(cursor);
+                        const wEnd = getEndOfWeek(wStart);
+                        const wNum = getISOWeekNumber(wStart);
+                        // Klipp visningsintervallet till månadens gränser för filtrering
+                        const clampedStart = wStart < filterStart ? new Date(filterStart) : wStart;
+                        const clampedEnd = wEnd > filterEnd ? new Date(filterEnd) : wEnd;
+
+                        buckets.push({
+                            label: `v.${wNum} (${clampedStart.getDate()}-${clampedEnd.getDate()}/${m + 1})`,
+                            start: clampedStart,
+                            end: clampedEnd,
+                            type: 'week',
+                            detailLabel: `Vecka ${wNum}, ${monthNamesFull[m]} ${year}`
+                        });
+                        cursor.setDate(cursor.getDate() + 7);
+                    }
+                } else {
+                    filterStart = new Date(year, 0, 1, 0, 0, 0, 0);
+                    filterEnd = new Date(year, 11, 31, 23, 59, 59, 999);
+                    periodLabel = `Helår ${year}`;
+                    chartTitle = `Aktivitetstid per månad – ${year} (min)`;
+                    isClickable = true;
+
+                    for (let m = 0; m < 12; m++) {
+                        const mStart = new Date(year, m, 1, 0, 0, 0, 0);
+                        const mEnd = new Date(year, m + 1, 0, 23, 59, 59, 999);
+                        buckets.push({
+                            label: monthNamesShort[m],
+                            start: mStart,
+                            end: mEnd,
+                            type: 'month',
+                            monthIndex: m
+                        });
+                    }
+                }
+            }
+
+            appState.currentChartBuckets = buckets;
+
+            // Filtrera aktiviteter för vald period
+            const filteredActivities = appState.activities.filter(act => {
+                const d = new Date(act.start_date_local);
+                return d >= filterStart && d <= filterEnd;
+            }).sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
+
+            // Uppdatera KPI-kort för vald period
+            let periodRunKm = 0;
+            let runPassesCount = 0;
+            let fatmaxPassesCount = 0;
+            let altCount = 0;
+            let hrLowCount = 0;
+            let hrMidCount = 0;
+            let hrHighCount = 0;
+
+            filteredActivities.forEach(act => {
+                const cat = classifyActivity(act);
+                const distKm = act.distance ? act.distance / 1000 : 0;
+                const hr = act.average_heartrate || 0;
+
+                if (cat.key === 'run') {
+                    periodRunKm += distKm;
+                    runPassesCount++;
+                    if (hr > 0 && hr <= 124) fatmaxPassesCount++;
+                } else {
+                    altCount++;
+                }
+
+                if (hr > 0) {
+                    if (hr <= 124) hrLowCount++;
+                    else if (hr <= 145) hrMidCount++;
+                    else hrHighCount++;
+                }
+            });
+
+            document.getElementById('kpiVolLabel').textContent = `Löpvolym (${periodLabel})`;
+            document.getElementById('kpiWeeklyVol').textContent = `${periodRunKm.toFixed(1)} km`;
+
+            const fatmaxShare = runPassesCount > 0 ? Math.round((fatmaxPassesCount / runPassesCount) * 100) : 0;
+            document.getElementById('kpiFatmaxShare').textContent = `${fatmaxShare}%`;
+            document.getElementById('kpiAltCount').textContent = `${altCount} st`;
+
+            // Uppdatera rubriker & tabell
+            document.getElementById('barChartTitle').textContent = chartTitle;
+            const clickHint = document.getElementById('barChartClickHint');
+            if (isClickable) {
+                clickHint.classList.remove('hidden');
+            } else {
+                clickHint.classList.add('hidden');
+            }
+
+            document.getElementById('tablePeriodTitle').textContent = `Träningshistorik – ${periodLabel} (${filteredActivities.length} pass)`;
+            renderTable(filteredActivities);
+            renderPeriodCharts(filteredActivities, buckets, hrLowCount, hrMidCount, hrHighCount, isClickable);
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function renderPeriodCharts(activities, buckets, hrLow, hrMid, hrHigh, isClickable) {
+            const labels = buckets.map(b => b.label);
+
+            // Initiera serier för alla kategorier som finns i ACTIVITY_CATEGORIES
+            const categoryKeys = Object.keys(ACTIVITY_CATEGORIES);
+            const dataByCat = {};
+            const activeCategories = new Set();
+
+            categoryKeys.forEach(k => {
+                dataByCat[k] = new Array(buckets.length).fill(0);
+            });
+
+            activities.forEach(act => {
+                const actDate = new Date(act.start_date_local);
+                const mins = act.moving_time ? Math.round(act.moving_time / 60) : 0;
+                if (mins <= 0) return;
+
+                const cat = classifyActivity(act);
+                for (let i = 0; i < buckets.length; i++) {
+                    if (actDate >= buckets[i].start && actDate <= buckets[i].end) {
+                        dataByCat[cat.key][i] += mins;
+                        activeCategories.add(cat.key);
+                        break;
+                    }
+                }
+            });
+
+            // Bygg legend för de kategorier som har aktiviteter (eller basuppsättning)
+            const legendEl = document.getElementById('activityLegend');
+            const keysToShow = activeCategories.size > 0 ? Array.from(activeCategories) : ['run', 'walk', 'strength'];
+            legendEl.innerHTML = keysToShow.map(k => {
+                const c = ACTIVITY_CATEGORIES[k];
+                return `<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm ${c.dotClass}"></span> ${c.label}</span>`;
+            }).join('');
+
+            const datasets = keysToShow.map(k => {
+                const c = ACTIVITY_CATEGORIES[k];
+                return {
+                    label: c.label,
+                    data: dataByCat[k],
+                    backgroundColor: c.hex,
+                    borderRadius: 4
+                };
+            });
+
+            const volCtx = document.getElementById('weeklyVolumeChart');
+            if (volumeChartInstance) volumeChartInstance.destroy();
+            volumeChartInstance = new Chart(volCtx.getContext('2d'), {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onHover: (event, elements) => {
+                        if (event.native && event.native.target) {
+                            event.native.target.style.cursor = (isClickable && elements.length > 0) ? 'pointer' : 'default';
+                        }
+                    },
+                    onClick: (event, elements) => {
+                        if (!isClickable || !elements.length) return;
+                        const index = elements[0].index;
+                        const clickedBucket = appState.currentChartBuckets[index];
+                        if (!clickedBucket) return;
+
+                        if (clickedBucket.type === 'month') {
+                            appState.selectedMonth = clickedBucket.monthIndex;
+                            appState.selectedWeekRange = null;
+                            updateDashboardPeriodView();
+                        } else if (clickedBucket.type === 'week') {
+                            appState.selectedWeekRange = {
+                                start: clickedBucket.start,
+                                end: clickedBucket.end,
+                                label: clickedBucket.detailLabel || clickedBucket.label
+                            };
+                            updateDashboardPeriodView();
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} min`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
+                        y: { stacked: true, ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#334155' } }
+                    }
+                }
+            });
+
+            const zoneCtx = document.getElementById('hrZoneChart');
+            if (zoneChartInstance) zoneChartInstance.destroy();
+            zoneChartInstance = new Chart(zoneCtx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['FatMax (<=124)', 'Mellan (125-145)', 'Tröskel (>145)'],
+                    datasets: [{ data: [hrLow, hrMid, hrHigh], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'] }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#f8fafc', font: { size: 10 } } } }
+                }
+            });
+        }
+
+        // ================= WELLNESS & BEREDSKAP =================
 
         function updateWellnessDisplay() {
             const calf = document.getElementById('inputCalf').value;
@@ -761,10 +1294,10 @@
             appState.apiKey = apiKey;
             appState.athleteId = athleteId;
 
-            setStatus('Hämtar data...');
+            setStatus('Hämtar data (1100 dagar)...');
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
-            const oldestStr = toLocalDateString(daysAgo(90));
+            const oldestStr = toLocalDateString(daysAgo(1100));
 
             try {
                 const response = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/activities?oldest=${oldestStr}`, {
@@ -778,11 +1311,61 @@
 
                 const data = await response.json();
                 appState.activities = Array.isArray(data) ? data : [];
-                processAndRenderDashboard(appState.activities);
+                document.getElementById('dataCountBadge').textContent = `${appState.activities.length} Pass Hämtade (1100d)`;
+                
+                computeCurrentAcwr(appState.activities);
+                updateDashboardPeriodView();
+                fetchTodayWellness();
                 setStatus('Ansluten via API');
             } catch (error) {
                 console.error(error);
                 setStatus('Kommunikationsfel');
+            }
+        }
+
+        function computeCurrentAcwr(activities) {
+            const now = new Date();
+            const sevenDaysAgo = new Date(now);
+            sevenDaysAgo.setDate(now.getDate() - 7);
+            const twentyEightDaysAgo = new Date(now);
+            twentyEightDaysAgo.setDate(now.getDate() - 28);
+
+            let vol7d = 0;
+            let vol28d = 0;
+
+            activities.forEach(act => {
+                const actDate = new Date(act.start_date_local);
+                const distKm = act.distance ? act.distance / 1000 : 0;
+                const cat = classifyActivity(act);
+                if (cat.key === 'run') {
+                    if (actDate >= sevenDaysAgo) vol7d += distKm;
+                    if (actDate >= twentyEightDaysAgo) vol28d += distKm;
+                }
+            });
+
+            const chronicWeekly = vol28d / 4;
+            const acwr = chronicWeekly > 0 ? vol7d / chronicWeekly : 0;
+            appState.latestAcwr = acwr;
+
+            const acwrEl = document.getElementById('kpiAcwr');
+            const acwrBadge = document.getElementById('kpiAcwrBadge');
+            acwrEl.textContent = acwr.toFixed(2);
+
+            if (acwr === 0) {
+                acwrBadge.textContent = 'Ingen data';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-700 text-slate-300';
+            } else if (acwr >= 0.8 && acwr <= 1.3) {
+                acwrBadge.textContent = 'Optimal';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+            } else if (acwr > 1.3 && acwr <= 1.5) {
+                acwrBadge.textContent = 'Hög ökning';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30';
+            } else if (acwr > 1.5) {
+                acwrBadge.textContent = 'Riskzon!';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30';
+            } else {
+                acwrBadge.textContent = 'Låg';
+                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30';
             }
         }
 
@@ -799,10 +1382,7 @@
                     headers: { 'Authorization': authHeader }
                 });
 
-                if (!response.ok) {
-                    autoSaveAcwrToIntervals();
-                    return;
-                }
+                if (!response.ok) return;
 
                 const data = await response.json();
                 if (typeof data.sleepQuality === 'number') {
@@ -854,7 +1434,7 @@
                     body: JSON.stringify(payload)
                 });
             } catch (error) {
-                console.log('Auto-sparande av ACWR hoppades över (wellness saknas för dagen).');
+                // Tyst hantering om wellness-posten ännu inte finns
             }
         }
 
@@ -909,104 +1489,20 @@
             }
         }
 
-        function processAndRenderDashboard(activities) {
-            const sortedActivities = [...activities].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
-            const now = new Date();
-            const sevenDaysAgo = new Date(now);
-            sevenDaysAgo.setDate(now.getDate() - 7);
-            const twentyEightDaysAgo = new Date(now);
-            twentyEightDaysAgo.setDate(now.getDate() - 28);
-
-            let weeklyVol = 0;
-            let vol7d = 0;
-            let vol28d = 0;
-            let runPassesCount = 0;
-            let fatmaxPassesCount = 0;
-            let altCount = 0;
-            let hrLowCount = 0;
-            let hrMidCount = 0;
-            let hrHighCount = 0;
-
-            sortedActivities.forEach(act => {
-                const actDate = new Date(act.start_date_local);
-                const distKm = act.distance ? act.distance / 1000 : 0;
-                const isRun = /run/i.test(act.type || '');
-                const hr = act.average_heartrate || 0;
-
-                if (actDate >= sevenDaysAgo && isRun) {
-                    weeklyVol += distKm;
-                    vol7d += distKm;
-                }
-
-                if (actDate >= twentyEightDaysAgo && isRun) {
-                    vol28d += distKm;
-                }
-
-                if (isRun) {
-                    runPassesCount++;
-                    if (hr > 0 && hr <= 124) fatmaxPassesCount++;
-                } else {
-                    altCount++;
-                }
-
-                if (hr > 0) {
-                    if (hr <= 124) hrLowCount++;
-                    else if (hr <= 145) hrMidCount++;
-                    else hrHighCount++;
-                }
-            });
-
-            const chronicWeekly = vol28d / 4;
-            const acwr = chronicWeekly > 0 ? vol7d / chronicWeekly : 0;
-            appState.latestAcwr = acwr;
-
-            document.getElementById('kpiWeeklyVol').textContent = `${weeklyVol.toFixed(1)} km`;
-            
-            const acwrEl = document.getElementById('kpiAcwr');
-            const acwrBadge = document.getElementById('kpiAcwrBadge');
-            acwrEl.textContent = acwr.toFixed(2);
-
-            if (acwr === 0) {
-                acwrBadge.textContent = 'Ingen data';
-                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-700 text-slate-300';
-            } else if (acwr >= 0.8 && acwr <= 1.3) {
-                acwrBadge.textContent = 'Optimal';
-                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
-            } else if (acwr > 1.3 && acwr <= 1.5) {
-                acwrBadge.textContent = 'Hög ökning';
-                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30';
-            } else if (acwr > 1.5) {
-                acwrBadge.textContent = 'Riskzon!';
-                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30';
-            } else {
-                acwrBadge.textContent = 'Låg';
-                acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30';
-            }
-
-            const fatmaxShare = runPassesCount > 0 ? Math.round((fatmaxPassesCount / runPassesCount) * 100) : 0;
-            document.getElementById('kpiFatmaxShare').textContent = `${fatmaxShare}%`;
-            document.getElementById('kpiAltCount').textContent = `${altCount} st`;
-
-            renderTable(sortedActivities);
-            renderCharts(sortedActivities, hrLowCount, hrMidCount, hrHighCount);
-            fetchTodayWellness();
-        }
-
         function renderTable(activities) {
             const tbody = document.getElementById('activitiesTableBody');
-            const countBadge = document.getElementById('dataCountBadge');
             tbody.innerHTML = '';
-            countBadge.textContent = `${activities.length} Pass Hämtade`;
 
             if (!activities.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">Inga aktiviteter hittades.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">Inga aktiviteter under vald period.</td></tr>';
                 return;
             }
 
             tbody.innerHTML = activities.map(act => {
                 const date = String(act.start_date_local || '').slice(0, 10);
                 const name = act.name || 'Träningspass';
-                const type = act.type || 'Löpning';
+                const cat = classifyActivity(act);
+                const typeLabel = act.type ? `${cat.label} (${act.type})` : cat.label;
                 const distKm = act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '-';
                 const durMin = act.moving_time ? `${Math.round(act.moving_time / 60)} min` : '-';
                 const hr = act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm` : '-';
@@ -1015,7 +1511,9 @@
                     <tr onclick="openActivityDetail('${act.id}')" class="border-b border-slate-800 hover:bg-indigo-950/40 cursor-pointer transition group">
                         <td class="p-2.5 text-slate-400">${date}</td>
                         <td class="p-2.5 font-bold text-white group-hover:text-indigo-300 transition">${name}</td>
-                        <td class="p-2.5 text-indigo-400">${type}</td>
+                        <td class="p-2.5">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${cat.badgeClass}">${typeLabel}</span>
+                        </td>
                         <td class="p-2.5">${distKm}</td>
                         <td class="p-2.5">${durMin}</td>
                         <td class="p-2.5 text-rose-400">${hr}</td>
@@ -1025,85 +1523,7 @@
             }).join('');
         }
 
-        function renderCharts(activities, hrLow, hrMid, hrHigh) {
-            const labels = [];
-            const dateMap = {};
-
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const key = toLocalDateString(d);
-                labels.push(key.slice(5));
-                dateMap[key] = i;
-            }
-
-            const runData = new Array(7).fill(0);
-            const walkData = new Array(7).fill(0);
-            const otherData = new Array(7).fill(0);
-
-            activities.forEach(act => {
-                const dateStr = String(act.start_date_local || '').slice(0, 10);
-                if (dateMap[dateStr] !== undefined) {
-                    const idx = 6 - (new Date().setHours(0,0,0,0) - new Date(dateStr).setHours(0,0,0,0)) / (1000 * 60 * 60 * 24);
-                    // Beräkna minuter
-                    const mins = act.moving_time ? act.moving_time / 60 : 0;
-                    const type = (act.type || '').toLowerCase();
-                    const name = (act.name || '').toLowerCase();
-
-                    // Säkerställ rätt index inom 0-6
-                    const diffDays = Math.round((new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24));
-                    const arrayIdx = 6 - diffDays;
-
-                    if (arrayIdx >= 0 && arrayIdx < 7) {
-                        if (type.includes('walk') || name.includes('promenad')) {
-                            walkData[arrayIdx] += mins;
-                        } else if (type.includes('run') || type.includes('löpning')) {
-                            runData[arrayIdx] += mins;
-                        } else {
-                            otherData[arrayIdx] += mins;
-                        }
-                    }
-                }
-            });
-
-            const volCtx = document.getElementById('weeklyVolumeChart');
-            if (volumeChartInstance) volumeChartInstance.destroy();
-            volumeChartInstance = new Chart(volCtx.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels,
-                    datasets: [
-                        { label: 'Löpning', data: runData, backgroundColor: '#6366f1', borderRadius: 4 },
-                        { label: 'Promenad', data: walkData, backgroundColor: '#38bdf8', borderRadius: 4 },
-                        { label: 'Styrka / Annat', data: otherData, backgroundColor: '#10b981', borderRadius: 4 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { stacked: true, ticks: { color: '#94a3b8' }, grid: { display: false } },
-                        y: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
-                    }
-                }
-            });
-
-            const zoneCtx = document.getElementById('hrZoneChart');
-            if (zoneChartInstance) zoneChartInstance.destroy();
-            zoneChartInstance = new Chart(zoneCtx.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['FatMax (<=124)', 'Mellan (125-145)', 'Tröskel (>145)'],
-                    datasets: [{ data: [hrLow, hrMid, hrHigh], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'] }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#f8fafc', font: { size: 10 } } } }
-                }
-            });
-        }
+        // ================= PASSDETALJER & DJUPANALYS =================
 
         function computeStreamAverages(streams) {
             const getStream = (type) => {
@@ -1157,7 +1577,6 @@
             return { avgGct, avgBal, avgStepLen };
         }
 
-        // PASSDETALJER & DJUPANALYS
         async function openActivityDetail(activityId) {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
@@ -1219,18 +1638,25 @@
         function renderActivityOverviewAndBlocks(act, streamStats = {}) {
             const date = String(act.start_date_local || '').slice(0, 16).replace('T', ' ');
             document.getElementById('detailDate').textContent = date;
-            document.getElementById('detailTypeBadge').textContent = act.type || 'Aktivitet';
+            
+            const cat = classifyActivity(act);
+            const typeBadge = document.getElementById('detailTypeBadge');
+            typeBadge.textContent = act.type ? `${cat.label} (${act.type})` : cat.label;
+            typeBadge.className = `px-2 py-0.5 text-[10px] font-semibold rounded-full ${cat.badgeClass}`;
+            
             document.getElementById('detailTitle').textContent = act.name || 'Träningspass';
 
-            const cat = getWorkoutCategoryDetails(act);
-            document.getElementById('detailWorkoutCategoryBadge').textContent = cat.label;
-            document.getElementById('dynamicTargetsHint').textContent = `Mål (${cat.label}): Kadens ≥ ${cat.minCadence} spm | GCT ≤ ${cat.maxGct} ms`;
+            const targets = getWorkoutTargets(act);
+            document.getElementById('detailWorkoutCategoryBadge').textContent = targets.label;
+            document.getElementById('dynamicTargetsHint').textContent = targets.maxGct > 0
+                ? `Mål (${targets.label}): Kadens ≥ ${targets.minCadence} spm | GCT ≤ ${targets.maxGct} ms`
+                : `Aktivitetstyp: ${cat.label}`;
 
-            // Färgmatchade ramar runt blocken
+            // Färgmatchade ramar runt blocken baserat på aktivitetstyp
             const b1Container = document.getElementById('block1Container');
             const b2Container = document.getElementById('block2Container');
-            b1Container.className = `bg-slate-800/60 border ${cat.borderColor} rounded-2xl p-5 space-y-4 transition-all`;
-            b2Container.className = `bg-slate-800/60 border ${cat.borderColor} rounded-2xl p-5 space-y-4 transition-all`;
+            b1Container.className = `bg-slate-800/60 border-2 ${cat.borderClass} rounded-2xl p-5 space-y-4 transition-all`;
+            b2Container.className = `bg-slate-800/60 border-2 ${cat.borderClass} rounded-2xl p-5 space-y-4 transition-all`;
 
             const distStr = act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '0 km';
             const durStr = formatDuration(act.moving_time);
@@ -1245,10 +1671,10 @@
             `;
 
             const cadenceVal = act.average_cadence ? Math.round(act.average_cadence * 2) : 0;
-            const cadenceColor = cadenceVal >= cat.minCadence ? 'text-emerald-400' : (cadenceVal > 0 ? 'text-rose-400' : 'text-white');
+            const cadenceColor = (targets.minCadence > 0 && cadenceVal >= targets.minCadence) ? 'text-emerald-400' : (cadenceVal > 0 && targets.minCadence > 0 ? 'text-rose-400' : 'text-white');
 
             const gctVal = act.avg_stance_time || act.stance_time || streamStats.avgGct || 0;
-            const gctColor = gctVal > 0 ? getGctColorClass(gctVal, cat.maxGct) : 'text-slate-400';
+            const gctColor = gctVal > 0 ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
 
             const balVal = act.avg_stance_time_balance || act.stance_time_balance || streamStats.avgBal || 0;
             const balInfo = formatBalancePair(balVal);
@@ -1364,8 +1790,8 @@
             const gctData = getStream('stance_time');
             const gctBalData = getStream('stance_time_balance');
 
-            const cat = getWorkoutCategoryDetails(act);
-            const maxGctTarget = cat.maxGct;
+            const targets = getWorkoutTargets(act);
+            const maxGctTarget = targets.maxGct;
 
             const hasGct = gctData && gctData.some(v => v > 0);
             const hasGctBal = gctBalData && gctBalData.some(v => v > 0);
@@ -1445,7 +1871,7 @@
 
         function renderKmSplits(streams, act) {
             const tbody = document.getElementById('kmSplitsTableBody');
-            const cat = getWorkoutCategoryDetails(act);
+            const targets = getWorkoutTargets(act);
             const getStream = (type) => {
                 if (!streams) return null;
                 if (Array.isArray(streams)) {
@@ -1498,7 +1924,7 @@
                             : `Km ${currentKm}`;
 
                         const avgGct = gctCount > 0 ? gctSum / gctCount : 0;
-                        const gctClass = avgGct > 0 ? getGctColorClass(avgGct, cat.maxGct) : 'text-slate-400';
+                        const gctClass = avgGct > 0 ? getGctColorClass(avgGct, targets.maxGct) : 'text-slate-400';
 
                         const avgLeft = balCount > 0 ? (balSum / balCount) : 0;
                         const balInfo = formatBalancePair(avgLeft);
@@ -1539,14 +1965,14 @@
 
         function renderIntervalsTable(intervals, act, streams) {
             const tbody = document.getElementById('intervalsSplitsTableBody');
-            const cat = getWorkoutCategoryDetails(act);
+            const targets = getWorkoutTargets(act);
 
             if (!intervals || !intervals.length) {
                 tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">Inga separata varv eller intervaller registrerade för detta pass.</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = intervals.map((iv, idx) => {
+            tbody.innerHTML = intervals.map((iv) => {
                 const avgSpeed = iv.average_speed || (iv.distance && iv.moving_time ? iv.distance / iv.moving_time : (iv.distance && iv.time ? iv.distance / iv.time : 0));
                 const typeInfo = determineIntervalType(iv, avgSpeed);
                 const typeBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold ${typeInfo.badge}">${typeInfo.text}</span>`;
@@ -1560,7 +1986,7 @@
                 
                 let gctVal = iv.avg_stance_time || iv.stance_time || 0;
                 if (!gctVal && streams && (iv.start_index !== undefined && iv.end_index !== undefined)) {
-                    const gctStream = streams.find(s => s.type === 'stance_time');
+                    const gctStream = Array.isArray(streams) ? streams.find(s => s.type === 'stance_time') : { data: streams['stance_time'] };
                     if (gctStream && gctStream.data) {
                         let sum = 0, count = 0;
                         for (let i = iv.start_index; i <= iv.end_index && i < gctStream.data.length; i++) {
@@ -1574,7 +2000,7 @@
                 }
 
                 const gctText = gctVal > 0 ? Math.round(gctVal) + ' ms' : '-';
-                const gctClass = (typeInfo.isRunning && gctVal > 0) ? getGctColorClass(gctVal, cat.maxGct) : 'text-slate-400';
+                const gctClass = (typeInfo.isRunning && gctVal > 0) ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
 
                 const balRaw = iv.avg_stance_time_balance || iv.stance_time_balance || 0;
                 const balInfo = formatBalancePair(balRaw);
