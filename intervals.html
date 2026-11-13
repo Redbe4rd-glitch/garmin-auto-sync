@@ -582,6 +582,8 @@ Main Set 4x
             currentChartBuckets: [],
             aiRecommendation: null,
             generatedWeeklySchedule: []
+            wellnessHistory: [],
+            coachAnalysis: null,
         };
 
         let volumeChartInstance = null;
@@ -1061,60 +1063,91 @@ Main Set 4x
             const foot = parseInt(document.getElementById('inputFoot').value, 10);
             const sleep = parseInt(document.getElementById('inputSleep').value, 10);
             const readiness = parseInt(document.getElementById('inputReadiness').value, 10);
-
+        
+            const analysis = appState.coachAnalysis || runCoachGenieAnalysis();
             const maxPain = Math.max(calf, knee, hip, foot);
+        
             const banner = document.getElementById('readinessBanner');
             const icon = document.getElementById('readinessIcon');
             const title = document.getElementById('readinessTitle');
             const desc = document.getElementById('readinessDesc');
             const action = document.getElementById('readinessAction');
             const sendBtn = document.getElementById('sendAiRecBtn');
-
-            if (maxPain >= 3 || readiness === 1 || sleep === 1) {
+        
+            // Sammanfattningsrad med 7/14/28d + vilopuls + ev. GCT/balans-varning
+            const contextSummary = `Löpning 7/14/28d: ${analysis.runKm7.toFixed(1)} / ${analysis.runKm14.toFixed(1)} / ${analysis.runKm28.toFixed(1)} km (längsta 14d: ${Math.round(analysis.maxRunMin14)} min) | Alt. cardio: ${analysis.altMin7}/${analysis.altMin14}/${analysis.altMin28} min. ${analysis.rhrTrendText}. ${analysis.biomechWarning}`;
+        
+            // 1. RÖTT LJUS: Smärta >= 3/10 eller kraftigt förhöjd vilopuls (+4 bpm)
+            if (maxPain >= 3 || readiness === 1 || sleep === 1 || analysis.rhrDelta >= 4) {
                 banner.className = "bg-gradient-to-r from-rose-950/80 to-slate-800 border border-rose-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-rose-400";
                 icon.setAttribute('data-lucide', 'shield-alert');
-                title.textContent = "🔴 Rött Ljus: Hög Skaderisk / Belastningsvarning";
-                
-                let source = "Känning över 3/10";
-                if (calf >= 3) source = "Varning i Vad/Hälsena";
-                else if (knee >= 3) source = "Varning i Knä/ITB";
-                else if (hip >= 3) source = "Stramhet i Höft/Säte";
-                else if (foot >= 3) source = "Känning i Fot/Benhinna";
-
-                desc.textContent = `${source} upptäckt. Vila från löpning rekommenderas för att skydda senor och leder.`;
-                action.textContent = "Rekommendation: Alternativ träning / Rehab / Vila";
-                sendBtn.classList.add('hidden');
-                appState.aiRecommendation = null;
-            } 
-            else if (maxPain >= 1 || readiness === 2 || sleep <= 2) {
+                title.textContent = "🔴 Rött Ljus: Avlastning & Senrehab";
+                desc.textContent = `${contextSummary}`;
+                action.textContent = "Ordination: Ingen löpning – kör Crosstrainer/Cykel + Vadrehab";
+        
+                const rehabPass = appState.libraryWorkouts.find(w => (w.name || '').includes('[Rehab]'));
+                if (rehabPass) {
+                    appState.aiRecommendation = rehabPass;
+                    sendBtn.classList.remove('hidden');
+                } else {
+                    appState.aiRecommendation = null;
+                    sendBtn.classList.add('hidden');
+                }
+            }
+            // 2. RETURN-TO-RUN-LÄGE: Låg smärta (0-2), men du har sprungit < 10 km eller max 15 min senaste 14d
+            else if (analysis.isReturnToRun) {
+                banner.className = "bg-gradient-to-r from-sky-950/80 to-slate-800 border border-sky-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
+                icon.className = "w-8 h-8 text-sky-400";
+                icon.setAttribute('data-lucide', 'footprints');
+                title.textContent = "🔵 Return-to-Run: Kontrollerad Löpstart";
+                desc.textContent = `Du har hållit igång motorn med ${analysis.altMin14} min alternativ träning (14d), men löpvolymen är låg (${Math.round(analysis.maxRunMin14)} min max). Långpass är spärrat. ${analysis.rhrTrendText}. ${analysis.biomechWarning}`;
+        
+                if (maxPain <= 1 && !analysis.biomechWarning) {
+                    action.textContent = "Testpass: 12 min (4x [1 min lugn jogg + 2 min gång])";
+                    appState.aiRecommendation = {
+                        id: 'rtr-test-1',
+                        name: '[FatMax] Return-to-Run Test (4x 1m jogg / 2m gång)',
+                        isCustomDirect: true,
+                        workoutText: "- 5m Walk Warmup\n\nMain Set 4x\n- 1m FatMax Z2 (100-124 bpm)\n- 2m Walk\n\n- 3m Cooldown Walk"
+                    };
+                    sendBtn.classList.remove('hidden');
+                } else {
+                    action.textContent = "Ordination: 30–40 min Crosstrainer/Cykel (FatMax) – vänta 48h med nästa löptest";
+                    const fatmaxAlt = appState.libraryWorkouts.find(w => (w.name || '').includes('[FatMax]') || (w.name || '').includes('[Rehab]'));
+                    appState.aiRecommendation = fatmaxAlt || null;
+                    sendBtn.classList.toggle('hidden', !fatmaxAlt);
+                }
+            }
+            // 3. GULT LJUS: Lätt stelhet (1-2/10), lätt förhöjd vilopuls eller GCT/balans-varning
+            else if (maxPain >= 1 || readiness === 2 || sleep <= 2 || analysis.rhrDelta >= 2 || analysis.biomechWarning) {
                 banner.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-amber-400";
                 icon.setAttribute('data-lucide', 'shield');
-                title.textContent = "🟡 Gult Ljus: Skadeförebyggande läge (Lätt stelhet)";
-                desc.textContent = "Lättare känning eller trötthet noterad. Lugn jogg eller alternativ träning rekommenderas.";
-                action.textContent = "Rekommendation: Kontrollerat Långpass (FatMax)";
-                sendBtn.classList.remove('hidden');
-                
-                // Matchar mot det dynamiska biblioteket om möjligt
-                appState.aiRecommendation = appState.libraryWorkouts.find(w => w.name.includes('FatMax') || w.name.includes('Långpass')) || appState.libraryWorkouts[0];
-            } 
+                title.textContent = "🟡 Gult Ljus: Skadeförebyggande läge";
+                desc.textContent = contextSummary;
+                action.textContent = "Ordination: Kort lugn FatMax-jogg (max 30 min) eller Crosstrainer";
+                appState.aiRecommendation = appState.libraryWorkouts.find(w => (w.name || '').includes('[FatMax]')) || appState.libraryWorkouts[0];
+                sendBtn.classList.toggle('hidden', !appState.aiRecommendation);
+            }
+            // 4. GRÖNT LJUS: Etablerad löpvolym (>10 km/14d), 0 smärta, stabil vilopuls & bra GCT/balans
             else {
                 banner.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-emerald-400";
                 icon.setAttribute('data-lucide', 'shield-check');
                 title.textContent = "🟢 Grönt Ljus: Kroppen i utmärkt balans";
-                desc.textContent = "Inga påtagliga känningar eller belastningstoppar loggade. Redo för planerad träning och formutveckling.";
-                
+                desc.textContent = contextSummary;
+        
                 if (appState.latestAcwr > 1.3) {
-                    action.textContent = "Rekommendation: Lugnt FatMax-pass (Hög belastning kvot)";
-                    appState.aiRecommendation = appState.libraryWorkouts.find(w => w.name.includes('FatMax')) || appState.libraryWorkouts[0];
+                    action.textContent = "Ordination: Lugnt FatMax-pass (ACWR > 1.3)";
+                    appState.aiRecommendation = appState.libraryWorkouts.find(w => (w.name || '').includes('[FatMax]')) || appState.libraryWorkouts[0];
                 } else {
-                    action.textContent = "Rekommendation: Norsk Tröskel (Optimal för syreupptag)";
-                    appState.aiRecommendation = appState.libraryWorkouts.find(w => w.name.includes('[Tröskel]')) || appState.libraryWorkouts[0];
+                    action.textContent = "Ordination: Kvalitet / Tröskelpass OK";
+                    appState.aiRecommendation = appState.libraryWorkouts.find(w => (w.name || '').includes('[Tröskel]')) || appState.libraryWorkouts[0];
                 }
-                sendBtn.classList.remove('hidden');
+                sendBtn.classList.toggle('hidden', !appState.aiRecommendation);
             }
+        
             if (window.lucide) lucide.createIcons();
         }
 
@@ -1285,98 +1318,193 @@ Main Set 4x
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
             const startOfWeek = getStartOfWeek(new Date());
             const dayNames = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
-
+        
             const calf = parseInt(document.getElementById('inputCalf').value, 10);
-            const isInjured = calf >= 3;
-
-            // Om biblioteket är tomt, hämta först
-            if (!appState.libraryWorkouts.length) {
-                alert('Hämtar pass från biblioteket först...');
-                fetchLibraryWorkouts().then(() => generateAiWeeklySchedule());
-                return;
-            }
-
-            // Hjälpfunktion för att plocka ett pass baserat på sökord ur det riktiga biblioteket
-            const findWorkoutByKeyword = (keyword) => {
-                return appState.libraryWorkouts.find(w => (w.name || '').toLowerCase().includes(keyword.toLowerCase())) || appState.libraryWorkouts[0];
-            };
-
-            let scheduleTemplate = [
-                { dayIdx: 0, keyword: 'Vila' },
-                { dayIdx: 1, keyword: isInjured ? 'Rehab' : 'Tröskel' },
-                { dayIdx: 2, keyword: 'Rehab' },
-                { dayIdx: 3, keyword: isInjured ? 'FatMax' : 'VO2max' },
-                { dayIdx: 4, keyword: 'Vila' },
-                { dayIdx: 5, keyword: 'FatMax' },
-                { dayIdx: 6, keyword: 'Fartlek' }
-            ];
-
-            appState.generatedWeeklySchedule = scheduleTemplate.map((item, idx) => {
-                const dateObj = new Date(startOfWeek);
-                dateObj.setDate(startOfWeek.getDate() + idx);
-                const dateStr = toLocalDateString(dateObj);
-                const workout = findWorkoutByKeyword(item.keyword);
-
-                return {
-                    dayName: dayNames[idx],
-                    dateStr,
-                    workout
+            const knee = parseInt(document.getElementById('inputKnee').value, 10);
+            const hip = parseInt(document.getElementById('inputHip').value, 10);
+            const foot = parseInt(document.getElementById('inputFoot').value, 10);
+            const maxPain = Math.max(calf, knee, hip, foot);
+        
+            const analysis = appState.coachAnalysis || runCoachGenieAnalysis();
+            const isRedLight = (maxPain >= 3 || analysis.rhrDelta >= 4);
+            const canTestRun = (!isRedLight && maxPain <= 1 && !analysis.biomechWarning);
+        
+            // Om användaren är i Return-to-Run eller har känning: Bygg 50-70 km-ekvivalent (ca 5.5h varierad kondition + styrka)
+            if (analysis.isReturnToRun || maxPain >= 1 || isRedLight) {
+                const altWeekTemplate = [
+                    {
+                        dayIdx: 0,
+                        title: 'Vila & Rörlighet',
+                        tag: 'Återhämtning',
+                        tagClass: 'bg-slate-700 text-slate-300',
+                        sportType: 'Workout',
+                        isRest: true,
+                        desc: 'Fullständig vila från kondition. Lätt fotledsrörlighet och foamrolling av vader.'
+                    },
+                    {
+                        dayIdx: 1,
+                        title: canTestRun ? 'Return-to-Run Test + Crosstrainer' : 'Crosstrainer Tröskel (Norska 4x4)',
+                        tag: canTestRun ? 'Test + Kvalitet (60m)' : 'Kvalitet AT (55m)',
+                        tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+                        sportType: canTestRun ? 'Run' : 'Elliptical',
+                        desc: canTestRun
+                            ? '- 5m Walk Warmup\n\nMain Set 4x\n- 1m FatMax Z2 (100-124 bpm)\n- 2m Walk\n\n- 40m Crosstrainer FatMax (115-124 bpm) direkt efter som volymersättning'
+                            : '- 10m Warmup Z1-Z2\n\nMain Set 4x\n- 4m Crosstrainer AT (137-142 bpm)\n- 2m Lugn tramp (Z1)\n\n- 10m Cooldown Z1'
+                    },
+                    {
+                        dayIdx: 2,
+                        title: 'Tung Vadrehab & Löpstyrka',
+                        tag: 'Styrka & Senrehab (45m)',
+                        tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+                        sportType: 'WeightTraining',
+                        desc: '- 3x12 Raka tåhävningar (3s upp, 3s ner)\n- 3x15 Sittande tåhävningar (soleus)\n- 3x10 Enbens knäböj / Utfall\n- 3x12 Höftlyft & Core'
+                    },
+                    {
+                        dayIdx: 3,
+                        title: 'Cykel Distans (FatMax)',
+                        tag: 'Aerob Bas (65m)',
+                        tagClass: 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
+                        sportType: 'Ride',
+                        desc: '- 10m Warmup Z1\n- 45m Cykel/Trainer i FatMax (110-124 bpm, hög kadens 90+ rpm för minimal vadbelastning)\n- 10m Cooldown Z1'
+                    },
+                    {
+                        dayIdx: 4,
+                        title: 'Vila eller Lätt Core/Rörlighet',
+                        tag: 'Återhämtning',
+                        tagClass: 'bg-slate-700 text-slate-300',
+                        sportType: 'Workout',
+                        isRest: true,
+                        desc: 'Vilodag inför helgens längre konditionsblock. Utvärdera morgonstelhet i vad/hälsena.'
+                    },
+                    {
+                        dayIdx: 5,
+                        title: canTestRun ? 'Långpass-ersättning: Test + Cykel/Cross' : 'Långpass-ersättning: Cykel + Crosstrainer',
+                        tag: 'Långpass FatMax (95m)',
+                        tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+                        sportType: canTestRun ? 'Run' : 'Ride',
+                        desc: canTestRun
+                            ? '- 5m Walk Warmup\n\nMain Set 5x\n- 1m FatMax Z2 (100-124 bpm)\n- 2m Walk\n\n- 75m Cykel eller Crosstrainer i FatMax (110-124 bpm) för motsvarande 15 km långpass'
+                            : '- 50m Cykel FatMax (110-124 bpm)\n- 45m Crosstrainer FatMax (115-124 bpm)\n(Byte av redskap halvvägs sparar rygg och fötter)'
+                    },
+                    {
+                        dayIdx: 6,
+                        title: 'Crosstrainer Fartlek + Vadrehab',
+                        tag: 'Varierad Cardio + Rehab (60m)',
+                        tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+                        sportType: 'Elliptical',
+                        desc: '- 10m Warmup Z1\n- 35m Crosstrainer Fartlek (växla 3m 120 bpm / 1m 135-140 bpm)\n- 15m Vadrehab: Tåhävningar & balansplatta'
+                    }
+                ];
+        
+                appState.generatedWeeklySchedule = altWeekTemplate.map((item, idx) => {
+                    const dateObj = new Date(startOfWeek);
+                    dateObj.setDate(startOfWeek.getDate() + idx);
+                    return {
+                        dayName: dayNames[idx],
+                        dateStr: toLocalDateString(dateObj),
+                        isCustomAlt: true,
+                        ...item
+                    };
+                });
+            } else {
+                // FULL LÖPVECKA (50-70 km) när man är etablerad (>10 km/14d) och har Grönt Ljus
+                if (!appState.libraryWorkouts.length) {
+                    alert('Hämtar pass från biblioteket först...');
+                    fetchLibraryWorkouts().then(() => generateAiWeeklySchedule());
+                    return;
+                }
+        
+                const findWorkoutByKeyword = (keyword) => {
+                    return appState.libraryWorkouts.find(w => (w.name || '').toLowerCase().includes(keyword.toLowerCase())) || appState.libraryWorkouts[0];
                 };
-            });
-
-            container.innerHTML = appState.generatedWeeklySchedule.map(item => {
-                const wName = item.workout ? item.workout.name : 'Vilodag';
-                const cat = item.workout ? getPhilosophyCategory(wName) : 'Vila';
-                const desc = item.workout ? (item.workout.description || 'Ingen beskrivning') : 'Återhämtning';
-
-                return `
-                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3.5 space-y-2 flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-center text-[11px] text-indigo-400 font-bold">
-                                <span>${item.dayName}</span>
-                                <span class="font-mono text-slate-400">${item.dateStr.slice(5)}</span>
-                            </div>
-                            <h4 class="font-bold text-white text-xs mt-1">${wName}</h4>
-                            <span class="inline-block mt-1 px-2 py-0.5 text-[9px] font-semibold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">[${cat}]</span>
+        
+                const runWeekTemplate = [
+                    { dayIdx: 0, keyword: 'Vila', isRest: true },
+                    { dayIdx: 1, keyword: 'Tröskel', isRest: false },
+                    { dayIdx: 2, keyword: 'Rehab', isRest: false },
+                    { dayIdx: 3, keyword: 'VO2max', isRest: false },
+                    { dayIdx: 4, keyword: 'Vila', isRest: true },
+                    { dayIdx: 5, keyword: 'FatMax', isRest: false },
+                    { dayIdx: 6, keyword: 'Fartlek', isRest: false }
+                ];
+        
+                appState.generatedWeeklySchedule = runWeekTemplate.map((item, idx) => {
+                    const dateObj = new Date(startOfWeek);
+                    dateObj.setDate(startOfWeek.getDate() + idx);
+                    const workout = item.isRest ? null : findWorkoutByKeyword(item.keyword);
+                    const wName = workout ? workout.name : 'Vilodag';
+                    const cat = workout ? getPhilosophyCategory(wName) : 'Vila';
+        
+                    return {
+                        dayName: dayNames[idx],
+                        dateStr: toLocalDateString(dateObj),
+                        isCustomAlt: false,
+                        isRest: item.isRest,
+                        workoutId: workout ? workout.id : null,
+                        title: wName,
+                        tag: `[${cat}]`,
+                        tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+                        sportType: 'Run',
+                        desc: workout ? (workout.description || 'Ingen beskrivning') : 'Fullständig återhämtning'
+                    };
+                });
+            }
+        
+            container.innerHTML = appState.generatedWeeklySchedule.map(item => `
+                <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3.5 space-y-2 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center text-[11px] text-indigo-400 font-bold">
+                            <span>${item.dayName}</span>
+                            <span class="font-mono text-slate-400">${item.dateStr.slice(5)}</span>
                         </div>
-                        <div class="text-[10px] text-slate-300 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800/80 line-clamp-3">
-                            ${desc}
-                        </div>
+                        <h4 class="font-bold text-white text-xs mt-1">${item.title}</h4>
+                        <span class="inline-block mt-1 px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.tagClass}">${item.tag}</span>
                     </div>
-                `;
-            }).join('');
-
+                    <div class="text-[10px] text-slate-300 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800/80 whitespace-pre-line">
+                        ${item.desc}
+                    </div>
+                </div>
+            `).join('');
+        
             sendWholeBtn.classList.remove('hidden');
             if (window.lucide) lucide.createIcons();
         }
-
+        
         async function sendWholeScheduleToIntervals() {
             if (!appState.generatedWeeklySchedule.length) {
                 alert('Generera ett schema först.');
                 return;
             }
-
+        
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
             if (!apiKey || !athleteId) {
                 openSettingsModal();
                 return;
             }
-
+        
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             let successCount = 0;
-
+        
             for (let item of appState.generatedWeeklySchedule) {
-                if (!item.workout || (item.workout.name || '').includes('Vila')) continue;
-
+                if (item.isRest) continue;
+        
                 const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
-                const payload = {
-                    workout_id: item.workout.id,
-                    start_date_local: `${item.dateStr}T00:00:00`,
-                    type: 'Workout',
-                    name: item.workout.name
-                };
-
+                const payload = item.isCustomAlt
+                    ? {
+                        category: 'WORKOUT',
+                        start_date_local: `${item.dateStr}T00:00:00`,
+                        type: item.sportType || 'Workout',
+                        name: item.title,
+                        description: item.desc
+                    }
+                    : {
+                        workout_id: item.workoutId,
+                        start_date_local: `${item.dateStr}T00:00:00`,
+                        type: 'Workout',
+                        name: item.title
+                    };
+        
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -1390,8 +1518,8 @@ Main Set 4x
                     console.error('Kunde inte skicka pass för', item.dateStr, e);
                 }
             }
-
-            alert(`✅ ${successCount} pass har skickats till Intervals.icu och lagts in på rätt datum i din klockkalender!`);
+        
+            alert(`✅ ${successCount} pass (motsvarande 50–70 km träningsbelastning) har skickats till din Intervals.icu-kalender!`);
         }
 
         async function sendAiRecommendedWorkout() {
@@ -1400,7 +1528,11 @@ Main Set 4x
                 return;
             }
             const rec = appState.aiRecommendation;
-            await scheduleIntervalsWorkout(rec.id, encodeURIComponent(rec.name));
+            if (rec.isCustomDirect) {
+                await sendWorkoutDirectly(toLocalDateString(), 'Return_to_Run_Test.txt', rec.workoutText);
+            } else {
+                await scheduleIntervalsWorkout(rec.id, encodeURIComponent(rec.name));
+            }
         }
 
         function openSettingsModal() {
@@ -1509,6 +1641,8 @@ Main Set 4x
                 
                 computeCurrentAcwr(appState.activities);
                 updateDashboardPeriodView();
+                await fetchWellnessHistory28d();
+                runCoachGenieAnalysis();
                 fetchTodayWellness();
                 setStatus('Ansluten via API');
             } catch (error) {
@@ -1562,7 +1696,123 @@ Main Set 4x
                 acwrBadge.className = 'text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30';
             }
         }
-
+                
+        // 2. Lägg till denna funktion som hämtar 28 dagars wellness (inkl. vilopuls)
+        async function fetchWellnessHistory28d() {
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            if (!apiKey || !athleteId) return;
+        
+            const oldestStr = toLocalDateString(daysAgo(28));
+            const newestStr = toLocalDateString();
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+        
+            try {
+                const res = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/wellness?oldest=${oldestStr}&newest=${newestStr}`, {
+                    headers: { 'Authorization': authHeader }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    appState.wellnessHistory = Array.isArray(data) ? data : [];
+                }
+            } catch (e) {
+                console.warn('Kunde inte hämta 28d wellness:', e);
+            }
+        }
+        
+        // 3. Den nya intelligenta analysmotorn (7d / 14d / 28d + Vilopuls + GCT/Balans)
+        function runCoachGenieAnalysis() {
+            const now = new Date();
+            const d7 = daysAgo(7);
+            const d14 = daysAgo(14);
+            const d28 = daysAgo(28);
+        
+            let runKm7 = 0, runKm14 = 0, runKm28 = 0;
+            let maxRunMin14 = 0;
+            let altMin7 = 0, altMin14 = 0, altMin28 = 0;
+            let latestRun = null;
+        
+            // Sortera aktiviteter nyast först
+            const sortedActs = [...appState.activities].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
+        
+            sortedActs.forEach(act => {
+                const actDate = new Date(act.start_date_local);
+                if (actDate < d28) return;
+        
+                const cat = classifyActivity(act);
+                const distKm = act.distance ? act.distance / 1000 : 0;
+                const durMin = act.moving_time ? act.moving_time / 60 : 0;
+        
+                if (cat.key === 'run') {
+                    if (!latestRun) latestRun = act;
+                    runKm28 += distKm;
+                    if (actDate >= d14) {
+                        runKm14 += distKm;
+                        if (durMin > maxRunMin14) maxRunMin14 = durMin;
+                    }
+                    if (actDate >= d7) runKm7 += distKm;
+                } else if (['ride', 'cardio', 'swim', 'walk'].includes(cat.key)) {
+                    altMin28 += durMin;
+                    if (actDate >= d14) altMin14 += durMin;
+                    if (actDate >= d7) altMin7 += durMin;
+                }
+            });
+        
+            // Vilopuls-analys (28 dagar vs senaste 3 dagarna)
+            const rhrEntries = appState.wellnessHistory
+                .filter(w => typeof w.restingHR === 'number' && w.restingHR > 30)
+                .sort((a, b) => a.id.localeCompare(b.id));
+        
+            let rhrAvg28 = 0, rhrRecent = 0, rhrDelta = 0, rhrTrendText = 'Ingen vilopulsdata';
+            if (rhrEntries.length >= 3) {
+                rhrAvg28 = rhrEntries.reduce((sum, w) => sum + w.restingHR, 0) / rhrEntries.length;
+                const recentSlice = rhrEntries.slice(-3);
+                rhrRecent = recentSlice.reduce((sum, w) => sum + w.restingHR, 0) / recentSlice.length;
+                rhrDelta = rhrRecent - rhrAvg28;
+        
+                if (rhrDelta >= 4) {
+                    rhrTrendText = `⚠️ Stigande vilopuls (+${rhrDelta.toFixed(1)} bpm vs 28d snitt ${Math.round(rhrAvg28)})`;
+                } else if (rhrDelta >= 2) {
+                    rhrTrendText = `↗️ Lätt förhöjd vilopuls (+${rhrDelta.toFixed(1)} bpm vs 28d snitt ${Math.round(rhrAvg28)})`;
+                } else {
+                    rhrTrendText = `✅ Stabil vilopuls (${Math.round(rhrRecent)} bpm, 28d snitt ${Math.round(rhrAvg28)})`;
+                }
+            }
+        
+            // Biomekanisk kontroll på senaste löppasset
+            let biomechWarning = '';
+            if (latestRun) {
+                const gct = latestRun.avg_stance_time || latestRun.stance_time || 0;
+                const bal = latestRun.avg_stance_time_balance || latestRun.stance_time_balance || 0;
+                const targets = getWorkoutTargets(latestRun);
+        
+                const issues = [];
+                if (gct > 0 && targets.maxGct > 0 && gct > targets.maxGct) {
+                    issues.push(`hög GCT (${Math.round(gct)} ms > ${targets.maxGct} ms)`);
+                }
+                if (bal > 0 && Math.abs(bal - 50) > 1.2) {
+                    issues.push(`snedbelastning (${bal.toFixed(1)}% / ${(100 - bal).toFixed(1)}%)`);
+                }
+                if (issues.length > 0) {
+                    biomechWarning = `Senaste löppasset visade ${issues.join(' och ')}.`;
+                }
+            }
+        
+            // Avgör om användaren är i "Return-to-Run" (upptrappningsfas)
+            const isReturnToRun = (runKm14 < 10 || maxRunMin14 < 15);
+        
+            appState.coachAnalysis = {
+                runKm7, runKm14, runKm28, maxRunMin14,
+                altMin7: Math.round(altMin7),
+                altMin14: Math.round(altMin14),
+                altMin28: Math.round(altMin28),
+                rhrDelta, rhrTrendText,
+                biomechWarning,
+                isReturnToRun
+            };
+        
+            return appState.coachAnalysis;
+        }
         async function fetchTodayWellness() {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
