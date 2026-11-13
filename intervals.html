@@ -295,15 +295,35 @@
         <!-- ================= VYN 2: PASSBIBLIOTEK ================= -->
         <div id="viewLibrary" class="space-y-6 hidden">
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
-                <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-700 pb-4 gap-4">
                     <div>
                         <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                            <i data-lucide="book-open" class="w-4 h-4 text-indigo-400"></i> Kategoriserat Passbibliotek
+                            <i data-lucide="book-open" class="w-4 h-4 text-indigo-400"></i> Intervals.icu Passbibliotek & Filosofi
                         </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Dina unika favoritpass med träningsfilosofi och direkt synk till klockan.</p>
+                        <p class="text-xs text-slate-400 mt-0.5">Hämtas direkt från ditt Intervals.icu-konto. Välj pass, datum och skicka till klockan.</p>
+                    </div>
+                    <div class="flex items-center gap-2 w-full md:w-auto">
+                        <input type="text" id="librarySearchInput" placeholder="Sök i biblioteket..." oninput="filterLibraryView()" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full md:w-48">
+                        <button onclick="fetchLibraryWorkouts()" class="p-2 bg-slate-900 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition" title="Uppdatera bibliotek">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="workoutLibraryGrid"></div>
+
+                <!-- Filosofi Filter Tabs -->
+                <div class="flex flex-wrap gap-2" id="libraryPhilosophyTabs">
+                    <button onclick="setLibraryPhilosophy('Alla')" data-lib-tab="Alla" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-indigo-600 text-white shadow">Alla Pass</button>
+                    <button onclick="setLibraryPhilosophy('[Tröskel]')" data-lib-tab="[Tröskel]" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-900 text-slate-400 hover:text-white">Tröskel</button>
+                    <button onclick="setLibraryPhilosophy('[VO2max]')" data-lib-tab="[VO2max]" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-900 text-slate-400 hover:text-white">VO2 Max</button>
+                    <button onclick="setLibraryPhilosophy('[FatMax]')" data-lib-tab="[FatMax]" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-900 text-slate-400 hover:text-white">FatMax</button>
+                    <button onclick="setLibraryPhilosophy('[Fartlek]')" data-lib-tab="[Fartlek]" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-900 text-slate-400 hover:text-white">Fartlek</button>
+                    <button onclick="setLibraryPhilosophy('[Rehab]')" data-lib-tab="[Rehab]" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-900 text-slate-400 hover:text-white">Rehab & Styrka</button>
+                </div>
+
+                <!-- Pass Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="workoutLibraryGrid">
+                    <div class="col-span-full py-12 text-center text-slate-500 text-xs">Laddar pass från Intervals.icu...</div>
+                </div>
             </div>
 
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
@@ -316,7 +336,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="customWorkoutName" class="block text-xs font-medium text-slate-300 mb-1">Passnamn</label>
-                        <input id="customWorkoutName" type="text" placeholder="t.ex. Norska intervaller 4x4 min" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+                        <input id="customWorkoutName" type="text" placeholder="t.ex. [Tröskel] Norska intervaller 4x4 min" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
                         <label for="customWorkoutDate" class="block text-xs font-medium text-slate-300 mb-1">Datum för passet</label>
@@ -347,7 +367,7 @@ Main Set 4x
                         <h3 class="text-sm font-bold text-white flex items-center gap-2">
                             <i data-lucide="calendar-days" class="w-4 h-4 text-indigo-400"></i> AI Veckoschema-generator
                         </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Genererar ett komplett schema för innevarande vecka baserat på dina zoner, dagsform och skadeförebyggande status.</p>
+                        <p class="text-xs text-slate-400 mt-0.5">Genererar ett komplett schema för innevarande vecka och hämtar matchande pass direkt från ditt Intervals.icu-bibliotek.</p>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="generateAiWeeklySchedule()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
@@ -361,7 +381,7 @@ Main Set 4x
 
                 <div id="weeklyScheduleContainer" class="grid grid-cols-1 md:grid-cols-7 gap-3">
                     <div class="col-span-full py-12 text-center text-slate-500 text-xs">
-                        Klicka på <strong>"Generera Veckoschema"</strong> för att skapa veckans träningsplan.
+                        Klicka på <strong>"Generera Veckoschema"</strong> för att matcha veckans träning mot ditt bibliotek.
                     </div>
                 </div>
             </div>
@@ -522,109 +542,6 @@ Main Set 4x
     </div>
 
     <script>
-        const workoutLibrary = [
-            {
-                id: 'norsk-threshold',
-                title: 'Norsk Tröskel (3 x 10 min)',
-                tag: 'Tröskelträning / Seiler',
-                tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-                description: 'Målpuls kring anaerob tröskel (142 bpm) för att höja mjölksyratröskeln.',
-                workout: "- 10m Warmup Z1-Z2 (upp till 124 bpm)\n\nMain Set 3x\n- 10m AT-tröskel (137-142 bpm / ~4:15-4:35 min/km)\n- 2m Jog (Z1-Z2)\n\n- 5m Cooldown Z1",
-                filename: 'Norsk Troskel 3x10m.txt',
-                color: 'amber'
-            },
-            {
-                id: 'thousand-intervals',
-                title: 'Tusingar (5 x 1000m)',
-                tag: 'Intervall / VO2 Max',
-                tagClass: 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
-                description: 'Klassiska intervaller i Z5 (145-153 bpm) med ståvila.',
-                workout: "- 10m Warmup Z1-Z2\n\nMain Set 5x\n- 1000m Z5 Pace (3:46-4:00 min/km)\n- 90s Rest\n\n- 5m Cooldown Z1",
-                filename: 'Tusingar 5x1k.txt',
-                color: 'rose'
-            },
-            {
-                id: 'pyramid',
-                title: 'Pyramiden',
-                tag: 'Pyramid / Variation',
-                tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Intervallpass med växlande längd i tröskelzon.',
-                workout: "- 5m Warmup Z1-Z2\n\nMain Set 1x\n- 1m Z4 (137-142 bpm)\n- 30s Jog\n- 2m Z4\n- 1m Jog\n- 3m Z4\n- 1m Jog\n- 4m Z4\n- 1m Jog\n- 3m Z4\n- 1m Jog\n- 2m Z4\n- 30s Jog\n- 1m Z4\n\n- 5m Cooldown Z1",
-                filename: 'Pyramiden.txt',
-                color: 'indigo'
-            },
-            {
-                id: 'long-run',
-                title: 'Kontrollerat Långpass (FatMax)',
-                tag: 'FatMax / Z2 LSD',
-                tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-                description: 'Långpass i zonen för maximal fettförbränning (100-124 bpm / 5:20-7:07 min/km).',
-                workout: "- 5m Warmup Z1\n\nMain Set 6x\n- 4m FatMax Z2 (100-124 bpm)\n- 1m Walk\n\n- 5m Cooldown Z1",
-                filename: 'Langpass.txt',
-                color: 'emerald'
-            },
-            {
-                id: 'norwegian-10x3',
-                title: '10 × 3 min (Norska singlar)',
-                tag: 'Norska Singlar',
-                tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Effektivt för att samla minuter strax under anaerob tröskel (137-142 bpm).',
-                workout: "- 10m Warmup Z1-Z2\n\nMain Set 10x\n- 3m Tröskel (137-142 bpm)\n- 45s Jog/Walk\n\n- 5m Cooldown Z1",
-                filename: 'Norska Singlar 10x3m.txt',
-                color: 'indigo'
-            },
-            {
-                id: 'norwegian-6x5',
-                title: '6 × 5 min (Mellanlånga singlar)',
-                tag: 'Norska Singlar',
-                tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Stabil tröskelträning i zon Z4- / Z4+.',
-                workout: "- 10m Warmup Z1-Z2\n\nMain Set 6x\n- 5m Tröskel (137-142 bpm)\n- 60s Jog/Walk\n\n- 5m Cooldown Z1",
-                filename: 'Norska Singlar 6x5m.txt',
-                color: 'indigo'
-            },
-            {
-                id: 'norwegian-4x8',
-                title: '4 × 8 min (Långa singlar)',
-                tag: 'Norska Singlar',
-                tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Totalt 32 minuter nära AT (142 bpm), utmärkt för uthållighet.',
-                workout: "- 10m Warmup Z1-Z2\n\nMain Set 4x\n- 8m AT-nivå (137-142 bpm)\n- 60s Jog/Walk\n\n- 5m Cooldown Z1",
-                filename: 'Norska Singlar 4x8m.txt',
-                color: 'indigo'
-            },
-            {
-                id: 'norwegian-pyramid',
-                title: 'Pyramid (3-4-5-6-5-4-3 min)',
-                tag: 'Stege / Variation',
-                tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                description: 'Varierat tröskelpass nära AT.',
-                workout: "- 10m Warmup Z1-Z2\n\nMain Set 1x\n- 3m Tröskel\n- 60s Rest\n- 4m Tröskel\n- 60s Rest\n- 5m Tröskel\n- 60s Rest\n- 6m Tröskel\n- 60s Rest\n- 5m Tröskel\n- 60s Rest\n- 4m Tröskel\n- 60s Rest\n- 3m Tröskel\n\n- 5m Cooldown Z1",
-                filename: 'Norsk Pyramid 3-6m.txt',
-                color: 'indigo'
-            },
-            {
-                id: 'rest',
-                title: 'Vila / Återhämtning',
-                tag: 'Vila',
-                tagClass: 'bg-slate-700 text-slate-300',
-                description: 'Fullständig återhämtning.',
-                workout: '- Vilodag / Ingen aktivitet',
-                filename: 'Vila.txt',
-                color: 'slate'
-            },
-            {
-                id: 'strength',
-                title: 'Styrka & Rehab',
-                tag: 'Styrka',
-                tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-                description: 'Styrketräning och skadeförebyggande rehab för vader och säte.',
-                workout: '- 30m Core & Säte\n- Vadstyrka / Tåhävningar',
-                filename: 'Styrka_Rehab.txt',
-                color: 'emerald'
-            }
-        ];
-
         const ACTIVITY_CATEGORIES = {
             run: { key: 'run', label: 'Löpning', hex: '#6366f1', badgeClass: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30', borderClass: 'border-indigo-500/50', dotClass: 'bg-indigo-500' },
             walk: { key: 'walk', label: 'Promenad', hex: '#38bdf8', badgeClass: 'bg-sky-500/15 text-sky-400 border border-sky-500/30', borderClass: 'border-sky-500/50', dotClass: 'bg-sky-400' },
@@ -655,6 +572,8 @@ Main Set 4x
             athleteId: localStorage.getItem('icu_athlete_id') || '',
             latestAcwr: 0,
             activities: [],
+            libraryWorkouts: [], // Hämtas live från Intervals.icu
+            currentLibraryPhilosophy: 'Alla',
             currentStreams: null,
             periodMode: 'currentWeek',
             selectedYear: new Date().getFullYear(),
@@ -1176,7 +1095,9 @@ Main Set 4x
                 desc.textContent = "Lättare känning eller trötthet noterad. Lugn jogg eller alternativ träning rekommenderas.";
                 action.textContent = "Rekommendation: Kontrollerat Långpass (FatMax)";
                 sendBtn.classList.remove('hidden');
-                appState.aiRecommendation = workoutLibrary.find(w => w.id === 'long-run');
+                
+                // Matchar mot det dynamiska biblioteket om möjligt
+                appState.aiRecommendation = appState.libraryWorkouts.find(w => w.name.includes('FatMax') || w.name.includes('Långpass')) || appState.libraryWorkouts[0];
             } 
             else {
                 banner.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
@@ -1187,17 +1108,178 @@ Main Set 4x
                 
                 if (appState.latestAcwr > 1.3) {
                     action.textContent = "Rekommendation: Lugnt FatMax-pass (Hög belastning kvot)";
-                    appState.aiRecommendation = workoutLibrary.find(w => w.id === 'long-run');
+                    appState.aiRecommendation = appState.libraryWorkouts.find(w => w.name.includes('FatMax')) || appState.libraryWorkouts[0];
                 } else {
                     action.textContent = "Rekommendation: Norsk Tröskel (Optimal för syreupptag)";
-                    appState.aiRecommendation = workoutLibrary.find(w => w.id === 'norsk-threshold');
+                    appState.aiRecommendation = appState.libraryWorkouts.find(w => w.name.includes('[Tröskel]')) || appState.libraryWorkouts[0];
                 }
                 sendBtn.classList.remove('hidden');
             }
             if (window.lucide) lucide.createIcons();
         }
 
-        // VECKOSCHEMA GENERATOR LOGIK
+        // ================= PASSBIBLIOTEK FRÅN INTERVALS.ICU =================
+        async function fetchLibraryWorkouts() {
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            const grid = document.getElementById('workoutLibraryGrid');
+
+            if (!apiKey || !athleteId) {
+                grid.innerHTML = '<div class="col-span-full py-12 text-center text-rose-400 text-xs">Inga API-uppgifter hittade. Klicka på "Ändra API-Uppgifter" ovan.</div>';
+                return;
+            }
+
+            grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 text-xs">Hämtar passbibliotek från Intervals.icu...</div>';
+
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+            try {
+                const response = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/workouts`, {
+                    headers: { 'Authorization': authHeader }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Kunde inte hämta bibliotek (${response.status})`);
+                }
+
+                const data = await response.json();
+                appState.libraryWorkouts = Array.isArray(data) ? data : [];
+                renderLibraryGrid();
+            } catch (err) {
+                console.error(err);
+                grid.innerHTML = '<div class="col-span-full py-12 text-center text-rose-400 text-xs">Kunde inte hämta passbibliotek från Intervals.icu. Kontrollera dina inställningar.</div>';
+            }
+        }
+
+        function getPhilosophyCategory(workoutName) {
+            if (workoutName.includes('[Tröskel]')) return 'Tröskel';
+            if (workoutName.includes('[VO2max]')) return 'VO2max';
+            if (workoutName.includes('[FatMax]')) return 'FatMax';
+            if (workoutName.includes('[Fartlek]')) return 'Fartlek';
+            if (workoutName.includes('[Rehab]')) return 'Rehab';
+            return 'Övrigt';
+        }
+
+        function setLibraryPhilosophy(philosophy) {
+            appState.currentLibraryPhilosophy = philosophy;
+            
+            // Uppdatera flikars utseende
+            document.querySelectorAll('[data-lib-tab]').forEach(btn => {
+                if (btn.getAttribute('data-lib-tab') === philosophy) {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-indigo-600 text-white shadow';
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-900 text-slate-400 hover:text-white';
+                }
+            });
+
+            renderLibraryGrid();
+        }
+
+        function filterLibraryView() {
+            renderLibraryGrid();
+        }
+
+        function renderLibraryGrid() {
+            const grid = document.getElementById('workoutLibraryGrid');
+            const searchVal = (document.getElementById('librarySearchInput').value || '').toLowerCase();
+            const activePhil = appState.currentLibraryPhilosophy;
+
+            let filtered = appState.libraryWorkouts.filter(w => {
+                const name = w.name || '';
+                const cat = getPhilosophyCategory(name);
+
+                if (activePhil !== 'Alla' && !name.includes(activePhil)) return false;
+                if (searchVal && !name.toLowerCase().includes(searchVal) && !(w.description || '').toLowerCase().includes(searchVal)) return false;
+                return true;
+            });
+
+            if (!filtered.length) {
+                grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 text-xs">Inga pass matchade ditt filter.</div>';
+                return;
+            }
+
+            const todayStr = toLocalDateString();
+
+            grid.innerHTML = filtered.map(w => {
+                const name = w.name || 'Namnlöst pass';
+                const cat = getPhilosophyCategory(name);
+                const desc = w.description || w.workout_doc || 'Ingen beskrivning tillgänglig.';
+                const sport = w.sport_type || 'Run';
+
+                let badgeClass = 'bg-slate-700 text-slate-300';
+                if (cat === 'Tröskel') badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+                else if (cat === 'VO2max') badgeClass = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                else if (cat === 'FatMax') badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                else if (cat === 'Fartlek') badgeClass = 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
+                else if (cat === 'Rehab') badgeClass = 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
+
+                return `
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-start gap-2">
+                                <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${badgeClass}">[${cat}]</span>
+                                <span class="text-[10px] font-mono text-slate-400">${sport}</span>
+                            </div>
+                            <h4 class="font-bold text-white text-sm">${name}</h4>
+                            <p class="text-xs text-slate-400 line-clamp-2">${desc}</p>
+                        </div>
+                        <div class="pt-3 border-t border-slate-800 space-y-2">
+                            <div class="flex items-center justify-between text-[11px] text-slate-400">
+                                <span>Datum:</span>
+                                <input type="date" id="date-${w.id}" value="${todayStr}" class="bg-slate-950 border border-slate-800 text-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:border-indigo-500 font-mono">
+                            </div>
+                            <button onclick="scheduleIntervalsWorkout('${w.id}', '${encodeURIComponent(name)}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Kalender
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async function scheduleIntervalsWorkout(workoutId, encodedName) {
+            const workoutName = decodeURIComponent(encodedName);
+            const dateInput = document.getElementById(`date-${workoutId}`);
+            const targetDate = dateInput ? dateInput.value : toLocalDateString();
+
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+
+            if (!apiKey || !athleteId) {
+                openSettingsModal();
+                return;
+            }
+
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+            const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
+            const payload = {
+                workout_id: workoutId,
+                start_date_local: `${targetDate}T00:00:00`,
+                type: 'Workout',
+                name: workoutName
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok || response.status === 201) {
+                    alert(`✅ Passet "${workoutName}" har schemalagts den ${targetDate} i din Intervals.icu-kalender!`);
+                } else {
+                    const errText = await response.text();
+                    alert(`Kunde inte schemalägga passet (${response.status}): ${errText}`);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Ett nätverksfel uppstod vid kommunikation med Intervals.icu.');
+            }
+        }
+
+        // ================= VECKOSCHEMA GENERATOR =================
         function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
@@ -1207,22 +1289,33 @@ Main Set 4x
             const calf = parseInt(document.getElementById('inputCalf').value, 10);
             const isInjured = calf >= 3;
 
-            // Standardmall för balanserad träningsvecka för löpare över 50 med vadfokus
+            // Om biblioteket är tomt, hämta först
+            if (!appState.libraryWorkouts.length) {
+                alert('Hämtar pass från biblioteket först...');
+                fetchLibraryWorkouts().then(() => generateAiWeeklySchedule());
+                return;
+            }
+
+            // Hjälpfunktion för att plocka ett pass baserat på sökord ur det riktiga biblioteket
+            const findWorkoutByKeyword = (keyword) => {
+                return appState.libraryWorkouts.find(w => (w.name || '').toLowerCase().includes(keyword.toLowerCase())) || appState.libraryWorkouts[0];
+            };
+
             let scheduleTemplate = [
-                { dayIdx: 0, workoutId: 'rest' },                               // Måndag: Vila
-                { dayIdx: 1, workoutId: isInjured ? 'strength' : 'norsk-threshold' }, // Tisdag: Tröskel eller Styrka
-                { dayIdx: 2, workoutId: 'strength' },                           // Onsdag: Styrka & Rehab
-                { dayIdx: 3, workoutId: isInjured ? 'long-run' : 'norwegian-10x3' }, // Torsdag: Kortare intervaller / Fatmax
-                { dayIdx: 4, workoutId: 'rest' },                               // Fredag: Vila
-                { dayIdx: 5, workoutId: 'long-run' },                           // Lördag: Långpass (Fatmax)
-                { dayIdx: 6, workoutId: 'norwegian-pyramid' }                   // Söndag: Varierat pass / Pyramid
+                { dayIdx: 0, keyword: 'Vila' },
+                { dayIdx: 1, keyword: isInjured ? 'Rehab' : 'Tröskel' },
+                { dayIdx: 2, keyword: 'Rehab' },
+                { dayIdx: 3, keyword: isInjured ? 'FatMax' : 'VO2max' },
+                { dayIdx: 4, keyword: 'Vila' },
+                { dayIdx: 5, keyword: 'FatMax' },
+                { dayIdx: 6, keyword: 'Fartlek' }
             ];
 
             appState.generatedWeeklySchedule = scheduleTemplate.map((item, idx) => {
                 const dateObj = new Date(startOfWeek);
                 dateObj.setDate(startOfWeek.getDate() + idx);
                 const dateStr = toLocalDateString(dateObj);
-                const workout = workoutLibrary.find(w => w.id === item.workoutId);
+                const workout = findWorkoutByKeyword(item.keyword);
 
                 return {
                     dayName: dayNames[idx],
@@ -1231,21 +1324,27 @@ Main Set 4x
                 };
             });
 
-            container.innerHTML = appState.generatedWeeklySchedule.map(item => `
-                <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3.5 space-y-2 flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-center text-[11px] text-indigo-400 font-bold">
-                            <span>${item.dayName}</span>
-                            <span class="font-mono text-slate-400">${item.dateStr.slice(5)}</span>
+            container.innerHTML = appState.generatedWeeklySchedule.map(item => {
+                const wName = item.workout ? item.workout.name : 'Vilodag';
+                const cat = item.workout ? getPhilosophyCategory(wName) : 'Vila';
+                const desc = item.workout ? (item.workout.description || 'Ingen beskrivning') : 'Återhämtning';
+
+                return `
+                    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3.5 space-y-2 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center text-[11px] text-indigo-400 font-bold">
+                                <span>${item.dayName}</span>
+                                <span class="font-mono text-slate-400">${item.dateStr.slice(5)}</span>
+                            </div>
+                            <h4 class="font-bold text-white text-xs mt-1">${wName}</h4>
+                            <span class="inline-block mt-1 px-2 py-0.5 text-[9px] font-semibold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">[${cat}]</span>
                         </div>
-                        <h4 class="font-bold text-white text-xs mt-1">${item.workout.title}</h4>
-                        <span class="inline-block mt-1 px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.workout.tagClass}">${item.workout.tag}</span>
+                        <div class="text-[10px] text-slate-300 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800/80 line-clamp-3">
+                            ${desc}
+                        </div>
                     </div>
-                    <div class="text-[10px] text-slate-300 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800/80 line-clamp-3">
-                        ${item.workout.workout.replace(/\n/g, '<br>')}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             sendWholeBtn.classList.remove('hidden');
             if (window.lucide) lucide.createIcons();
@@ -1268,16 +1367,14 @@ Main Set 4x
             let successCount = 0;
 
             for (let item of appState.generatedWeeklySchedule) {
-                if (item.workout.id === 'rest') continue; // Hoppa över vilodagar
+                if (!item.workout || (item.workout.name || '').includes('Vila')) continue;
 
                 const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
                 const payload = {
-                    category: 'WORKOUT',
+                    workout_id: item.workout.id,
                     start_date_local: `${item.dateStr}T00:00:00`,
-                    type: 'Run',
-                    name: item.workout.title,
-                    filename: item.workout.filename,
-                    description: item.workout.workout
+                    type: 'Workout',
+                    name: item.workout.name
                 };
 
                 try {
@@ -1295,7 +1392,6 @@ Main Set 4x
             }
 
             alert(`✅ ${successCount} pass har skickats till Intervals.icu och lagts in på rätt datum i din klockkalender!`);
-            fetchIntervalsData();
         }
 
         async function sendAiRecommendedWorkout() {
@@ -1304,39 +1400,7 @@ Main Set 4x
                 return;
             }
             const rec = appState.aiRecommendation;
-            await sendWorkoutDirectly(toLocalDateString(), rec.filename, rec.workout);
-        }
-
-        function renderWorkoutCards() {
-            const grid = document.getElementById('workoutLibraryGrid');
-            if (!grid) return;
-
-            grid.innerHTML = workoutLibrary.map(item => `
-                <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
-                    <div class="space-y-2">
-                        <div class="flex justify-between items-start gap-2">
-                            <h4 class="font-bold text-white text-sm">${item.title}</h4>
-                            <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${item.tagClass}">${item.tag}</span>
-                        </div>
-                        <p class="text-xs text-slate-400">${item.description}</p>
-                        <div class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
-                            ${item.workout.replace(/\n/g, '<br>')}
-                        </div>
-                    </div>
-                    <button data-workout-id="${item.id}" class="w-full mt-3 py-2 bg-${item.color}-600 hover:bg-${item.color}-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Idag
-                    </button>
-                </div>
-            `).join('');
-
-            document.querySelectorAll('[data-workout-id]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const id = btn.getAttribute('data-workout-id');
-                    sendWorkoutById(id);
-                });
-            });
-
-            if (window.lucide) lucide.createIcons();
+            await scheduleIntervalsWorkout(rec.id, encodeURIComponent(rec.name));
         }
 
         function openSettingsModal() {
@@ -1367,6 +1431,7 @@ Main Set 4x
             localStorage.setItem('icu_athlete_id', athleteId);
             closeSettingsModal();
             fetchIntervalsData();
+            fetchLibraryWorkouts();
         }
 
         function switchTab(tab) {
@@ -1397,10 +1462,12 @@ Main Set 4x
                 lib.classList.remove('hidden');
                 btnDetail.classList.add('hidden');
                 btnLib.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
+                if (!appState.libraryWorkouts.length) fetchLibraryWorkouts();
             } else if (tab === 'schedule') {
                 schedule.classList.remove('hidden');
                 btnDetail.classList.add('hidden');
                 btnSchedule.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5';
+                if (!appState.libraryWorkouts.length) fetchLibraryWorkouts();
             } else if (tab === 'detail') {
                 detail.classList.remove('hidden');
                 btnDetail.classList.remove('hidden');
@@ -2168,12 +2235,6 @@ Main Set 4x
             }).join('');
         }
 
-        async function sendWorkoutById(workoutId) {
-            const workout = workoutLibrary.find(item => item.id === workoutId);
-            if (!workout) return;
-            await sendWorkoutDirectly(toLocalDateString(), workout.filename, workout.workout);
-        }
-
         async function sendCustomWorkout() {
             const nameInput = document.getElementById('customWorkoutName');
             const dateInput = document.getElementById('customWorkoutDate');
@@ -2236,7 +2297,6 @@ Main Set 4x
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            renderWorkoutCards();
             updateWellnessDisplay();
             if (window.lucide) lucide.createIcons();
 
@@ -2249,6 +2309,7 @@ Main Set 4x
 
             if (appState.apiKey && appState.athleteId) {
                 fetchIntervalsData();
+                fetchLibraryWorkouts();
             }
         });
     </script>
