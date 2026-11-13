@@ -27,6 +27,7 @@
 </head>
 <body class="min-h-screen pb-12">
 
+
     <header class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -39,6 +40,7 @@
                 </div>
             </div>
         </div>
+
 
         <div class="max-w-6xl mx-auto flex flex-wrap gap-2 mt-3 border-t border-slate-800/80 pt-2">
             <button onclick="switchTab('dashboard')" id="tabBtnDashboard" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5">
@@ -56,6 +58,7 @@
         </div>
     </header>
 
+
     <main class="max-w-6xl mx-auto px-4 pt-6 space-y-6">
         
         <!-- ================= VYN 1: DASHBOARD ================= -->
@@ -71,6 +74,7 @@
                     <span id="dataCountBadge" class="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold rounded-full">-- Pass Hämtade</span>
                 </div>
             </div>
+
 
             <!-- Beredskapskort / Trafikljus & AI-Coach Rekommendation -->
             <div id="readinessBanner" class="bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all">
@@ -95,6 +99,7 @@
                 </div>
             </div>
 
+
             <!-- TIDSPERIODVÄLJARE FÖR DASHBOARD -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
                 <div class="flex flex-wrap items-center gap-2">
@@ -109,6 +114,7 @@
                     </button>
                 </div>
 
+
                 <div class="flex items-center gap-3">
                     <div id="drilldownBanner" class="hidden flex items-center gap-2 bg-indigo-500/15 border border-indigo-500/30 px-3 py-1 rounded-xl">
                         <span id="drilldownLabel" class="text-xs font-semibold text-indigo-300">Vald period</span>
@@ -116,6 +122,7 @@
                             <i data-lucide="arrow-up-left" class="w-3 h-3"></i> Tillbaka
                         </button>
                     </div>
+
 
                     <div id="yearSelectorGroup" class="hidden flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-xl px-2 py-1">
                         <button onclick="changeSelectedYear(-1)" class="p-1 text-slate-400 hover:text-white transition" title="Föregående år">
@@ -129,6 +136,7 @@
                 </div>
             </div>
 
+
             <!-- KPI-Kort inklusive ACWR -->
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
@@ -140,6 +148,7 @@
                         <h3 class="text-lg font-bold text-white" id="kpiWeeklyVol">0.0 km</h3>
                     </div>
                 </div>
+
 
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
                     <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
@@ -154,6 +163,7 @@
                     </div>
                 </div>
 
+
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
                     <div class="p-3 bg-sky-500/10 text-sky-400 rounded-xl border border-sky-500/20">
                         <i data-lucide="heart-pulse" class="w-6 h-6"></i>
@@ -163,6 +173,7 @@
                         <h3 class="text-lg font-bold text-white" id="kpiFatmaxShare">0%</h3>
                     </div>
                 </div>
+
 
                 <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 flex items-center gap-4">
                     <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
@@ -174,6 +185,7 @@
                     </div>
                 </div>
             </div>
+
 
             <!-- Grafer -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -196,6 +208,7 @@
                 </div>
             </div>
 
+
             <!-- Morgonstatus & Känningar -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="flex items-center justify-between">
@@ -204,6 +217,7 @@
                     </h3>
                     <span class="text-[11px] text-slate-400" id="wellnessDate">--</span>
                 </div>
+
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
                     <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
@@ -236,6 +250,7 @@
                     </div>
                 </div>
 
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-700/60">
                     <div class="space-y-1.5 bg-slate-900/40 p-3 rounded-xl border border-slate-800">
                         <div class="flex justify-between font-semibold">
@@ -253,6 +268,7 @@
                     </div>
                 </div>
 
+
                 <div class="flex flex-col sm:flex-row gap-3 items-center pt-2">
                     <input type="text" id="inputWellnessNotes" placeholder="Morgonnoteringar..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
                     <button onclick="saveMorningWellness()" class="w-full sm:w-auto px-5 py-2 bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow shrink-0">
@@ -261,6 +277,7 @@
                     </button>
                 </div>
             </div>
+
 
             <!-- Tabell -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
@@ -292,6 +309,7 @@
             </div>
         </div>
 
+
         <!-- ================= VYN 2: PASSBIBLIOTEK ================= -->
         <div id="viewLibrary" class="space-y-6 hidden">
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
@@ -310,6 +328,7 @@
                     </div>
                 </div>
 
+
                 <!-- Filosofi Filter Tabs -->
                 <div class="flex flex-wrap gap-2" id="libraryPhilosophyTabs">
                     <button onclick="setLibraryPhilosophy('Alla')" data-lib-tab="Alla" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-indigo-600 text-white shadow">Alla Pass</button>
@@ -320,11 +339,13 @@
                     <button onclick="setLibraryPhilosophy('[Rehab]')" data-lib-tab="[Rehab]" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-slate-900 text-slate-400 hover:text-white">Rehab & Styrka</button>
                 </div>
 
+
                 <!-- Pass Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="workoutLibraryGrid">
                     <div class="col-span-full py-12 text-center text-slate-500 text-xs">Laddar pass från Intervals.icu...</div>
                 </div>
             </div>
+
 
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="border-b border-slate-700 pb-3">
@@ -347,9 +368,11 @@
                     <label for="customWorkoutText" class="block text-xs font-medium text-slate-300 mb-1">Passbeskrivning / Struktur</label>
                     <textarea id="customWorkoutText" rows="4" placeholder="- 10m Warmup Z1
 
+
 Main Set 4x
 - 4m Tröskel (137-142 bpm)
 - 2m Jog
+
 
 - 5m Cooldown Z1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"></textarea>
                 </div>
@@ -358,6 +381,7 @@ Main Set 4x
                 </button>
             </div>
         </div>
+
 
         <!-- ================= VYN 3: AI VECKOSCHEMA ================= -->
         <div id="viewSchedule" class="space-y-6 hidden">
@@ -379,6 +403,7 @@ Main Set 4x
                     </div>
                 </div>
 
+
                 <div id="weeklyScheduleContainer" class="grid grid-cols-1 md:grid-cols-7 gap-3">
                     <div class="col-span-full py-12 text-center text-slate-500 text-xs">
                         Klicka på <strong>"Generera Veckoschema"</strong> för att matcha veckans träning mot ditt bibliotek.
@@ -386,6 +411,7 @@ Main Set 4x
                 </div>
             </div>
         </div>
+
 
         <!-- ================= VYN 4: PASSDETALJER (DJUPANALYS) ================= -->
         <div id="viewDetail" class="space-y-6 hidden">
@@ -410,10 +436,12 @@ Main Set 4x
                     </div>
                 </div>
 
+
                 <div id="detailSummaryBox" class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 leading-relaxed">
                     Hämtar sammanfattning...
                 </div>
             </div>
+
 
             <!-- BLOCK 1: HUVUDMÄTVÄRDEN -->
             <div id="block1Container" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4 transition-all">
@@ -422,6 +450,7 @@ Main Set 4x
                 </h3>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="block1Grid"></div>
             </div>
+
 
             <!-- BLOCK 2: BELASTNING, FYSIOLOGI & LÖPDYNAMIK -->
             <div id="block2Container" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4 transition-all">
@@ -433,6 +462,7 @@ Main Set 4x
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="block2Grid"></div>
             </div>
+
 
             <!-- DIAGRAM -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -462,6 +492,7 @@ Main Set 4x
                 </div>
             </div>
 
+
             <!-- RUTA 1: VÄRDEN PER KILOMETER -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -485,6 +516,7 @@ Main Set 4x
                     </table>
                 </div>
             </div>
+
 
             <!-- RUTA 2: ALLA SPLITS / INTERVALLER -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3">
@@ -513,8 +545,10 @@ Main Set 4x
                 </div>
             </div>
 
+
         </div>
     </main>
+
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-50">
@@ -541,6 +575,7 @@ Main Set 4x
         </div>
     </div>
 
+
     <script>
         const ACTIVITY_CATEGORIES = {
             run: { key: 'run', label: 'Löpning', hex: '#6366f1', badgeClass: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30', borderClass: 'border-indigo-500/50', dotClass: 'bg-indigo-500' },
@@ -553,9 +588,11 @@ Main Set 4x
             other: { key: 'other', label: 'Övrigt', hex: '#94a3b8', badgeClass: 'bg-slate-700/60 text-slate-300 border border-slate-600', borderClass: 'border-slate-500/50', dotClass: 'bg-slate-400' }
         };
 
+
         function classifyActivity(act) {
             const type = (act.type || '').toLowerCase();
             const name = (act.name || '').toLowerCase();
+
 
             if (type.includes('run') || type.includes('trail') || name.includes('löpning')) return ACTIVITY_CATEGORIES.run;
             if (type.includes('walk') || type.includes('hike') || name.includes('promenad') || name.includes('gång')) return ACTIVITY_CATEGORIES.walk;
@@ -567,12 +604,13 @@ Main Set 4x
             return ACTIVITY_CATEGORIES.other;
         }
 
+
         const appState = {
             apiKey: localStorage.getItem('icu_api_key') || '',
             athleteId: localStorage.getItem('icu_athlete_id') || '',
             latestAcwr: 0,
             activities: [],
-            libraryWorkouts: [], // Hämtas live från Intervals.icu
+            libraryWorkouts: [],
             currentLibraryPhilosophy: 'Alla',
             currentStreams: null,
             periodMode: 'currentWeek',
@@ -581,25 +619,29 @@ Main Set 4x
             selectedWeekRange: null,
             currentChartBuckets: [],
             aiRecommendation: null,
-            generatedWeeklySchedule: []
+            generatedWeeklySchedule: [],
             wellnessHistory: [],
-            coachAnalysis: null,
+            coachAnalysis: null
         };
+
 
         let volumeChartInstance = null;
         let zoneChartInstance = null;
         let detailChartInstances = {};
+
 
         function toLocalDateString(date = new Date()) {
             const offset = date.getTimezoneOffset() * 60000;
             return new Date(date.getTime() - offset).toISOString().slice(0, 10);
         }
 
+
         function daysAgo(days) {
             const d = new Date();
             d.setDate(d.getDate() - days);
             return d;
         }
+
 
         function getStartOfWeek(date) {
             const d = new Date(date);
@@ -610,12 +652,14 @@ Main Set 4x
             return d;
         }
 
+
         function getEndOfWeek(startOfWeek) {
             const d = new Date(startOfWeek);
             d.setDate(d.getDate() + 6);
             d.setHours(23, 59, 59, 999);
             return d;
         }
+
 
         function getISOWeekNumber(date) {
             const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -625,6 +669,7 @@ Main Set 4x
             return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
         }
 
+
         function formatPace(speedMs) {
             if (!speedMs || speedMs <= 0.1) return '-';
             const secPerKm = 1000 / speedMs;
@@ -632,6 +677,7 @@ Main Set 4x
             const secs = Math.round(secPerKm % 60);
             return `${mins}:${secs < 10 ? '0' : ''}${secs} /km`;
         }
+
 
         function formatDuration(seconds) {
             if (!seconds) return '-';
@@ -641,6 +687,7 @@ Main Set 4x
             if (h > 0) return `${h}h ${m}m ${s}s`;
             return `${m}m ${s < 10 ? '0' : ''}${s}s`;
         }
+
 
         function formatBalancePair(leftPct) {
             if (!leftPct || leftPct <= 0) return { text: '-', color: 'text-white' };
@@ -658,10 +705,12 @@ Main Set 4x
             };
         }
 
+
         function getWorkoutTargets(act) {
             const name = (act.name || '').toLowerCase();
             const hr = act.average_heartrate || 0;
             const cat = classifyActivity(act);
+
 
             if (cat.key !== 'run') {
                 return { label: cat.label, minCadence: 0, maxGct: 0 };
@@ -675,15 +724,18 @@ Main Set 4x
             return { label: 'Distans / FatMax (Z2)', minCadence: 160, maxGct: 285 };
         }
 
+
         function getGctColorClass(gctVal, maxGct) {
             if (!gctVal || gctVal <= 0 || !maxGct) return 'text-white';
             return gctVal <= maxGct ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold';
         }
 
+
         function setStatus(message) {
             const statusText = document.getElementById('statusText');
             if (statusText) statusText.textContent = message;
         }
+
 
         function setPeriodMode(mode) {
             appState.periodMode = mode;
@@ -695,12 +747,14 @@ Main Set 4x
             updateDashboardPeriodView();
         }
 
+
         function changeSelectedYear(delta) {
             appState.selectedYear += delta;
             appState.selectedMonth = null;
             appState.selectedWeekRange = null;
             updateDashboardPeriodView();
         }
+
 
         function resetDrilldown() {
             if (appState.selectedWeekRange && appState.periodMode === 'months' && appState.selectedMonth !== null) {
@@ -712,12 +766,14 @@ Main Set 4x
             updateDashboardPeriodView();
         }
 
+
         function updatePeriodButtonsUI() {
             const modes = [
                 { id: 'btnPeriodCurrentWeek', mode: 'currentWeek' },
                 { id: 'btnPeriodLast4Weeks', mode: 'last4Weeks' },
                 { id: 'btnPeriodMonths', mode: 'months' }
             ];
+
 
             modes.forEach(item => {
                 const btn = document.getElementById(item.id);
@@ -729,6 +785,7 @@ Main Set 4x
                 }
             });
 
+
             const yearGroup = document.getElementById('yearSelectorGroup');
             const yearDisplay = document.getElementById('selectedYearDisplay');
             if (appState.periodMode === 'months') {
@@ -738,9 +795,11 @@ Main Set 4x
                 yearGroup.classList.add('hidden');
             }
 
+
             const drillBanner = document.getElementById('drilldownBanner');
             const drillLabel = document.getElementById('drilldownLabel');
             const monthNamesFull = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
+
 
             if (appState.selectedWeekRange) {
                 drillBanner.classList.remove('hidden');
@@ -753,8 +812,10 @@ Main Set 4x
             }
         }
 
+
         function updateDashboardPeriodView() {
             updatePeriodButtonsUI();
+
 
             const now = new Date();
             let filterStart, filterEnd, periodLabel;
@@ -762,9 +823,11 @@ Main Set 4x
             let chartTitle = '';
             let isClickable = false;
 
+
             const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
             const monthNamesFull = ['Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni', 'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'];
             const dayNames = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
+
 
             if (appState.selectedWeekRange) {
                 filterStart = new Date(appState.selectedWeekRange.start);
@@ -772,6 +835,7 @@ Main Set 4x
                 periodLabel = appState.selectedWeekRange.label;
                 chartTitle = `Aktivitetstid per dag – ${periodLabel} (min)`;
                 isClickable = false;
+
 
                 for (let i = 0; i < 7; i++) {
                     const dStart = new Date(filterStart);
@@ -793,6 +857,7 @@ Main Set 4x
                 periodLabel = `Innevarande vecka (v.${weekNum})`;
                 chartTitle = `Aktivitetstid per dag – v.${weekNum} (min)`;
                 isClickable = false;
+
 
                 for (let i = 0; i < 7; i++) {
                     const dStart = new Date(filterStart);
@@ -816,6 +881,7 @@ Main Set 4x
                 chartTitle = 'Aktivitetstid per vecka – Senaste 4 veckorna (min)';
                 isClickable = true;
 
+
                 for (let w = 0; w < 4; w++) {
                     const wStart = new Date(filterStart);
                     wStart.setDate(filterStart.getDate() + w * 7);
@@ -832,6 +898,7 @@ Main Set 4x
             } else if (appState.periodMode === 'months') {
                 const year = appState.selectedYear;
 
+
                 if (appState.selectedMonth !== null) {
                     const m = appState.selectedMonth;
                     filterStart = new Date(year, m, 1, 0, 0, 0, 0);
@@ -840,6 +907,7 @@ Main Set 4x
                     chartTitle = `Aktivitetstid per vecka – ${periodLabel} (min)`;
                     isClickable = true;
 
+
                     let cursor = getStartOfWeek(filterStart);
                     while (cursor <= filterEnd) {
                         const wStart = new Date(cursor);
@@ -847,6 +915,7 @@ Main Set 4x
                         const wNum = getISOWeekNumber(wStart);
                         const clampedStart = wStart < filterStart ? new Date(filterStart) : wStart;
                         const clampedEnd = wEnd > filterEnd ? new Date(filterEnd) : wEnd;
+
 
                         buckets.push({
                             label: `v.${wNum} (${clampedStart.getDate()}-${clampedEnd.getDate()}/${m + 1})`,
@@ -864,6 +933,7 @@ Main Set 4x
                     chartTitle = `Aktivitetstid per månad – ${year} (min)`;
                     isClickable = true;
 
+
                     for (let m = 0; m < 12; m++) {
                         const mStart = new Date(year, m, 1, 0, 0, 0, 0);
                         const mEnd = new Date(year, m + 1, 0, 23, 59, 59, 999);
@@ -878,12 +948,15 @@ Main Set 4x
                 }
             }
 
+
             appState.currentChartBuckets = buckets;
+
 
             const filteredActivities = appState.activities.filter(act => {
                 const d = new Date(act.start_date_local);
                 return d >= filterStart && d <= filterEnd;
             }).sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
+
 
             let periodRunKm = 0;
             let runPassesCount = 0;
@@ -893,10 +966,12 @@ Main Set 4x
             let zone2Count = 0;
             let zone3Count = 0;
 
+
             filteredActivities.forEach(act => {
                 const cat = classifyActivity(act);
                 const distKm = act.distance ? act.distance / 1000 : 0;
                 const hr = act.average_heartrate || 0;
+
 
                 if (cat.key === 'run') {
                     periodRunKm += distKm;
@@ -906,6 +981,7 @@ Main Set 4x
                     altCount++;
                 }
 
+
                 if (hr > 0) {
                     if (hr <= 124) zone1Count++;
                     else if (hr <= 142) zone2Count++;
@@ -913,12 +989,15 @@ Main Set 4x
                 }
             });
 
+
             document.getElementById('kpiVolLabel').textContent = `Löpvolym (${periodLabel})`;
             document.getElementById('kpiWeeklyVol').textContent = `${periodRunKm.toFixed(1)} km`;
+
 
             const fatmaxShare = runPassesCount > 0 ? Math.round((fatmaxPassesCount / runPassesCount) * 100) : 0;
             document.getElementById('kpiFatmaxShare').textContent = `${fatmaxShare}%`;
             document.getElementById('kpiAltCount').textContent = `${altCount} st`;
+
 
             document.getElementById('barChartTitle').textContent = chartTitle;
             const clickHint = document.getElementById('barChartClickHint');
@@ -928,12 +1007,15 @@ Main Set 4x
                 clickHint.classList.add('hidden');
             }
 
+
             document.getElementById('tablePeriodTitle').textContent = `Träningshistorik – ${periodLabel} (${filteredActivities.length} pass)`;
             renderTable(filteredActivities);
             renderPeriodCharts(filteredActivities, buckets, zone1Count, zone2Count, zone3Count, isClickable);
 
+
             if (window.lucide) lucide.createIcons();
         }
+
 
         function renderPeriodCharts(activities, buckets, z1Count, z2Count, z3Count, isClickable) {
             const labels = buckets.map(b => b.label);
@@ -941,14 +1023,17 @@ Main Set 4x
             const dataByCat = {};
             const activeCategories = new Set();
 
+
             categoryKeys.forEach(k => {
                 dataByCat[k] = new Array(buckets.length).fill(0);
             });
+
 
             activities.forEach(act => {
                 const actDate = new Date(act.start_date_local);
                 const mins = act.moving_time ? Math.round(act.moving_time / 60) : 0;
                 if (mins <= 0) return;
+
 
                 const cat = classifyActivity(act);
                 for (let i = 0; i < buckets.length; i++) {
@@ -960,12 +1045,14 @@ Main Set 4x
                 }
             });
 
+
             const legendEl = document.getElementById('activityLegend');
             const keysToShow = activeCategories.size > 0 ? Array.from(activeCategories) : ['run', 'walk', 'strength'];
             legendEl.innerHTML = keysToShow.map(k => {
                 const c = ACTIVITY_CATEGORIES[k];
                 return `<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm ${c.dotClass}"></span> ${c.label}</span>`;
             }).join('');
+
 
             const datasets = keysToShow.map(k => {
                 const c = ACTIVITY_CATEGORIES[k];
@@ -976,6 +1063,7 @@ Main Set 4x
                     borderRadius: 4
                 };
             });
+
 
             const volCtx = document.getElementById('weeklyVolumeChart');
             if (volumeChartInstance) volumeChartInstance.destroy();
@@ -995,6 +1083,7 @@ Main Set 4x
                         const index = elements[0].index;
                         const clickedBucket = appState.currentChartBuckets[index];
                         if (!clickedBucket) return;
+
 
                         if (clickedBucket.type === 'month') {
                             appState.selectedMonth = clickedBucket.monthIndex;
@@ -1024,6 +1113,7 @@ Main Set 4x
                 }
             });
 
+
             const zoneCtx = document.getElementById('hrZoneChart');
             if (zoneChartInstance) zoneChartInstance.destroy();
             zoneChartInstance = new Chart(zoneCtx.getContext('2d'), {
@@ -1040,6 +1130,7 @@ Main Set 4x
             });
         }
 
+
         function updateWellnessDisplay() {
             const calf = document.getElementById('inputCalf').value;
             const knee = document.getElementById('inputKnee').value;
@@ -1048,6 +1139,7 @@ Main Set 4x
             const sleep = document.getElementById('inputSleep').value;
             const readiness = document.getElementById('inputReadiness').value;
 
+
             document.getElementById('valCalf').textContent = `${calf} / 10`;
             document.getElementById('valKnee').textContent = `${knee} / 10`;
             document.getElementById('valHip').textContent = `${hip} / 10`;
@@ -1055,6 +1147,7 @@ Main Set 4x
             document.getElementById('valSleep').textContent = `${sleep} / 5`;
             document.getElementById('valReadiness').textContent = `${readiness} / 4`;
         }
+
 
         function evaluateReadiness() {
             const calf = parseInt(document.getElementById('inputCalf').value, 10);
@@ -1074,10 +1167,8 @@ Main Set 4x
             const action = document.getElementById('readinessAction');
             const sendBtn = document.getElementById('sendAiRecBtn');
         
-            // Sammanfattningsrad med 7/14/28d + vilopuls + ev. GCT/balans-varning
             const contextSummary = `Löpning 7/14/28d: ${analysis.runKm7.toFixed(1)} / ${analysis.runKm14.toFixed(1)} / ${analysis.runKm28.toFixed(1)} km (längsta 14d: ${Math.round(analysis.maxRunMin14)} min) | Alt. cardio: ${analysis.altMin7}/${analysis.altMin14}/${analysis.altMin28} min. ${analysis.rhrTrendText}. ${analysis.biomechWarning}`;
         
-            // 1. RÖTT LJUS: Smärta >= 3/10 eller kraftigt förhöjd vilopuls (+4 bpm)
             if (maxPain >= 3 || readiness === 1 || sleep === 1 || analysis.rhrDelta >= 4) {
                 banner.className = "bg-gradient-to-r from-rose-950/80 to-slate-800 border border-rose-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-rose-400";
@@ -1095,7 +1186,6 @@ Main Set 4x
                     sendBtn.classList.add('hidden');
                 }
             }
-            // 2. RETURN-TO-RUN-LÄGE: Låg smärta (0-2), men du har sprungit < 10 km eller max 15 min senaste 14d
             else if (analysis.isReturnToRun) {
                 banner.className = "bg-gradient-to-r from-sky-950/80 to-slate-800 border border-sky-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-sky-400";
@@ -1119,7 +1209,6 @@ Main Set 4x
                     sendBtn.classList.toggle('hidden', !fatmaxAlt);
                 }
             }
-            // 3. GULT LJUS: Lätt stelhet (1-2/10), lätt förhöjd vilopuls eller GCT/balans-varning
             else if (maxPain >= 1 || readiness === 2 || sleep <= 2 || analysis.rhrDelta >= 2 || analysis.biomechWarning) {
                 banner.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-amber-400";
@@ -1130,7 +1219,6 @@ Main Set 4x
                 appState.aiRecommendation = appState.libraryWorkouts.find(w => (w.name || '').includes('[FatMax]')) || appState.libraryWorkouts[0];
                 sendBtn.classList.toggle('hidden', !appState.aiRecommendation);
             }
-            // 4. GRÖNT LJUS: Etablerad löpvolym (>10 km/14d), 0 smärta, stabil vilopuls & bra GCT/balans
             else {
                 banner.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-emerald-400";
@@ -1151,18 +1239,21 @@ Main Set 4x
             if (window.lucide) lucide.createIcons();
         }
 
-        // ================= PASSBIBLIOTEK FRÅN INTERVALS.ICU =================
+
         async function fetchLibraryWorkouts() {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
             const grid = document.getElementById('workoutLibraryGrid');
+
 
             if (!apiKey || !athleteId) {
                 grid.innerHTML = '<div class="col-span-full py-12 text-center text-rose-400 text-xs">Inga API-uppgifter hittade. Klicka på "Ändra API-Uppgifter" ovan.</div>';
                 return;
             }
 
+
             grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 text-xs">Hämtar passbibliotek från Intervals.icu...</div>';
+
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             try {
@@ -1170,9 +1261,11 @@ Main Set 4x
                     headers: { 'Authorization': authHeader }
                 });
 
+
                 if (!response.ok) {
                     throw new Error(`Kunde inte hämta bibliotek (${response.status})`);
                 }
+
 
                 const data = await response.json();
                 appState.libraryWorkouts = Array.isArray(data) ? data : [];
@@ -1183,6 +1276,7 @@ Main Set 4x
             }
         }
 
+
         function getPhilosophyCategory(workoutName) {
             if (workoutName.includes('[Tröskel]')) return 'Tröskel';
             if (workoutName.includes('[VO2max]')) return 'VO2max';
@@ -1192,10 +1286,10 @@ Main Set 4x
             return 'Övrigt';
         }
 
+
         function setLibraryPhilosophy(philosophy) {
             appState.currentLibraryPhilosophy = philosophy;
             
-            // Uppdatera flikars utseende
             document.querySelectorAll('[data-lib-tab]').forEach(btn => {
                 if (btn.getAttribute('data-lib-tab') === philosophy) {
                     btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-indigo-600 text-white shadow';
@@ -1204,33 +1298,41 @@ Main Set 4x
                 }
             });
 
+
             renderLibraryGrid();
         }
+
 
         function filterLibraryView() {
             renderLibraryGrid();
         }
+
 
         function renderLibraryGrid() {
             const grid = document.getElementById('workoutLibraryGrid');
             const searchVal = (document.getElementById('librarySearchInput').value || '').toLowerCase();
             const activePhil = appState.currentLibraryPhilosophy;
 
+
             let filtered = appState.libraryWorkouts.filter(w => {
                 const name = w.name || '';
                 const cat = getPhilosophyCategory(name);
+
 
                 if (activePhil !== 'Alla' && !name.includes(activePhil)) return false;
                 if (searchVal && !name.toLowerCase().includes(searchVal) && !(w.description || '').toLowerCase().includes(searchVal)) return false;
                 return true;
             });
 
+
             if (!filtered.length) {
                 grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 text-xs">Inga pass matchade ditt filter.</div>';
                 return;
             }
 
+
             const todayStr = toLocalDateString();
+
 
             grid.innerHTML = filtered.map(w => {
                 const name = w.name || 'Namnlöst pass';
@@ -1238,12 +1340,14 @@ Main Set 4x
                 const desc = w.description || w.workout_doc || 'Ingen beskrivning tillgänglig.';
                 const sport = w.sport_type || 'Run';
 
+
                 let badgeClass = 'bg-slate-700 text-slate-300';
                 if (cat === 'Tröskel') badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
                 else if (cat === 'VO2max') badgeClass = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
                 else if (cat === 'FatMax') badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
                 else if (cat === 'Fartlek') badgeClass = 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
                 else if (cat === 'Rehab') badgeClass = 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
+
 
                 return `
                     <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3 flex flex-col justify-between">
@@ -1268,21 +1372,26 @@ Main Set 4x
                 `;
             }).join('');
 
+
             if (window.lucide) lucide.createIcons();
         }
+
 
         async function scheduleIntervalsWorkout(workoutId, encodedName) {
             const workoutName = decodeURIComponent(encodedName);
             const dateInput = document.getElementById(`date-${workoutId}`);
             const targetDate = dateInput ? dateInput.value : toLocalDateString();
 
+
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+
 
             if (!apiKey || !athleteId) {
                 openSettingsModal();
                 return;
             }
+
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
@@ -1293,12 +1402,14 @@ Main Set 4x
                 name: workoutName
             };
 
+
             try {
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+
 
                 if (response.ok || response.status === 201) {
                     alert(`✅ Passet "${workoutName}" har schemalagts den ${targetDate} i din Intervals.icu-kalender!`);
@@ -1312,7 +1423,7 @@ Main Set 4x
             }
         }
 
-        // ================= VECKOSCHEMA GENERATOR =================
+
         function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
@@ -1329,7 +1440,6 @@ Main Set 4x
             const isRedLight = (maxPain >= 3 || analysis.rhrDelta >= 4);
             const canTestRun = (!isRedLight && maxPain <= 1 && !analysis.biomechWarning);
         
-            // Om användaren är i Return-to-Run eller har känning: Bygg 50-70 km-ekvivalent (ca 5.5h varierad kondition + styrka)
             if (analysis.isReturnToRun || maxPain >= 1 || isRedLight) {
                 const altWeekTemplate = [
                     {
@@ -1407,7 +1517,6 @@ Main Set 4x
                     };
                 });
             } else {
-                // FULL LÖPVECKA (50-70 km) när man är etablerad (>10 km/14d) och har Grönt Ljus
                 if (!appState.libraryWorkouts.length) {
                     alert('Hämtar pass från biblioteket först...');
                     fetchLibraryWorkouts().then(() => generateAiWeeklySchedule());
@@ -1522,6 +1631,7 @@ Main Set 4x
             alert(`✅ ${successCount} pass (motsvarande 50–70 km träningsbelastning) har skickats till din Intervals.icu-kalender!`);
         }
 
+
         async function sendAiRecommendedWorkout() {
             if (!appState.aiRecommendation) {
                 alert('Ingen aktiv träningsrekommendation tillgänglig för dagsformen.');
@@ -1535,6 +1645,7 @@ Main Set 4x
             }
         }
 
+
         function openSettingsModal() {
             const modal = document.getElementById('settingsModal');
             if (!modal) return;
@@ -1543,19 +1654,23 @@ Main Set 4x
             modal.classList.remove('hidden');
         }
 
+
         function closeSettingsModal() {
             const modal = document.getElementById('settingsModal');
             if (modal) modal.classList.add('hidden');
         }
 
+
         function saveCredentialsFromModal() {
             const apiKey = document.getElementById('settingsApiKey').value.trim();
             const athleteId = document.getElementById('settingsAthleteId').value.trim();
+
 
             if (!apiKey || !athleteId) {
                 alert('Ange både API Key och Athlete ID.');
                 return;
             }
+
 
             appState.apiKey = apiKey;
             appState.athleteId = athleteId;
@@ -1565,6 +1680,7 @@ Main Set 4x
             fetchIntervalsData();
             fetchLibraryWorkouts();
         }
+
 
         function switchTab(tab) {
             const dash = document.getElementById('viewDashboard');
@@ -1577,14 +1693,17 @@ Main Set 4x
             const btnSchedule = document.getElementById('tabBtnSchedule');
             const btnDetail = document.getElementById('tabBtnDetail');
 
+
             dash.classList.add('hidden');
             lib.classList.add('hidden');
             schedule.classList.add('hidden');
             detail.classList.add('hidden');
 
+
             btnDash.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
             btnLib.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
             btnSchedule.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1.5';
+
 
             if (tab === 'dashboard') {
                 dash.classList.remove('hidden');
@@ -1608,32 +1727,40 @@ Main Set 4x
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+
         async function fetchIntervalsData() {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+
 
             if (!apiKey || !athleteId) {
                 openSettingsModal();
                 return;
             }
 
+
             appState.apiKey = apiKey;
             appState.athleteId = athleteId;
 
+
             setStatus('Hämtar data (3000 dagar)...');
+
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             const oldestStr = toLocalDateString(daysAgo(3000));
+
 
             try {
                 const response = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/activities?oldest=${oldestStr}`, {
                     headers: { 'Authorization': authHeader }
                 });
 
+
                 if (!response.ok) {
                     setStatus(`Fel vid hämtning (${response.status})`);
                     return;
                 }
+
 
                 const data = await response.json();
                 appState.activities = Array.isArray(data) ? data : [];
@@ -1651,6 +1778,7 @@ Main Set 4x
             }
         }
 
+
         function computeCurrentAcwr(activities) {
             const now = new Date();
             const sevenDaysAgo = new Date(now);
@@ -1658,8 +1786,10 @@ Main Set 4x
             const twentyEightDaysAgo = new Date(now);
             twentyEightDaysAgo.setDate(now.getDate() - 28);
 
+
             let vol7d = 0;
             let vol28d = 0;
+
 
             activities.forEach(act => {
                 const actDate = new Date(act.start_date_local);
@@ -1671,13 +1801,16 @@ Main Set 4x
                 }
             });
 
+
             const chronicWeekly = vol28d / 4;
             const acwr = chronicWeekly > 0 ? vol7d / chronicWeekly : 0;
             appState.latestAcwr = acwr;
 
+
             const acwrEl = document.getElementById('kpiAcwr');
             const acwrBadge = document.getElementById('kpiAcwrBadge');
             acwrEl.textContent = acwr.toFixed(2);
+
 
             if (acwr === 0) {
                 acwrBadge.textContent = 'Ingen data';
@@ -1697,7 +1830,6 @@ Main Set 4x
             }
         }
                 
-        // 2. Lägg till denna funktion som hämtar 28 dagars wellness (inkl. vilopuls)
         async function fetchWellnessHistory28d() {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
@@ -1720,7 +1852,6 @@ Main Set 4x
             }
         }
         
-        // 3. Den nya intelligenta analysmotorn (7d / 14d / 28d + Vilopuls + GCT/Balans)
         function runCoachGenieAnalysis() {
             const now = new Date();
             const d7 = daysAgo(7);
@@ -1732,7 +1863,6 @@ Main Set 4x
             let altMin7 = 0, altMin14 = 0, altMin28 = 0;
             let latestRun = null;
         
-            // Sortera aktiviteter nyast först
             const sortedActs = [...appState.activities].sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
         
             sortedActs.forEach(act => {
@@ -1758,7 +1888,6 @@ Main Set 4x
                 }
             });
         
-            // Vilopuls-analys (28 dagar vs senaste 3 dagarna)
             const rhrEntries = appState.wellnessHistory
                 .filter(w => typeof w.restingHR === 'number' && w.restingHR > 30)
                 .sort((a, b) => a.id.localeCompare(b.id));
@@ -1779,7 +1908,6 @@ Main Set 4x
                 }
             }
         
-            // Biomekanisk kontroll på senaste löppasset
             let biomechWarning = '';
             if (latestRun) {
                 const gct = latestRun.avg_stance_time || latestRun.stance_time || 0;
@@ -1798,7 +1926,6 @@ Main Set 4x
                 }
             }
         
-            // Avgör om användaren är i "Return-to-Run" (upptrappningsfas)
             const isReturnToRun = (runKm14 < 10 || maxRunMin14 < 15);
         
             appState.coachAnalysis = {
@@ -1813,20 +1940,25 @@ Main Set 4x
         
             return appState.coachAnalysis;
         }
+
         async function fetchTodayWellness() {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
             if (!apiKey || !athleteId) return;
 
+
             const todayStr = toLocalDateString();
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+
 
             try {
                 const response = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/wellness/${todayStr}`, {
                     headers: { 'Authorization': authHeader }
                 });
 
+
                 if (!response.ok) return;
+
 
                 const data = await response.json();
                 if (typeof data.sleepQuality === 'number') {
@@ -1847,9 +1979,11 @@ Main Set 4x
                     if (footMatch) document.getElementById('inputFoot').value = footMatch[1];
                 }
 
-                if (!data.acwr && appState.latestAcwr > 0) {
+
+                if (!data.Acwr && appState.latestAcwr > 0) {
                     autoSaveAcwrToIntervals();
                 }
+
 
                 updateWellnessDisplay();
                 evaluateReadiness();
@@ -1857,6 +1991,7 @@ Main Set 4x
                 console.log('Kunde inte läsa dagens wellness:', error);
             }
         }
+
 
         async function autoSaveAcwrToIntervals() {
             try {
@@ -1879,6 +2014,7 @@ Main Set 4x
             } catch (error) {}
         }
 
+
         async function saveMorningWellness() {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
@@ -1899,7 +2035,6 @@ Main Set 4x
         
             const commentText = `[Känningar] Vad/Hälsena: ${calf}/10, Knä/ITB: ${knee}/10, Höft/Säte: ${hip}/10, Fot/Benhinna: ${foot}/10. ${notes}`.trim();
             
-            // Bygg payloaden exakt enligt Intervals.icu förväntade format
             const payload = {
                 sleepQuality: sleep,
                 readiness: readiness,
@@ -1913,7 +2048,6 @@ Main Set 4x
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
         
             try {
-                // Skickar till PUT /wellness/{date} där datumet är ID
                 const response = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/wellness/${todayStr}`, {
                     method: 'PUT',
                     headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
@@ -1933,14 +2067,17 @@ Main Set 4x
             }
         }
 
+
         function renderTable(activities) {
             const tbody = document.getElementById('activitiesTableBody');
             tbody.innerHTML = '';
+
 
             if (!activities.length) {
                 tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">Inga aktiviteter under vald period.</td></tr>';
                 return;
             }
+
 
             tbody.innerHTML = activities.map(act => {
                 const date = String(act.start_date_local || '').slice(0, 10);
@@ -1950,6 +2087,7 @@ Main Set 4x
                 const distKm = act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '-';
                 const durMin = act.moving_time ? `${Math.round(act.moving_time / 60)} min` : '-';
                 const hr = act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm` : '-';
+
 
                 return `
                     <tr onclick="openActivityDetail('${act.id}')" class="border-b border-slate-800 hover:bg-indigo-950/40 cursor-pointer transition group">
@@ -1967,6 +2105,7 @@ Main Set 4x
             }).join('');
         }
 
+
         function computeStreamAverages(streams) {
             const getStream = (type) => {
                 if (!streams) return null;
@@ -1977,10 +2116,12 @@ Main Set 4x
                 return streams[type] || null;
             };
 
+
             const gctData = getStream('stance_time');
             const balData = getStream('stance_time_balance');
             const velData = getStream('velocity_smooth');
             const cadData = getStream('cadence');
+
 
             let avgGct = null;
             if (gctData) {
@@ -1988,6 +2129,7 @@ Main Set 4x
                 for (let v of gctData) { if (v > 0) { sum += v; count++; } }
                 if (count > 0) avgGct = sum / count;
             }
+
 
             let avgBal = null;
             if (balData) {
@@ -1997,6 +2139,7 @@ Main Set 4x
                 }
                 if (count > 0) avgBal = sum / count;
             }
+
 
             let avgStepLen = null;
             if (velData && cadData) {
@@ -2016,17 +2159,22 @@ Main Set 4x
                 if (count > 0) avgStepLen = sum / count;
             }
 
+
             return { avgGct, avgBal, avgStepLen };
         }
+
 
         async function openActivityDetail(activityId) {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
 
+
             switchTab('detail');
+
 
             const loadingBadge = document.getElementById('detailLoadingBadge');
             loadingBadge.classList.remove('hidden');
+
 
             document.getElementById('detailTitle').textContent = 'Laddar pass...';
             document.getElementById('detailSummaryBox').textContent = 'Hämtar fullständig data från Intervals.icu...';
@@ -2035,6 +2183,7 @@ Main Set 4x
             document.getElementById('kmSplitsTableBody').innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Hämtar...</td></tr>';
             document.getElementById('intervalsSplitsTableBody').innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">Hämtar...</td></tr>';
 
+
             try {
                 const streamTypes = 'time,distance,heartrate,velocity_smooth,cadence,stance_time,stance_time_balance';
                 const [actRes, streamRes] = await Promise.all([
@@ -2042,13 +2191,16 @@ Main Set 4x
                     fetch(`https://intervals.icu/api/v1/activity/${activityId}/streams.json?types=${streamTypes}`, { headers: { 'Authorization': authHeader } })
                 ]);
 
+
                 const act = actRes.ok ? await actRes.json() : appState.activities.find(a => String(a.id) === String(activityId));
                 const streams = streamRes.ok ? await streamRes.json() : null;
                 appState.currentStreams = streams;
                 const streamStats = computeStreamAverages(streams);
 
+
                 if (act) {
                     renderActivityOverviewAndBlocks(act, streamStats);
+
 
                     let intervals = act.icu_intervals || act.laps || act.splits_metric || act.intervals || [];
                     if (!intervals.length) {
@@ -2061,12 +2213,14 @@ Main Set 4x
                     renderIntervalsTable(intervals, act, streams);
                 }
 
+
                 if (streams) {
                     renderDetailCharts(streams, act);
                     renderKmSplits(streams, act);
                 } else {
                     document.getElementById('kmSplitsTableBody').innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Ingen GPS/strömningsdata tillgänglig för detta pass.</td></tr>';
                 }
+
 
             } catch (err) {
                 console.error("Fel vid hämtning av passdetaljer:", err);
@@ -2076,6 +2230,7 @@ Main Set 4x
                 if (window.lucide) lucide.createIcons();
             }
         }
+
 
         function renderActivityOverviewAndBlocks(act, streamStats = {}) {
             const date = String(act.start_date_local || '').slice(0, 16).replace('T', ' ');
@@ -2088,16 +2243,19 @@ Main Set 4x
             
             document.getElementById('detailTitle').textContent = act.name || 'Träningspass';
 
+
             const targets = getWorkoutTargets(act);
             document.getElementById('detailWorkoutCategoryBadge').textContent = targets.label;
             document.getElementById('dynamicTargetsHint').textContent = targets.maxGct > 0
                 ? `Mål (${targets.label}): Kadens ≥ ${targets.minCadence} spm | GCT ≤ ${targets.maxGct} ms`
                 : `Aktivitetstyp: ${cat.label}`;
 
+
             const b1Container = document.getElementById('block1Container');
             const b2Container = document.getElementById('block2Container');
             b1Container.className = `bg-slate-800/60 border-2 ${cat.borderClass} rounded-2xl p-5 space-y-4 transition-all`;
             b2Container.className = `bg-slate-800/60 border-2 ${cat.borderClass} rounded-2xl p-5 space-y-4 transition-all`;
+
 
             const distStr = act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '0 km';
             const durStr = formatDuration(act.moving_time);
@@ -2106,24 +2264,30 @@ Main Set 4x
             const loadStr = act.icu_training_load ? `Träningsbelastning: ${Math.round(act.icu_training_load)}` : '';
             const descNote = act.description ? `<br><span class="text-slate-400 italic mt-1 block">"${act.description}"</span>` : '';
 
+
             document.getElementById('detailSummaryBox').innerHTML = `
                 Ett pass på <strong>${distStr}</strong> under <strong>${durStr}</strong> med ett snittempo på <strong>${paceStr}</strong> och en medelpuls på <strong>${hrStr}</strong>. ${loadStr}
                 ${descNote}
             `;
 
+
             const cadenceVal = act.average_cadence ? Math.round(act.average_cadence * 2) : 0;
             const cadenceColor = (targets.minCadence > 0 && cadenceVal >= targets.minCadence) ? 'text-emerald-400' : (cadenceVal > 0 && targets.minCadence > 0 ? 'text-rose-400' : 'text-white');
+
 
             const gctVal = act.avg_stance_time || act.stance_time || streamStats.avgGct || 0;
             const gctColor = gctVal > 0 ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
 
+
             const balVal = act.avg_stance_time_balance || act.stance_time_balance || streamStats.avgBal || 0;
             const balInfo = formatBalancePair(balVal);
+
 
             let stepLenVal = act.avg_step_length || act.step_length || streamStats.avgStepLen || 0;
             if (!stepLenVal && act.average_speed > 0 && cadenceVal > 0) {
                 stepLenVal = act.average_speed / (cadenceVal / 60);
             }
+
 
             const block1Config = [
                 { label: 'Distans', icon: 'footprints', color: 'emerald', value: act.distance ? (act.distance / 1000).toFixed(2) + ' km' : '-' },
@@ -2137,6 +2301,7 @@ Main Set 4x
                 { label: 'Medelstegslängd', icon: 'maximize-2', color: 'purple', value: stepLenVal > 0 ? (stepLenVal > 3 ? (stepLenVal / 1000).toFixed(2) + ' m' : stepLenVal.toFixed(2) + ' m') : '-' }
             ];
 
+
             const block2Config = [
                 { label: 'Kalorier', icon: 'flame', color: 'amber', value: act.calories ? Math.round(act.calories) + ' kcal' : '-' },
                 { label: 'Training Load', icon: 'bar-chart-3', color: 'indigo', value: act.icu_training_load ? Math.round(act.icu_training_load) : '-' },
@@ -2148,6 +2313,7 @@ Main Set 4x
                 { label: 'GCT (MS)', icon: 'clock', color: 'amber', customClass: gctColor, value: gctVal > 0 ? Math.round(gctVal) + ' ms' : '-' },
                 { label: 'GCT-Balans (Vä/Hö)', icon: 'scale', color: 'emerald', customClass: balInfo.color, value: balInfo.text }
             ];
+
 
             const renderBlockCards = (config, containerId) => {
                 const container = document.getElementById(containerId);
@@ -2167,9 +2333,11 @@ Main Set 4x
                 }).join('');
             };
 
+
             renderBlockCards(block1Config, 'block1Grid');
             renderBlockCards(block2Config, 'block2Grid');
         }
+
 
         function extractStatFromStreams(streams, startTime, endTime, streamName) {
             if (!streams) return null;
@@ -2181,9 +2349,11 @@ Main Set 4x
                 return streams[type] || null;
             };
 
+
             const timeArr = getStream('time');
             const targetArr = getStream(streamName);
             if (!timeArr || !targetArr) return null;
+
 
             let sum = 0, count = 0;
             for (let i = 0; i < timeArr.length; i++) {
@@ -2199,9 +2369,11 @@ Main Set 4x
             return count > 0 ? sum / count : null;
         }
 
+
         function determineIntervalType(iv, avgSpeed) {
             const label = (iv.label || iv.name || '').toLowerCase();
             const type = (iv.type || '').toUpperCase();
+
 
             if (type === 'RECOVERY' || label.includes('vila') || label.includes('rest') || label.includes('cooldown')) {
                 return { text: 'Vila / Gång', badge: 'bg-blue-500/20 text-blue-400 border border-blue-500/30', isRunning: false };
@@ -2215,6 +2387,7 @@ Main Set 4x
             return { text: iv.label || iv.name || 'Löpning', badge: 'bg-amber-500/20 text-amber-400 border border-amber-500/20', isRunning: true };
         }
 
+
         function renderDetailCharts(streams, act) {
             const getStream = (type) => {
                 if (!streams) return null;
@@ -2225,17 +2398,21 @@ Main Set 4x
                 return streams[type] || null;
             };
 
+
             const timeData = getStream('time') || [];
             const hrData = getStream('heartrate');
             const velData = getStream('velocity_smooth');
             const gctData = getStream('stance_time');
             const gctBalData = getStream('stance_time_balance');
 
+
             const targets = getWorkoutTargets(act);
             const maxGctTarget = targets.maxGct;
 
+
             const hasGct = gctData && gctData.some(v => v > 0);
             const hasGctBal = gctBalData && gctBalData.some(v => v > 0);
+
 
             const step = Math.max(1, Math.floor(timeData.length / 300));
             const labels = [];
@@ -2247,10 +2424,12 @@ Main Set 4x
             const atLineData = [];
             const fatmaxLineData = [];
 
+
             for (let i = 0; i < timeData.length; i += step) {
                 const mins = Math.floor(timeData[i] / 60);
                 const secs = timeData[i] % 60;
                 labels.push(`${mins}:${secs < 10 ? '0' : ''}${secs}`);
+
 
                 if (hrData) sampledHr.push(hrData[i]);
                 if (velData) {
@@ -2267,10 +2446,12 @@ Main Set 4x
                 fatmaxLineData.push(124);
             }
 
+
             const buildLineChart = (canvasId, label, dataArr, color, reverseY = false, hasData = true, extraDatasets = []) => {
                 const ctx = document.getElementById(canvasId);
                 if (!ctx) return;
                 if (detailChartInstances[canvasId]) detailChartInstances[canvasId].destroy();
+
 
                 const datasets = [{
                     label,
@@ -2282,6 +2463,7 @@ Main Set 4x
                     fill: true,
                     tension: 0.2
                 }, ...extraDatasets];
+
 
                 detailChartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
                     type: 'line',
@@ -2297,6 +2479,7 @@ Main Set 4x
                     }
                 });
             };
+
 
             const hrExtra = [
                 {
@@ -2319,6 +2502,7 @@ Main Set 4x
                 }
             ];
 
+
             const gctExtra = maxGctTarget > 0 ? [{
                 label: `Max GCT-mål (${maxGctTarget} ms)`,
                 data: targetLineData,
@@ -2329,11 +2513,13 @@ Main Set 4x
                 fill: false
             }] : [];
 
+
             buildLineChart('detailHrChart', 'Puls (bpm)', sampledHr, '#f43f5e', false, true, hrExtra);
             buildLineChart('detailPaceChart', 'Tempo (min/km)', sampledPace, '#38bdf8', true, true);
             buildLineChart('detailGctChart', 'GCT (ms)', sampledGct, '#fbbf24', false, hasGct, gctExtra);
             buildLineChart('detailGctBalChart', 'GCT Balans (% Vänster)', sampledGctBal, '#10b981', false, hasGctBal);
         }
+
 
         function renderKmSplits(streams, act) {
             const tbody = document.getElementById('kmSplitsTableBody');
@@ -2347,6 +2533,7 @@ Main Set 4x
                 return streams[type] || null;
             };
 
+
             const timeData = getStream('time');
             const distData = getStream('distance');
             const hrData = getStream('heartrate');
@@ -2354,25 +2541,30 @@ Main Set 4x
             const gctData = getStream('stance_time');
             const gctBalData = getStream('stance_time_balance');
 
+
             if (!timeData || !distData || distData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Saknar distansström för att räkna ut kilometertider.</td></tr>';
                 return;
             }
 
+
             const splits = [];
             let currentKm = 1;
             let startIdx = 0;
+
 
             for (let i = 1; i < distData.length; i++) {
                 if (distData[i] >= currentKm * 1000 || i === distData.length - 1) {
                     const segmentDist = distData[i] - distData[startIdx];
                     const segmentTime = timeData[i] - timeData[startIdx];
 
+
                     if (segmentDist > 50) {
                         let hrSum = 0, hrCount = 0;
                         let cadSum = 0, cadCount = 0;
                         let gctSum = 0, gctCount = 0;
                         let balSum = 0, balCount = 0;
+
 
                         for (let j = startIdx; j <= i; j++) {
                             if (hrData && hrData[j] > 0) { hrSum += hrData[j]; hrCount++; }
@@ -2384,16 +2576,20 @@ Main Set 4x
                             }
                         }
 
+
                         const avgSpeed = segmentDist / segmentTime;
                         const labelKm = (i === distData.length - 1 && distData[i] < currentKm * 1000)
                             ? `${(distData[i] / 1000).toFixed(2)} km`
                             : `Km ${currentKm}`;
 
+
                         const avgGct = gctCount > 0 ? gctSum / gctCount : 0;
                         const gctClass = avgGct > 0 ? getGctColorClass(avgGct, targets.maxGct) : 'text-slate-400';
 
+
                         const avgLeft = balCount > 0 ? (balSum / balCount) : 0;
                         const balInfo = formatBalancePair(avgLeft);
+
 
                         splits.push({
                             km: labelKm,
@@ -2407,15 +2603,18 @@ Main Set 4x
                         });
                     }
 
+
                     startIdx = i;
                     currentKm++;
                 }
             }
 
+
             if (splits.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">För kort distans för kilometersplits.</td></tr>';
                 return;
             }
+
 
             tbody.innerHTML = splits.map(s => `
                 <tr class="border-b border-slate-800 hover:bg-slate-800/40">
@@ -2429,19 +2628,23 @@ Main Set 4x
             `).join('');
         }
 
+
         function renderIntervalsTable(intervals, act, streams) {
             const tbody = document.getElementById('intervalsSplitsTableBody');
             const targets = getWorkoutTargets(act);
+
 
             if (!intervals || !intervals.length) {
                 tbody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">Inga separata varv eller intervaller registrerade för detta pass.</td></tr>';
                 return;
             }
 
+
             tbody.innerHTML = intervals.map((iv) => {
                 const avgSpeed = iv.average_speed || (iv.distance && iv.moving_time ? iv.distance / iv.moving_time : (iv.distance && iv.time ? iv.distance / iv.time : 0));
                 const typeInfo = determineIntervalType(iv, avgSpeed);
                 const typeBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold ${typeInfo.badge}">${typeInfo.text}</span>`;
+
 
                 const dist = iv.distance ? `${(iv.distance / 1000).toFixed(2)} km` : '-';
                 const time = formatDuration(iv.moving_time || iv.elapsed_time || iv.time);
@@ -2465,11 +2668,14 @@ Main Set 4x
                     gctVal = extractStatFromStreams(streams, iv.start_time, iv.end_time, 'stance_time');
                 }
 
+
                 const gctText = gctVal > 0 ? Math.round(gctVal) + ' ms' : '-';
                 const gctClass = (typeInfo.isRunning && gctVal > 0) ? getGctColorClass(gctVal, targets.maxGct) : 'text-slate-400';
 
+
                 const balRaw = iv.avg_stance_time_balance || iv.stance_time_balance || 0;
                 const balInfo = formatBalancePair(balRaw);
+
 
                 return `
                     <tr class="border-b border-slate-800 hover:bg-slate-800/40">
@@ -2487,35 +2693,43 @@ Main Set 4x
             }).join('');
         }
 
+
         async function sendCustomWorkout() {
             const nameInput = document.getElementById('customWorkoutName');
             const dateInput = document.getElementById('customWorkoutDate');
             const textInput = document.getElementById('customWorkoutText');
 
+
             const name = nameInput.value.trim() || 'Eget pass';
             const workoutDate = dateInput.value || toLocalDateString();
             const text = textInput.value.trim();
+
 
             if (!text) {
                 alert('Vänligen klistra in passbeskrivningen i textrutan.');
                 return;
             }
 
+
             const filename = name.replace(/\s+/g, '_') + '.txt';
             await sendWorkoutDirectly(workoutDate, filename, text);
+
 
             nameInput.value = '';
             textInput.value = '';
         }
 
+
         async function sendWorkoutDirectly(workoutDate, filename, workoutText) {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+
 
             if (!apiKey || !athleteId) {
                 openSettingsModal();
                 return;
             }
+
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
@@ -2528,12 +2742,14 @@ Main Set 4x
                 description: workoutText
             };
 
+
             try {
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+
 
                 if (response.ok || response.status === 201) {
                     alert(`✅ Passet har skickats till Intervals.icu för datum ${workoutDate} och synkas till din klocka!`);
@@ -2548,16 +2764,20 @@ Main Set 4x
             }
         }
 
+
         document.addEventListener('DOMContentLoaded', () => {
             updateWellnessDisplay();
             if (window.lucide) lucide.createIcons();
+
 
             const todayStr = toLocalDateString();
             const wellnessDate = document.getElementById('wellnessDate');
             if (wellnessDate) wellnessDate.textContent = todayStr;
 
+
             const customDateInput = document.getElementById('customWorkoutDate');
             if (customDateInput) customDateInput.value = todayStr;
+
 
             if (appState.apiKey && appState.athleteId) {
                 fetchIntervalsData();
