@@ -1308,51 +1308,81 @@ Main Set 4x
             renderLibraryGrid();
         }
 
-       // ================= SMART KOMPRIMERANDE PARSER (SLÅR IHOP LIKADANA RADER) =================
+        // ================= SLUTLIG & RENSAD PARSER (INGA DUBBLERINGAR ELLER LÅNGA RADVÄGGAR) =================
         function formatWorkoutBlocksHTML(rawText) {
             if (!rawText || !rawText.trim()) {
                 return '<div class="text-[11px] text-slate-500 italic py-2">Ingen passstruktur angiven.</div>';
             }
         
-            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const cleanRaw = rawText.replace(/\\n/g, '\n');
+            const lines = cleanRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
             let html = '<div class="space-y-1.5">';
         
-            // Slå ihop på varandra följande identiska rader
-            let compressedLines = [];
-            let currentLine = null;
-            let count = 0;
-        
-            lines.forEach(line => {
-                let clean = line.replace(/^[-•]\s*/, '').trim();
-                if (currentLine === clean) {
-                    count++;
-                } else {
-                    if (currentLine !== null) {
-                        compressedLines.push({ text: currentLine, count: count });
-                    }
-                    currentLine = clean;
-                    count = 1;
+            // 1. Filtrera bort den översta råa sammanfattningsraden om den är lång eller innehåller flera delar
+            const filteredLines = lines.filter(line => {
+                const lower = line.toLowerCase();
+                if ((lower.includes('warmup') || lower.includes('uppvärmning') || lower.includes('main set')) && 
+                    (lower.includes('cooldown') || lower.includes('nedvarvning') || lower.includes('kategori') || line.length > 50)) {
+                    return false;
                 }
+                return true;
             });
-            if (currentLine !== null) {
-                compressedLines.push({ text: currentLine, count: count });
-            }
         
-            compressedLines.forEach(item => {
-                let line = item.text;
-                let repeatCount = item.count;
+            // 2. Gruppera ihop efterföljande identiska rader automatiskt
+            let compressedItems = [];
+            let i = 0;
+            while (i < filteredLines.length) {
+                let line = filteredLines[i];
                 let lower = line.toLowerCase();
         
-                // Rubriker
-                if (lower.startsWith('kategori:') || (line.length < 25 && !line.includes('-') && !line.includes('z') && !line.includes('Pace') && repeatCount === 1)) {
-                    html += `<div class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 pt-2 pb-0.5">${line}</div>`;
+                // Rubriker (t.ex. WARMUP, COOLDOWN, Kategori)
+                if (!line.startsWith('-') && !line.includes('[') && (lower === 'warmup' || lower === 'cooldown' || lower === 'uppvärmning' || lower === 'nedvarvning' || lower === 'main set' || lower.startsWith('kategori:'))) {
+                    compressedItems.push({ type: 'header', text: line });
+                    i++;
+                    continue;
+                }
+        
+                // Städa texten och snygga till tidsenheter (m -> min, s -> sek)
+                let clean = line.replace(/^[-•]\s*/, '').trim();
+                clean = clean
+                    .replace(/\b([0-9]+)\s*m\b/gi, '$1 min')
+                    .replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
+        
+                // Räkna hur många gånger samma rad kommer efter varandra
+                let count = 1;
+                while (i + count < filteredLines.length) {
+                    let nextLine = filteredLines[i + count];
+                    let nextClean = nextLine.replace(/^[-•]\s*/, '').trim()
+                        .replace(/\b([0-9]+)\s*m\b/gi, '$1 min')
+                        .replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
+                    
+                    if (nextClean === clean) {
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+        
+                compressedItems.push({ type: 'row', text: clean, count: count });
+                i += count;
+            }
+        
+            // 3. Bygg HTML för varje block
+            compressedItems.forEach(item => {
+                if (item.type === 'header') {
+                    html += `
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 pt-2 pb-0.5 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                            ${item.text}
+                        </div>
+                    `;
                     return;
                 }
         
-                // Tidsenheter
-                let cleanText = line
-                    .replace(/\b([0-9]+)\s*m\b/gi, '$1 min')
-                    .replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
+                let line = item.text;
+                let repeatCount = item.count;
+                let lower = line.toLowerCase();
         
                 let blockStyle = 'bg-slate-900/90 border-slate-700/70 text-slate-200';
                 let badgeText = 'Moment';
@@ -1366,22 +1396,21 @@ Main Set 4x
                     blockStyle = 'bg-sky-950/30 border-sky-500/30 text-sky-100';
                     badgeText = 'Nedvarvning';
                     badgeStyle = 'bg-sky-500/20 text-sky-300';
-                } else if (lower.includes('vila') || lower.includes('gångvila')) {
+                } else if (lower.includes('vila') || lower.includes('gångvila') || lower.includes('stångvila')) {
                     blockStyle = 'bg-slate-900/60 border-slate-800 text-slate-400';
-                    badgeText = 'Vila';
+                    badgeText = repeatCount > 1 ? `${repeatCount} st Vilor` : 'Vila';
                     badgeStyle = 'bg-slate-800 text-slate-400';
-                } else if (lower.includes('tröskel') || lower.includes('fartlek') || lower.includes('intervaller') || lower.includes('hög kadens') || lower.includes('pace') || lower.includes('snabbt')) {
+                } else if (lower.includes('tröskel') || lower.includes('fartlek') || lower.includes('intervaller') || lower.includes('hög kadens') || lower.includes('pace') || lower.includes('snabbt') || lower.includes('steg')) {
                     blockStyle = 'bg-amber-950/30 border-amber-500/40 text-amber-100';
                     badgeText = repeatCount > 1 ? `${repeatCount} st Intervaller` : 'Arbete';
                     badgeStyle = 'bg-amber-500/20 text-amber-300';
                 }
         
-                // Om det är upprepat flera gånger, visa en snygg räknare (t.ex. "15x") framför texten
                 let countBadge = repeatCount > 1 ? `<span class="text-[10px] font-bold bg-amber-500/20 border border-amber-500/40 text-amber-300 px-1.5 py-0.5 rounded mr-2 shrink-0">${repeatCount}x</span>` : '';
         
                 html += `
                     <div class="border rounded-lg px-2.5 py-1.5 text-[11px] flex items-center justify-between gap-2 ${blockStyle}">
-                        <span class="font-medium leading-snug flex items-center">${countBadge}${cleanText}</span>
+                        <span class="font-medium leading-snug flex items-center">${countBadge}${line}</span>
                         <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${badgeStyle}">${badgeText}</span>
                     </div>
                 `;
@@ -1389,7 +1418,7 @@ Main Set 4x
         
             html += '</div>';
             return html;
-        } 
+        }
        
         function toggleLibraryCard(workoutId) {
             const detailsEl = document.getElementById(`lib-details-${workoutId}`);
