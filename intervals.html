@@ -1308,133 +1308,89 @@ Main Set 4x
             renderLibraryGrid();
         }
 
-        
-       // ================= SMART & KOMPAKT VISUELL PARSER FÖR TRÄNINGSBLOCK =================
+       // ================= SMART KOMPRIMERANDE PARSER (SLÅR IHOP LIKADANA RADER) =================
         function formatWorkoutBlocksHTML(rawText) {
             if (!rawText || !rawText.trim()) {
                 return '<div class="text-[11px] text-slate-500 italic py-2">Ingen passstruktur angiven.</div>';
             }
         
             const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            
-            // Om det är väldigt många rader (typ intervaller på rad), räkna och gruppera dem intelligent
             let html = '<div class="space-y-1.5">';
-            let runningCount = 0;
-            let restCount = 0;
-            let otherLines = [];
         
-            // Enkel kontroll om det är ett upprepat intervallpass (många rader med t.ex. steg/vila)
-            const isIntervalSeries = lines.length > 6 && lines.some(l => l.toLowerCase().includes('vila') || l.toLowerCase().includes('steg'));
+            // Slå ihop på varandra följande identiska rader
+            let compressedLines = [];
+            let currentLine = null;
+            let count = 0;
         
-            if (isIntervalSeries) {
-                // Räkna ihop hur många intervaller och vilomoment passet har
-                let sampleIntervalText = '';
-                let sampleRestText = '';
-        
-                lines.forEach(l => {
-                    const lower = l.toLowerCase();
-                    if (lower.includes('vila') || lower.includes('sek') || lower.includes('0m30s')) {
-                        restCount++;
-                        if (!sampleRestText) sampleRestText = l.replace(/^[-•]\s*/, '');
-                    } else if (lower.includes('steg') || lower.includes('tröskel') || lower.includes('min')) {
-                        runningCount++;
-                        if (!sampleIntervalText) sampleIntervalText = l.replace(/^[-•]\s*/, '');
-                    } else {
-                        otherLines.push(l);
+            lines.forEach(line => {
+                let clean = line.replace(/^[-•]\s*/, '').trim();
+                if (currentLine === clean) {
+                    count++;
+                } else {
+                    if (currentLine !== null) {
+                        compressedLines.push({ text: currentLine, count: count });
                     }
-                });
-        
-                // Visa eventuell inledning/rubrik först
-                otherLines.forEach(ol => {
-                    html += `<div class="text-[11px] font-medium text-slate-300 pb-1">${ol}</div>`;
-                });
-        
-                // Skapa ett snyggt samlat kompakt block för intervallserien istället för 20 utspridda rader
-                const totalSets = Math.max(runningCount, restCount);
-                if (totalSets > 0) {
-                    let cleanInterval = sampleIntervalText.replace(/\b([0-9]+)\s*m\b/gi, '$1 min').replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
-                    let cleanRest = sampleRestText.replace(/\b([0-9]+)\s*m\b/gi, '$1 min').replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
-        
-                    html += `
-                        <div class="p-3 bg-amber-950/30 border border-amber-500/40 rounded-xl space-y-2">
-                            <div class="text-[11px] font-bold uppercase tracking-wider text-amber-300 flex items-center justify-between">
-                                <span class="flex items-center gap-1.5">
-                                    <i data-lucide="repeat" class="w-3.5 h-3.5"></i> ${totalSets} st Intervallserier
-                                </span>
-                                <span class="text-[9px] bg-amber-500/20 px-2 py-0.5 rounded text-amber-300">Kvalitet</span>
-                            </div>
-                            <div class="text-[11px] text-slate-200 space-y-1 pt-1 border-t border-amber-500/20">
-                                <div class="flex items-center justify-between">
-                                    <span class="font-medium">• ${cleanInterval}</span>
-                                    <span class="text-[9px] text-amber-400 font-semibold">Arbete</span>
-                                </div>
-                                ${cleanRest ? `
-                                <div class="flex items-center justify-between text-slate-400">
-                                    <span class="font-medium">• ${cleanRest}</span>
-                                    <span class="text-[9px] text-slate-500 font-semibold">Vila</span>
-                                </div>` : ''}
-                            </div>
-                        </div>
-                    `;
+                    currentLine = clean;
+                    count = 1;
                 }
-            } else {
-                // Vanlig parsning för korta/normala pass
-                lines.forEach(line => {
-                    const lower = line.toLowerCase();
-        
-                    if ((lower.includes('warmup') || lower.includes('uppvärmning')) && (lower.includes('cooldown') || lower.includes('nedvarvning') || lower.includes('kategori'))) {
-                        return;
-                    }
-        
-                    if (!line.startsWith('-') && !line.includes('[') && (lower.includes('warmup') || lower.includes('cooldown') || lower.includes('uppvärmning') || lower.includes('nedvarvning') || lower.includes('main set'))) {
-                        html += `
-                            <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-300 pt-2 pb-0.5 flex items-center gap-1.5">
-                                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                                ${line}
-                            </div>
-                        `;
-                        return;
-                    }
-        
-                    let cleanText = line.replace(/^[-•]\s*/, '');
-                    cleanText = cleanText
-                        .replace(/\b([0-9]+)\s*m\b/gi, '$1 min')
-                        .replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
-        
-                    let blockStyle = 'bg-slate-900/90 border-slate-700/70 text-slate-200';
-                    let badgeText = 'Moment';
-                    let badgeStyle = 'bg-slate-800 text-slate-400';
-        
-                    if (lower.includes('warmup') || lower.includes('uppvärmning')) {
-                        blockStyle = 'bg-emerald-950/30 border-emerald-500/30 text-emerald-100';
-                        badgeText = 'Uppvärmning';
-                        badgeStyle = 'bg-emerald-500/20 text-emerald-300';
-                    } else if (lower.includes('cooldown') || lower.includes('nedvarvning')) {
-                        blockStyle = 'bg-sky-950/30 border-sky-500/30 text-sky-100';
-                        badgeText = 'Nedvarvning';
-                        badgeStyle = 'bg-sky-500/20 text-sky-300';
-                    } else if (lower.includes('tröskel') || lower.includes('at') || lower.includes('vo2') || lower.includes('fartlek') || lower.includes('+') || lower.includes('x')) {
-                        blockStyle = 'bg-amber-950/30 border-amber-500/40 text-amber-100';
-                        badgeText = 'Intervall & Vila';
-                        badgeStyle = 'bg-amber-500/20 text-amber-300';
-                    } else if (lower.includes('fatmax') || lower.includes('z2') || lower.includes('distans')) {
-                        blockStyle = 'bg-indigo-950/30 border-indigo-500/30 text-indigo-100';
-                        badgeText = 'FatMax / Z2';
-                        badgeStyle = 'bg-indigo-500/20 text-indigo-300';
-                    }
-        
-                    html += `
-                        <div class="border rounded-lg px-2.5 py-1.5 text-[11px] flex items-center justify-between gap-2 ${blockStyle}">
-                            <span class="font-medium leading-snug">${cleanText}</span>
-                            <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${badgeStyle}">${badgeText}</span>
-                        </div>
-                    `;
-                });
+            });
+            if (currentLine !== null) {
+                compressedLines.push({ text: currentLine, count: count });
             }
+        
+            compressedLines.forEach(item => {
+                let line = item.text;
+                let repeatCount = item.count;
+                let lower = line.toLowerCase();
+        
+                // Rubriker
+                if (lower.startsWith('kategori:') || (line.length < 25 && !line.includes('-') && !line.includes('z') && !line.includes('Pace') && repeatCount === 1)) {
+                    html += `<div class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 pt-2 pb-0.5">${line}</div>`;
+                    return;
+                }
+        
+                // Tidsenheter
+                let cleanText = line
+                    .replace(/\b([0-9]+)\s*m\b/gi, '$1 min')
+                    .replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
+        
+                let blockStyle = 'bg-slate-900/90 border-slate-700/70 text-slate-200';
+                let badgeText = 'Moment';
+                let badgeStyle = 'bg-slate-800 text-slate-400';
+        
+                if (lower.includes('uppvärmning') || lower.includes('warmup')) {
+                    blockStyle = 'bg-emerald-950/30 border-emerald-500/30 text-emerald-100';
+                    badgeText = 'Uppvärmning';
+                    badgeStyle = 'bg-emerald-500/20 text-emerald-300';
+                } else if (lower.includes('nedvarvning') || lower.includes('cooldown')) {
+                    blockStyle = 'bg-sky-950/30 border-sky-500/30 text-sky-100';
+                    badgeText = 'Nedvarvning';
+                    badgeStyle = 'bg-sky-500/20 text-sky-300';
+                } else if (lower.includes('vila') || lower.includes('gångvila')) {
+                    blockStyle = 'bg-slate-900/60 border-slate-800 text-slate-400';
+                    badgeText = 'Vila';
+                    badgeStyle = 'bg-slate-800 text-slate-400';
+                } else if (lower.includes('tröskel') || lower.includes('fartlek') || lower.includes('intervaller') || lower.includes('hög kadens') || lower.includes('pace') || lower.includes('snabbt')) {
+                    blockStyle = 'bg-amber-950/30 border-amber-500/40 text-amber-100';
+                    badgeText = repeatCount > 1 ? `${repeatCount} st Intervaller` : 'Arbete';
+                    badgeStyle = 'bg-amber-500/20 text-amber-300';
+                }
+        
+                // Om det är upprepat flera gånger, visa en snygg räknare (t.ex. "15x") framför texten
+                let countBadge = repeatCount > 1 ? `<span class="text-[10px] font-bold bg-amber-500/20 border border-amber-500/40 text-amber-300 px-1.5 py-0.5 rounded mr-2 shrink-0">${repeatCount}x</span>` : '';
+        
+                html += `
+                    <div class="border rounded-lg px-2.5 py-1.5 text-[11px] flex items-center justify-between gap-2 ${blockStyle}">
+                        <span class="font-medium leading-snug flex items-center">${countBadge}${cleanText}</span>
+                        <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${badgeStyle}">${badgeText}</span>
+                    </div>
+                `;
+            });
         
             html += '</div>';
             return html;
-        }
+        } 
+       
         function toggleLibraryCard(workoutId) {
             const detailsEl = document.getElementById(`lib-details-${workoutId}`);
             const chevronEl = document.getElementById(`lib-chevron-${workoutId}`);
