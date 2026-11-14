@@ -1424,10 +1424,46 @@ Main Set 4x
         }
 
 
-        function generateAiWeeklySchedule() {
+        // ================= AI VECKOSCHEMA & KALENDERHANTERING =================
+
+        async function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
+            
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            if (!apiKey || !athleteId) {
+                openSettingsModal();
+                return;
+            }
+        
+            container.innerHTML = `<div class="col-span-full py-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+                <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Hämtar planering och schema från Intervals.icu...
+            </div>`;
+            if (window.lucide) lucide.createIcons();
+        
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             const startOfWeek = getStartOfWeek(new Date());
+            const endOfNextWeek = new Date(startOfWeek);
+            endOfNextWeek.setDate(endOfNextWeek.getDate() + 13); // Hämta till och med söndag nästa vecka
+        
+            const oldestStr = toLocalDateString(startOfWeek);
+            const newestStr = toLocalDateString(endOfNextWeek);
+        
+            let scheduledEvents = [];
+            try {
+                const res = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events?oldest=${oldestStr}&newest=${newestStr}`, {
+                    headers: { 'Authorization': authHeader }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    scheduledEvents = Array.isArray(data) ? data : [];
+                }
+            } catch (e) {
+                console.warn('Kunde inte hämta befintliga events:', e);
+            }
+        
+            const todayStr = toLocalDateString();
             const dayNames = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
         
             const calf = parseInt(document.getElementById('inputCalf').value, 10);
@@ -1440,143 +1476,209 @@ Main Set 4x
             const isRedLight = (maxPain >= 3 || analysis.rhrDelta >= 4);
             const canTestRun = (!isRedLight && maxPain <= 1 && !analysis.biomechWarning);
         
-            if (analysis.isReturnToRun || maxPain >= 1 || isRedLight) {
-                const altWeekTemplate = [
-                    {
-                        dayIdx: 0,
-                        title: 'Vila & Rörlighet',
-                        tag: 'Återhämtning',
-                        tagClass: 'bg-slate-700 text-slate-300',
-                        sportType: 'Workout',
-                        isRest: true,
-                        desc: 'Fullständig vila från kondition. Lätt fotledsrörlighet och foamrolling av vader.'
-                    },
-                    {
-                        dayIdx: 1,
-                        title: canTestRun ? 'Return-to-Run Test + Crosstrainer' : 'Crosstrainer Tröskel (Norska 4x4)',
-                        tag: canTestRun ? 'Test + Kvalitet (60m)' : 'Kvalitet AT (55m)',
-                        tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-                        sportType: canTestRun ? 'Run' : 'Elliptical',
-                        desc: canTestRun
-                            ? '- 5m Walk Warmup\n\nMain Set 4x\n- 1m FatMax Z2 (100-124 bpm)\n- 2m Walk\n\n- 40m Crosstrainer FatMax (115-124 bpm) direkt efter som volymersättning'
-                            : '- 10m Warmup Z1-Z2\n\nMain Set 4x\n- 4m Crosstrainer AT (137-142 bpm)\n- 2m Lugn tramp (Z1)\n\n- 10m Cooldown Z1'
-                    },
-                    {
-                        dayIdx: 2,
-                        title: 'Tung Vadrehab & Löpstyrka',
-                        tag: 'Styrka & Senrehab (45m)',
-                        tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-                        sportType: 'WeightTraining',
-                        desc: '- 3x12 Raka tåhävningar (3s upp, 3s ner)\n- 3x15 Sittande tåhävningar (soleus)\n- 3x10 Enbens knäböj / Utfall\n- 3x12 Höftlyft & Core'
-                    },
-                    {
-                        dayIdx: 3,
-                        title: 'Cykel Distans (FatMax)',
-                        tag: 'Aerob Bas (65m)',
-                        tagClass: 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
-                        sportType: 'Ride',
-                        desc: '- 10m Warmup Z1\n- 45m Cykel/Trainer i FatMax (110-124 bpm, hög kadens 90+ rpm för minimal vadbelastning)\n- 10m Cooldown Z1'
-                    },
-                    {
-                        dayIdx: 4,
-                        title: 'Vila eller Lätt Core/Rörlighet',
-                        tag: 'Återhämtning',
-                        tagClass: 'bg-slate-700 text-slate-300',
-                        sportType: 'Workout',
-                        isRest: true,
-                        desc: 'Vilodag inför helgens längre konditionsblock. Utvärdera morgonstelhet i vad/hälsena.'
-                    },
-                    {
-                        dayIdx: 5,
-                        title: canTestRun ? 'Långpass-ersättning: Test + Cykel/Cross' : 'Långpass-ersättning: Cykel + Crosstrainer',
-                        tag: 'Långpass FatMax (95m)',
-                        tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                        sportType: canTestRun ? 'Run' : 'Ride',
-                        desc: canTestRun
-                            ? '- 5m Walk Warmup\n\nMain Set 5x\n- 1m FatMax Z2 (100-124 bpm)\n- 2m Walk\n\n- 75m Cykel eller Crosstrainer i FatMax (110-124 bpm) för motsvarande 15 km långpass'
-                            : '- 50m Cykel FatMax (110-124 bpm)\n- 45m Crosstrainer FatMax (115-124 bpm)\n(Byte av redskap halvvägs sparar rygg och fötter)'
-                    },
-                    {
-                        dayIdx: 6,
-                        title: 'Crosstrainer Fartlek + Vadrehab',
-                        tag: 'Varierad Cardio + Rehab (60m)',
-                        tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-                        sportType: 'Elliptical',
-                        desc: '- 10m Warmup Z1\n- 35m Crosstrainer Fartlek (växla 3m 120 bpm / 1m 135-140 bpm)\n- 15m Vadrehab: Tåhävningar & balansplatta'
-                    }
-                ];
+            // Generera mallen för innevarande vecka + nästa vecka
+            let fullDaysList = [];
         
-                appState.generatedWeeklySchedule = altWeekTemplate.map((item, idx) => {
-                    const dateObj = new Date(startOfWeek);
-                    dateObj.setDate(startOfWeek.getDate() + idx);
-                    return {
-                        dayName: dayNames[idx],
-                        dateStr: toLocalDateString(dateObj),
-                        isCustomAlt: true,
-                        ...item
-                    };
-                });
-            } else {
-                if (!appState.libraryWorkouts.length) {
-                    alert('Hämtar pass från biblioteket först...');
-                    fetchLibraryWorkouts().then(() => generateAiWeeklySchedule());
-                    return;
+            for (let i = 0; i < 14; i++) {
+                const dateObj = new Date(startOfWeek);
+                dateObj.setDate(startOfWeek.getDate() + i);
+                const dateStr = toLocalDateString(dateObj);
+                
+                // Visa endast från och med aktuell dag
+                if (dateStr < todayStr) continue;
+        
+                const isNextWeek = i >= 7;
+                const dayName = `${isNextWeek ? 'Nästa ' : ''}${dayNames[i % 7]}`;
+        
+                // Kolla om det redan finns ett bokat pass i Intervals.icu för detta datum
+                const existingEvent = scheduledEvents.find(ev => String(ev.start_date_local || '').slice(0, 10) === dateStr);
+        
+                if (existingEvent) {
+                    fullDaysList.push({
+                        dateStr,
+                        dayName,
+                        isNextWeek,
+                        isExisting: true,
+                        eventId: existingEvent.id,
+                        title: existingEvent.name || 'Bokat pass',
+                        tag: `[${existingEvent.type || 'Pass'}]`,
+                        tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+                        desc: existingEvent.description || 'Ingen beskrivning tillgänglig.'
+                    });
+                } else {
+                    // Om inget är bokat, föreslå via AI-coachen (för innevarande vecka) eller standardupplägg
+                    let suggestion = getSmartDaySuggestion(i % 7, analysis, maxPain, canTestRun);
+                    fullDaysList.push({
+                        dateStr,
+                        dayName,
+                        isNextWeek,
+                        isExisting: false,
+                        ...suggestion
+                    });
                 }
-        
-                const findWorkoutByKeyword = (keyword) => {
-                    return appState.libraryWorkouts.find(w => (w.name || '').toLowerCase().includes(keyword.toLowerCase())) || appState.libraryWorkouts[0];
-                };
-        
-                const runWeekTemplate = [
-                    { dayIdx: 0, keyword: 'Vila', isRest: true },
-                    { dayIdx: 1, keyword: 'Tröskel', isRest: false },
-                    { dayIdx: 2, keyword: 'Rehab', isRest: false },
-                    { dayIdx: 3, keyword: 'VO2max', isRest: false },
-                    { dayIdx: 4, keyword: 'Vila', isRest: true },
-                    { dayIdx: 5, keyword: 'FatMax', isRest: false },
-                    { dayIdx: 6, keyword: 'Fartlek', isRest: false }
-                ];
-        
-                appState.generatedWeeklySchedule = runWeekTemplate.map((item, idx) => {
-                    const dateObj = new Date(startOfWeek);
-                    dateObj.setDate(startOfWeek.getDate() + idx);
-                    const workout = item.isRest ? null : findWorkoutByKeyword(item.keyword);
-                    const wName = workout ? workout.name : 'Vilodag';
-                    const cat = workout ? getPhilosophyCategory(wName) : 'Vila';
-        
-                    return {
-                        dayName: dayNames[idx],
-                        dateStr: toLocalDateString(dateObj),
-                        isCustomAlt: false,
-                        isRest: item.isRest,
-                        workoutId: workout ? workout.id : null,
-                        title: wName,
-                        tag: `[${cat}]`,
-                        tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                        sportType: 'Run',
-                        desc: workout ? (workout.description || 'Ingen beskrivning') : 'Fullständig återhämtning'
-                    };
-                });
             }
         
-            container.innerHTML = appState.generatedWeeklySchedule.map(item => `
-                <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3.5 space-y-2 flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-center text-[11px] text-indigo-400 font-bold">
-                            <span>${item.dayName}</span>
-                            <span class="font-mono text-slate-400">${item.dateStr.slice(5)}</span>
-                        </div>
-                        <h4 class="font-bold text-white text-xs mt-1">${item.title}</h4>
-                        <span class="inline-block mt-1 px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.tagClass}">${item.tag}</span>
-                    </div>
-                    <div class="text-[10px] text-slate-300 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800/80 whitespace-pre-line">
-                        ${item.desc}
-                    </div>
-                </div>
-            `).join('');
+            appState.generatedWeeklySchedule = fullDaysList;
         
+            // Bygg HTML med tydlig gräns mellan innevarande vecka och nästa vecka
+            let currentWeekHtml = '<div class="space-y-3"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Innevarande vecka (Från och med idag)</h4><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">';
+            let nextWeekHtml = '<div class="space-y-3 mt-8 pt-6 border-t border-slate-700/80"><h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> Nästa vecka (Framåtblick)</h4><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">';
+        
+            let hasCurrent = false;
+            let hasNext = false;
+        
+            fullDaysList.forEach((item, index) => {
+                const cardHtml = `
+                    <div class="bg-slate-900/60 border ${item.isExisting ? 'border-indigo-500/40' : 'border-slate-800'} rounded-2xl p-3.5 space-y-2 flex flex-col justify-between shadow-sm">
+                        <div>
+                            <div class="flex justify-between items-center text-[11px] text-slate-400 font-bold">
+                                <span class="text-indigo-300">${item.dayName}</span>
+                                <span class="font-mono">${item.dateStr.slice(5)}</span>
+                            </div>
+                            <h4 class="font-bold text-white text-xs mt-1">${item.title}</h4>
+                            <span class="inline-block mt-1 px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.tagClass}">${item.tag} ${item.isExisting ? ' (Bokat)' : ''}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-300 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800/80 whitespace-pre-line max-h-24 overflow-y-auto">
+                            ${item.desc}
+                        </div>
+                        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                            ${item.isExisting ? `
+                                <button onclick="deleteScheduledEvent('${item.eventId}')" class="flex-1 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-semibold rounded-lg border border-rose-500/20 transition flex items-center justify-center gap-1">
+                                    <i data-lucide="trash-2" class="w-3 h-3"></i> Ta bort
+                                </button>
+                            ` : `
+                                <button onclick="scheduleSingleItem(${index})" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-semibold rounded-lg transition flex items-center justify-center gap-1">
+                                    <i data-lucide="send" class="w-3 h-3"></i> Boka
+                                </button>
+                            `}
+                            <button onclick="openSwapModal(${index})" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold rounded-lg border border-slate-700 transition" title="Byt ut pass">
+                                Byt ut
+                            </button>
+                        </div>
+                    </div>
+                `;
+        
+                if (item.isNextWeek) {
+                    nextWeekHtml += cardHtml;
+                    hasNext = true;
+                } else {
+                    currentWeekHtml += cardHtml;
+                    hasCurrent = true;
+                }
+            });
+        
+            currentWeekHtml += '</div></div>';
+            nextWeekHtml += '</div></div>';
+        
+            container.innerHTML = (hasCurrent ? currentWeekHtml : '') + (hasNext ? nextWeekHtml : '');
             sendWholeBtn.classList.remove('hidden');
             if (window.lucide) lucide.createIcons();
+        }
+        
+        // Hjälpfunktion för att ta fram smart förslag per dag
+        function getSmartDaySuggestion(dayIndex, analysis, maxPain, canTestRun) {
+            const isAlt = (analysis.isReturnToRun || maxPain >= 1);
+        
+            if (dayIndex === 0) { // Måndag
+                return { title: 'Vila & Rörlighet', tag: '[Återhämtning]', tagClass: 'bg-slate-700 text-slate-300', desc: 'Fullständig vila. Lätt fotledsrörlighet.' };
+            } else if (dayIndex === 1) { // Tisdag
+                return isAlt ? {
+                    title: canTestRun ? 'Return-to-Run Test + Crosstrainer' : 'Crosstrainer Tröskel (Norska 4x4)',
+                    tag: '[Kvalitet]', tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+                    desc: canTestRun ? '- 4x (1m jogg / 2m gång)\n- 40m Crosstrainer FatMax' : '- 4x 4m Crosstrainer AT (137-142 bpm)'
+                } : {
+                    title: '[Tröskel] Norska intervaller 4x4', tag: '[Tröskel]', tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+                    desc: '- 10m Warmup\n- 4x 4m Tröskel (137-142 bpm)\n- 5m Cooldown'
+                };
+            } else if (dayIndex === 2) { // Onsdag
+                return { title: 'Tung Vadrehab & Styrka', tag: '[Rehab]', tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20', desc: '- 3x12 Raka tåhävningar\n- 3x15 Sittande tåhävningar\n- Höftlyft & Core' };
+            } else if (dayIndex === 3) { // Torsdag
+                return { title: 'Cykel Distans (FatMax)', tag: '[FatMax]', tagClass: 'bg-sky-500/10 text-sky-400 border border-sky-500/20', desc: '- 45m Cykel i FatMax (110-124 bpm), hög kadens 90+ rpm' };
+            } else if (dayIndex === 4) { // Fredag
+                return { title: 'Vila / Rörlighet', tag: '[Återhämtning]', tagClass: 'bg-slate-700 text-slate-300', desc: 'Vilodag inför helgen.' };
+            } else if (dayIndex === 5) { // Lördag
+                return isAlt ? {
+                    title: 'Långpass-ersättning: Cykel + Cross',
+                    tag: '[FatMax]', tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+                    desc: '- 50m Cykel FatMax\n- 45m Crosstrainer FatMax'
+                } : {
+                    title: '[FatMax] Långpass Distans', tag: '[FatMax]', tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+                    desc: '- 75m Lugn löpning i FatMax-zon'
+                };
+            } else { // Söndag
+                return { title: 'Crosstrainer Fartlek + Rehab', tag: '[Fartlek]', tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20', desc: '- 35m Fartlek på crosstrainer\n- 15m Vadrehab' };
+            }
+        }
+        
+        // Ta bort bokat pass från kalendern
+        async function deleteScheduledEvent(eventId) {
+            if (!confirm('Vill du ta bort det här passet från din Intervals.icu-kalender?')) return;
+        
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+        
+            try {
+                const res = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${eventId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': authHeader }
+                });
+                if (res.ok || res.status === 200) {
+                    alert('✅ Passet har tagits bort!');
+                    generateAiWeeklySchedule();
+                } else {
+                    alert('Kunde inte ta bort passet.');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Ett nätverksfel uppstod.');
+            }
+        }
+        
+        // Boka ett enskilt förslaget pass till kalendern
+        async function scheduleSingleItem(index) {
+            const item = appState.generatedWeeklySchedule[index];
+            if (!item) return;
+        
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+        
+            const payload = {
+                category: 'WORKOUT',
+                start_date_local: `${item.dateStr}T00:00:00`,
+                type: 'Workout',
+                name: item.title,
+                description: item.desc
+            };
+        
+            try {
+                const res = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events`, {
+                    method: 'POST',
+                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok || res.status === 201) {
+                    alert(`✅ Passet "${item.title}" har bokats den ${item.dateStr}!`);
+                    generateAiWeeklySchedule();
+                } else {
+                    alert('Kunde inte boka passet.');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Ett nätverksfel uppstod.');
+            }
+        }
+        
+        // Enkel väljare för att byta ut pass mot något från biblioteket
+        function openSwapModal(index) {
+            const item = appState.generatedWeeklySchedule[index];
+            const newTitle = prompt(`Byt ut "${item.title}" mot valfritt passnamn:`, item.title);
+            if (!newTitle) return;
+        
+            item.title = newTitle;
+            item.desc = 'Anpassat pass via snabbbyte.';
+            generateAiWeeklySchedule();
         }
         
         async function sendWholeScheduleToIntervals() {
