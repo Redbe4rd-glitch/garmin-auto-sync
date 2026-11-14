@@ -1308,7 +1308,7 @@ Main Set 4x
             renderLibraryGrid();
         }
 
-        // ================= VISUELL PARSER FÖR TRÄNINGSBLOCK =================
+        // ================= VISUELL PARSER FÖR TRÄNINGSBLOCK (MED REPETITIONER) =================
         function formatWorkoutBlocksHTML(rawText) {
             if (!rawText || !rawText.trim()) {
                 return '<div class="text-[11px] text-slate-500 italic py-2">Ingen passstruktur angiven.</div>';
@@ -1316,25 +1316,48 @@ Main Set 4x
         
             const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             let html = '<div class="space-y-1.5">';
+            let inRepeatBlock = false;
+            let repeatCountLabel = '';
         
-            lines.forEach(line => {
+            lines.forEach((line, index) => {
                 const lower = line.toLowerCase();
         
-                // 1. Rubriker / Set-indikatorer (t.ex. "Main Set 5x" eller "Warmup")
-                if (!line.startsWith('-') && (lower.includes('set') || lower.includes('warmup') || lower.includes('cooldown') || lower.endsWith('x'))) {
+                // 1. Kolla om raden anger en repetition (t.ex. "10x", "Main Set 4x" eller liknande)
+                const repeatMatch = line.match(/^([0-9]+)x\b/i) || line.match(/^(?:main set|set)?\s*([0-9]+)x/i) || (lower.includes('x') && !lower.includes('warmup') && !lower.includes('cooldown') && line.length < 15);
+        
+                if (repeatMatch && !line.startsWith('-')) {
+                    inRepeatBlock = true;
+                    repeatCountLabel = line;
                     html += `
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 pt-1.5 pb-0.5 flex items-center gap-1.5">
-                            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                        <div class="mt-2 mb-1 p-2 bg-indigo-950/40 border border-indigo-500/30 rounded-xl space-y-1.5">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 flex items-center justify-between">
+                                <span class="flex items-center gap-1.5">
+                                    <i data-lucide="repeat" class="w-3 h-3"></i> ${repeatCountLabel} repetitioner
+                                </span>
+                            </div>
+                    `;
+                    return;
+                }
+        
+                // 2. Vanliga rubriker (Warmup, Cooldown etc)
+                if (!line.startsWith('-') && (lower.includes('warmup') || lower.includes('cooldown') || lower.includes('uppvärmning') || lower.includes('nedvarvning'))) {
+                    if (inRepeatBlock) {
+                        html += '</div>'; // Stäng tidigare repeat-block
+                        inRepeatBlock = false;
+                    }
+                    html += `
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 pt-1.5 pb-0.5 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
                             ${line}
                         </div>
                     `;
                     return;
                 }
         
-                // Ta bort inledande bindestreck för snyggare visning
+                // Ta bort inledande bindestreck
                 const cleanText = line.replace(/^-\s*/, '');
         
-                // 2. Bestäm färgblock baserat på intensitet / nyckelord
+                // 3. Färgkodning av moment
                 let blockStyle = 'bg-slate-900/90 border-slate-700/70 text-slate-200';
                 let badgeText = 'Moment';
                 let badgeStyle = 'bg-slate-800 text-slate-400';
@@ -1349,7 +1372,7 @@ Main Set 4x
                     badgeStyle = 'bg-sky-500/20 text-sky-300';
                 } else if (lower.includes('tröskel') || lower.includes('at') || lower.includes('vo2') || lower.includes('fartlek') || lower.includes('137') || lower.includes('142')) {
                     blockStyle = 'bg-amber-950/30 border-amber-500/40 text-amber-100';
-                    badgeText = 'Kvalitet';
+                    badgeText = 'Intervall / Kvalitet';
                     badgeStyle = 'bg-amber-500/20 text-amber-300';
                 } else if (lower.includes('vila') || lower.includes('walk') || lower.includes('gång') || lower.includes('jog') || lower.includes('rest') || lower.includes('easy')) {
                     blockStyle = 'bg-slate-900/60 border-slate-800 text-slate-400';
@@ -1359,19 +1382,21 @@ Main Set 4x
                     blockStyle = 'bg-indigo-950/30 border-indigo-500/30 text-indigo-100';
                     badgeText = 'FatMax / Z2';
                     badgeStyle = 'bg-indigo-500/20 text-indigo-300';
-                } else if (lower.includes('rehab') || lower.includes('tåhäv') || lower.includes('styrka') || lower.includes('core')) {
-                    blockStyle = 'bg-purple-950/30 border-purple-500/30 text-purple-100';
-                    badgeText = 'Rehab / Styrka';
-                    badgeStyle = 'bg-purple-500/20 text-purple-300';
                 }
         
+                const indentClass = inRepeatBlock ? 'ml-2 border-l-2 border-indigo-500/40 pl-2' : '';
+        
                 html += `
-                    <div class="border rounded-lg px-2.5 py-1.5 text-[11px] flex items-center justify-between gap-2 ${blockStyle}">
+                    <div class="border rounded-lg px-2.5 py-1.5 text-[11px] flex items-center justify-between gap-2 ${blockStyle} ${indentClass}">
                         <span class="font-medium leading-snug">${cleanText}</span>
                         <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${badgeStyle}">${badgeText}</span>
                     </div>
                 `;
             });
+        
+            if (inRepeatBlock) {
+                html += '</div>';
+            }
         
             html += '</div>';
             return html;
