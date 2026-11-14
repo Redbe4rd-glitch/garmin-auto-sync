@@ -1773,17 +1773,39 @@ Main Set 4x
             if (window.lucide) lucide.createIcons();
         }
         
-        // 4. Utför själva bytet i schemat
-        function applyWorkoutSwap(scheduleIndex, encodedName, encodedDesc) {
+        // 4. Utför själva bytet i schemat och uppdatera Intervals.icu direkt
+        async function applyWorkoutSwap(scheduleIndex, encodedName, encodedDesc) {
             const item = appState.generatedWeeklySchedule[scheduleIndex];
             if (!item) return;
         
-            item.title = decodeURIComponent(encodedName);
-            item.desc = decodeURIComponent(encodedDesc);
-            item.isExisting = false; // Gör om till ett förslag som kan bokas
+            const newTitle = decodeURIComponent(encodedName);
+            const newDesc = decodeURIComponent(encodedDesc);
+        
+            // Om passet redan var bokat i kalendern måste vi ta bort det gamla eventet först
+            if (item.isExisting && item.eventId) {
+                const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+                const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+                const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+        
+                try {
+                    await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${item.eventId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': authHeader }
+                    });
+                } catch (e) {
+                    console.warn('Kunde inte ta bort gamla passet vid byte:', e);
+                }
+            }
+        
+            // Uppdatera objektet lokalt
+            item.title = newTitle;
+            item.desc = newDesc;
+            item.isExisting = false; // Det är nu ett nytt val som skickas
         
             closeSwapModal();
-            generateAiWeeklySchedule(); // Uppdaterar vyn direkt
+        
+            // Boka det nya passet direkt till kalendern för att säkerställa att det hamnar rätt
+            await scheduleSingleItem(scheduleIndex);
         }
         
         async function sendWholeScheduleToIntervals() {
