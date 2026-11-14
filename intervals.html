@@ -391,7 +391,7 @@ Main Set 4x
                         <h3 class="text-sm font-bold text-white flex items-center gap-2">
                             <i data-lucide="calendar-days" class="w-4 h-4 text-indigo-400"></i> AI Veckoschema-generator
                         </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Genererar ett komplett schema för innevarande vecka och hämtar matchande pass direkt från ditt Intervals.icu-bibliotek.</p>
+                        <p class="text-xs text-slate-400 mt-0.5">Genererar ett komplett schema för innevarande vecka och nästa vecka direkt från din kalender.</p>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="generateAiWeeklySchedule()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
@@ -404,9 +404,10 @@ Main Set 4x
                 </div>
 
 
-                <div id="weeklyScheduleContainer" class="grid grid-cols-1 md:grid-cols-7 gap-3">
-                    <div class="col-span-full py-12 text-center text-slate-500 text-xs">
-                        Klicka på <strong>"Generera Veckoschema"</strong> för att matcha veckans träning mot ditt bibliotek.
+                <!-- Här injiceras vecko-grupperna dynamiskt -->
+                <div id="weeklyScheduleContainer" class="space-y-6">
+                    <div class="py-12 text-center text-slate-500 text-xs">
+                        Klicka på <strong>"Generera Veckoschema"</strong> för att ladda in dina pass.
                     </div>
                 </div>
             </div>
@@ -1437,7 +1438,7 @@ Main Set 4x
                 return;
             }
         
-            container.innerHTML = `<div class="col-span-full py-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+            container.innerHTML = `<div class="py-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
                 <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Hämtar planering och schema från Intervals.icu...
             </div>`;
             if (window.lucide) lucide.createIcons();
@@ -1476,7 +1477,6 @@ Main Set 4x
             const isRedLight = (maxPain >= 3 || analysis.rhrDelta >= 4);
             const canTestRun = (!isRedLight && maxPain <= 1 && !analysis.biomechWarning);
         
-            // Generera mallen för innevarande vecka + nästa vecka
             let fullDaysList = [];
         
             for (let i = 0; i < 14; i++) {
@@ -1490,7 +1490,6 @@ Main Set 4x
                 const isNextWeek = i >= 7;
                 const dayName = `${isNextWeek ? 'Nästa ' : ''}${dayNames[i % 7]}`;
         
-                // Kolla om det redan finns ett bokat pass i Intervals.icu för detta datum
                 const existingEvent = scheduledEvents.find(ev => String(ev.start_date_local || '').slice(0, 10) === dateStr);
         
                 if (existingEvent) {
@@ -1506,7 +1505,6 @@ Main Set 4x
                         desc: existingEvent.description || 'Ingen beskrivning tillgänglig.'
                     });
                 } else {
-                    // Om inget är bokat, föreslå via AI-coachen (för innevarande vecka) eller standardupplägg
                     let suggestion = getSmartDaySuggestion(i % 7, analysis, maxPain, canTestRun);
                     fullDaysList.push({
                         dateStr,
@@ -1520,9 +1518,8 @@ Main Set 4x
         
             appState.generatedWeeklySchedule = fullDaysList;
         
-            // Bygg HTML med tydlig gräns mellan innevarande vecka och nästa vecka
-            let currentWeekHtml = '<div class="space-y-3"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Innevarande vecka (Från och med idag)</h4><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">';
-            let nextWeekHtml = '<div class="space-y-3 mt-8 pt-6 border-t border-slate-700/80"><h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> Nästa vecka (Framåtblick)</h4><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">';
+            let currentWeekHtml = '<div class="space-y-3"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Innevarande vecka (Från och med idag)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
+            let nextWeekHtml = '<div class="space-y-3 mt-8 pt-6 border-t border-slate-700/80"><h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> Nästa vecka (Framåtblick)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
         
             let hasCurrent = false;
             let hasNext = false;
@@ -1575,13 +1572,12 @@ Main Set 4x
             if (window.lucide) lucide.createIcons();
         }
         
-        // Hjälpfunktion för att ta fram smart förslag per dag
         function getSmartDaySuggestion(dayIndex, analysis, maxPain, canTestRun) {
             const isAlt = (analysis.isReturnToRun || maxPain >= 1);
         
-            if (dayIndex === 0) { // Måndag
+            if (dayIndex === 0) {
                 return { title: 'Vila & Rörlighet', tag: '[Återhämtning]', tagClass: 'bg-slate-700 text-slate-300', desc: 'Fullständig vila. Lätt fotledsrörlighet.' };
-            } else if (dayIndex === 1) { // Tisdag
+            } else if (dayIndex === 1) {
                 return isAlt ? {
                     title: canTestRun ? 'Return-to-Run Test + Crosstrainer' : 'Crosstrainer Tröskel (Norska 4x4)',
                     tag: '[Kvalitet]', tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
@@ -1590,13 +1586,13 @@ Main Set 4x
                     title: '[Tröskel] Norska intervaller 4x4', tag: '[Tröskel]', tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
                     desc: '- 10m Warmup\n- 4x 4m Tröskel (137-142 bpm)\n- 5m Cooldown'
                 };
-            } else if (dayIndex === 2) { // Onsdag
+            } else if (dayIndex === 2) {
                 return { title: 'Tung Vadrehab & Styrka', tag: '[Rehab]', tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20', desc: '- 3x12 Raka tåhävningar\n- 3x15 Sittande tåhävningar\n- Höftlyft & Core' };
-            } else if (dayIndex === 3) { // Torsdag
+            } else if (dayIndex === 3) {
                 return { title: 'Cykel Distans (FatMax)', tag: '[FatMax]', tagClass: 'bg-sky-500/10 text-sky-400 border border-sky-500/20', desc: '- 45m Cykel i FatMax (110-124 bpm), hög kadens 90+ rpm' };
-            } else if (dayIndex === 4) { // Fredag
+            } else if (dayIndex === 4) {
                 return { title: 'Vila / Rörlighet', tag: '[Återhämtning]', tagClass: 'bg-slate-700 text-slate-300', desc: 'Vilodag inför helgen.' };
-            } else if (dayIndex === 5) { // Lördag
+            } else if (dayIndex === 5) {
                 return isAlt ? {
                     title: 'Långpass-ersättning: Cykel + Cross',
                     tag: '[FatMax]', tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
@@ -1605,12 +1601,11 @@ Main Set 4x
                     title: '[FatMax] Långpass Distans', tag: '[FatMax]', tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
                     desc: '- 75m Lugn löpning i FatMax-zon'
                 };
-            } else { // Söndag
+            } else {
                 return { title: 'Crosstrainer Fartlek + Rehab', tag: '[Fartlek]', tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20', desc: '- 35m Fartlek på crosstrainer\n- 15m Vadrehab' };
             }
         }
         
-        // Ta bort bokat pass från kalendern
         async function deleteScheduledEvent(eventId) {
             if (!confirm('Vill du ta bort det här passet från din Intervals.icu-kalender?')) return;
         
@@ -1635,7 +1630,6 @@ Main Set 4x
             }
         }
         
-        // Boka ett enskilt förslaget pass till kalendern
         async function scheduleSingleItem(index) {
             const item = appState.generatedWeeklySchedule[index];
             if (!item) return;
@@ -1670,7 +1664,6 @@ Main Set 4x
             }
         }
         
-        // Enkel väljare för att byta ut pass mot något från biblioteket
         function openSwapModal(index) {
             const item = appState.generatedWeeklySchedule[index];
             const newTitle = prompt(`Byt ut "${item.title}" mot valfritt passnamn:`, item.title);
@@ -1730,7 +1723,7 @@ Main Set 4x
                 }
             }
         
-            alert(`✅ ${successCount} pass (motsvarande 50–70 km träningsbelastning) har skickats till din Intervals.icu-kalender!`);
+            alert(`✅ ${successCount} pass har skickats till din Intervals.icu-kalender!`);
         }
 
 
