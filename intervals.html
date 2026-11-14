@@ -1308,7 +1308,8 @@ Main Set 4x
             renderLibraryGrid();
         }
 
-        // ================= VISUELL PARSER FÖR TRÄNINGSBLOCK (MED TYDLIGA TIDSENHETER) =================
+        
+        // ================= FINJUSTERAD VISUELL PARSER FÖR TRÄNINGSBLOCK =================
         function formatWorkoutBlocksHTML(rawText) {
             if (!rawText || !rawText.trim()) {
                 return '<div class="text-[11px] text-slate-500 italic py-2">Ingen passstruktur angiven.</div>';
@@ -1320,10 +1321,15 @@ Main Set 4x
             lines.forEach(line => {
                 const lower = line.toLowerCase();
         
-                // 1. Övergripande rubriker
+                // 1. Dölj den översta sammanfattande raden om den bara innehåller en helhetsbeskrivning (innehåller både warmup och cooldown på samma rad)
+                if ((lower.includes('warmup') || lower.includes('uppvärmning')) && (lower.includes('cooldown') || lower.includes('nedvarvning') || lower.includes('kategori'))) {
+                    return; // Hoppa över denna rad helt så den inte dubblerar
+                }
+        
+                // 2. Snygga rubriker i fet stil istället för taggar (t.ex. WARMUP, COOLDOWN, MAIN SET)
                 if (!line.startsWith('-') && !line.includes('[') && (lower.includes('warmup') || lower.includes('cooldown') || lower.includes('uppvärmning') || lower.includes('nedvarvning') || lower.includes('main set'))) {
                     html += `
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 pt-1.5 pb-0.5 flex items-center gap-1.5">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-300 pt-2 pb-0.5 flex items-center gap-1.5">
                             <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
                             ${line}
                         </div>
@@ -1334,12 +1340,12 @@ Main Set 4x
                 // Ta bort inledande bindestreck eller punkter
                 let cleanText = line.replace(/^[-•]\s*/, '');
         
-                // Snygga till m -> min och s -> sek för bättre läsbarhet (ersätter t.ex. "3m" med "3 min" och "45s" med "45 sek")
+                // Byt ut m -> min och s -> sek för bättre läsbarhet
                 cleanText = cleanText
                     .replace(/\b([0-9]+)\s*m\b/gi, '$1 min')
                     .replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
         
-                // 2. Färgkodning baserat på innehåll
+                // 3. Färgkodning baserat på innehåll
                 let blockStyle = 'bg-slate-900/90 border-slate-700/70 text-slate-200';
                 let badgeText = 'Moment';
                 let badgeStyle = 'bg-slate-800 text-slate-400';
@@ -1377,7 +1383,6 @@ Main Set 4x
             html += '</div>';
             return html;
         }
-        
 
         function toggleLibraryCard(workoutId) {
             const detailsEl = document.getElementById(`lib-details-${workoutId}`);
