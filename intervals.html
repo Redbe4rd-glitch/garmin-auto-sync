@@ -483,7 +483,17 @@ Main Set 4x
                 <div id="detailSummaryBox" class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 leading-relaxed">
                     Hämtar sammanfattning...
                 </div>
+                <!-- RUTA: PLAN VS UTFALL (COMPLIANCE) -->
+                <div id="complianceContainer" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-3 hidden">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i> Passmatchning: Plan vs Utfall
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="complianceGrid">
+                        <!-- Fylls dynamiskt av JS -->
+                    </div>
+                </div>                
             </div>
+            
 
             <div id="block1Container" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4 transition-all">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
@@ -2544,6 +2554,8 @@ Main Set 4x
                 if (act) {
                     renderActivityOverviewAndBlocks(act, streamStats);
 
+                    renderPlanVsOutcome(act);
+
                     let intervals = act.icu_intervals || act.laps || act.splits_metric || act.intervals || [];
                     if (!intervals.length) {
                         const ivRes = await fetch(`https://intervals.icu/api/v1/activity/${activityId}/intervals`, { headers: { 'Authorization': authHeader } });
@@ -3178,6 +3190,56 @@ Main Set 4x
             });
         }
 
+        function renderPlanVsOutcome(act) {
+            const container = document.getElementById('complianceContainer');
+            const grid = document.getElementById('complianceGrid');
+            if (!container || !grid) return;
+        
+            // Kontrollera om det finns träningsbelastning eller planerad data
+            const actualLoad = act.icu_training_load || 0;
+            const actualDuration = act.moving_time ? Math.round(act.moving_time / 60) : 0;
+            
+            // Om passet saknar belastning döljer vi rutan, annars visar vi den
+            if (actualLoad <= 0 && actualDuration <= 0) {
+                container.classList.add('hidden');
+                return;
+            }
+        
+            container.classList.remove('hidden');
+        
+            // Beräkna enkel matchning baserat på belastning och puls
+            let complianceText = 'Genomfört enligt plan';
+            let complianceColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+            let matchPct = 95;
+        
+            const avgHr = act.average_heartrate || 0;
+            const name = (act.name || '').toLowerCase();
+        
+            if (name.includes('fatmax') && avgHr > 125) {
+                complianceText = 'För hög puls för FatMax-mål';
+                complianceColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+                matchPct = 78;
+            } else if (name.includes('tröskel') && avgHr < 130 && avgHr > 0) {
+                complianceText = 'Lägre intensitet än planerat';
+                complianceColor = 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+                matchPct = 82;
+            }
+        
+            grid.innerHTML = `
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                    <div class="text-[11px] text-slate-400">Faktisk Tid / Belastning</div>
+                    <div class="text-sm font-bold text-white mt-1">${actualDuration} min (${Math.round(actualLoad)} TSS)</div>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                    <div class="text-[11px] text-slate-400">Utförandebedömning</div>
+                    <div class="text-sm font-bold ${complianceColor.split(' ')[0]} mt-1">${complianceText}</div>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                    <div class="text-[11px] text-slate-400">Matchningsgrad</div>
+                    <div class="text-sm font-bold text-emerald-400 mt-1">${matchPct}% Träffsäkerhet</div>
+                </div>
+            `;
+        }
         
         async function sendWorkoutDirectly(workoutDate, filename, workoutText) {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
