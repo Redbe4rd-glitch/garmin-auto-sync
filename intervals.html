@@ -1747,7 +1747,6 @@ Main Set 4x
             }
         }
 
-        // Tillagd saknad funktion för att hantera kategori vid AI-rekommendationer
         async function scheduleIntervalsWorkoutWithCategory(workoutId, encodedName, category = 'WORKOUT') {
             const workoutName = decodeURIComponent(encodedName);
             const targetDate = toLocalDateString();
@@ -2984,8 +2983,6 @@ Main Set 4x
         }
 
         // ================= SIMULERINGSMOTOR FÖR FORMKURVA (CTL / ATL / TSB) =================
-        let formForecastChartInstance = null;
-        
         function estimateWorkoutLoad(title = '', desc = '', explicitLoad = null) {
             if (typeof explicitLoad === 'number' && explicitLoad > 0) return explicitLoad;
         
@@ -3235,11 +3232,9 @@ Main Set 4x
             const grid = document.getElementById('complianceGrid');
             if (!container || !grid) return;
         
-            // Kontrollera om det finns träningsbelastning eller planerad data
             const actualLoad = act.icu_training_load || 0;
             const actualDuration = act.moving_time ? Math.round(act.moving_time / 60) : 0;
             
-            // Om passet saknar belastning döljer vi rutan, annars visar vi den
             if (actualLoad <= 0 && actualDuration <= 0) {
                 container.classList.add('hidden');
                 return;
@@ -3247,7 +3242,6 @@ Main Set 4x
         
             container.classList.remove('hidden');
         
-            // Beräkna enkel matchning baserat på belastning och puls
             let complianceText = 'Genomfört enligt plan';
             let complianceColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
             let matchPct = 95;
