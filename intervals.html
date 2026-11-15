@@ -232,6 +232,40 @@
                 </div>
             </div>
 
+            <!-- ================= FORMKURVA (HISTORIK + BIOMETRISK PROGNOS) ================= -->
+            <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/70 pb-3">
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-4 h-4 text-indigo-400"></i>
+                            Formkurva: Historik (28d) & Prognos (14d)
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">
+                            Heldragen = Faktisk data | Streckad = Prognos baserad på kalender + dagsform
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="formForecastBadge" class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            Normal progression
+                        </span>
+                        <button onclick="updateFormCurveForecast()" class="p-1.5 bg-slate-900 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" title="Räkna om prognos">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            
+                <!-- Förklaring av zoner -->
+                <div class="flex flex-wrap items-center gap-4 text-[10px] text-slate-300">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-sky-400 inline-block"></span> Fitness (CTL)</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-rose-400 inline-block"></span> Fatigue (ATL)</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-emerald-400 inline-block"></span> Form (TSB: +5 till +15 = Formtopp, < -20 = Hög slitning)</span>
+                </div>
+            
+                <div class="h-64 relative">
+                    <canvas id="formForecastChart"></canvas>
+                </div>
+            </div>
+                        
             <!-- Morgonstatus & Känningar -->
             <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
                 <div class="flex items-center justify-between">
@@ -620,6 +654,7 @@ Main Set 4x
         let volumeChartInstance = null;
         let zoneChartInstance = null;
         let detailChartInstances = {};
+        let formForecastChartInstance = null;
 
         function toLocalDateString(date = new Date()) {
             const offset = date.getTimezoneOffset() * 60000;
@@ -2135,7 +2170,8 @@ Main Set 4x
             if (rec.isCustomDirect) {
                 await sendWorkoutDirectly(toLocalDateString(), 'Return_to_Run_Test.txt', rec.workoutText);
             } else {
-                await scheduleIntervalsWorkout(rec.id, encodeURIComponent(rec.name));
+                // Skicka med ID och säkerställ att kategori hanteras korrekt
+                await scheduleIntervalsWorkoutWithCategory(rec.id, encodeURIComponent(rec.name), 'WORKOUT');
             }
         }
 
@@ -2895,6 +2931,254 @@ Main Set 4x
             textInput.value = '';
         }
 
+        // ================= SIMULERINGSMOTOR FÖR FORMKURVA (CTL / ATL / TSB) =================
+        let formForecastChartInstance = null;
+        
+        function estimateWorkoutLoad(title = '', desc = '', explicitLoad = null) {
+            if (typeof explicitLoad === 'number' && explicitLoad > 0) return explicitLoad;
+        
+            const text = `${title} ${desc}`.toLowerCase();
+            if (text.includes('vila') && !text.includes('intervall')) return 0;
+            if (text.includes('rehab') || text.includes('rörlighet') || text.includes('yoga')) return 20;
+            if (text.includes('vo2') || text.includes('tröskel') || text.includes('norska') || text.includes('tusingar') || text.includes('intervall')) return 75;
+            if (text.includes('långpass') || text.includes('75m') || text.includes('90m')) return 65;
+            if (text.includes('fartlek')) return 60;
+            if (text.includes('fatmax') || text.includes('cykel') || text.includes('crosstrainer') || text.includes('distans')) return 45;
+            if (text.includes('styrka') || text.includes('gym')) return 35;
+        
+            return 40; // Standardvärde för ospecificerat pass
+        }
+        
+        async function updateFormCurveForecast() {
+            const canvas = document.getElementById('formForecastChart');
+            const badge = document.getElementById('formForecastBadge');
+            if (!canvas) return;
+        
+            const history = [...(appState.wellnessHistory || [])].sort((a, b) => a.id.localeCompare(b.id));
+            if (!history.length) return;
+        
+            // 1. Extrahera historiska värden (senaste 28 dagarna)
+            const labels = [];
+            const histCtl = [];
+            const histAtl = [];
+            const histTsb = [];
+        
+            let lastCtl = 0;
+            let lastAtl = 0;
+        
+            history.forEach(day => {
+                const ctl = typeof day.ctl === 'number' ? day.ctl : lastCtl;
+                const atl = typeof day.atl === 'number' ? day.atl : lastAtl;
+                const tsb = ctl - atl;
+        
+                lastCtl = ctl;
+                lastAtl = atl;
+        
+                labels.push(day.id.slice(5)); // MM-DD
+                histCtl.push(Math.round(ctl * 10) / 10);
+                histAtl.push(Math.round(atl * 10) / 10);
+                histTsb.push(Math.round(tsb * 10) / 10);
+            });
+        
+            // 2. Hämta framtida bokade pass från Intervals.icu (14 dagar framåt)
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            let futureEvents = [];
+        
+            if (apiKey && athleteId) {
+                const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const endForecast = new Date();
+                endForecast.setDate(endForecast.getDate() + 14);
+        
+                try {
+                    const res = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events?oldest=${toLocalDateString(tomorrow)}&newest=${toLocalDateString(endForecast)}`, {
+                        headers: { 'Authorization': authHeader }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        futureEvents = Array.isArray(data) ? data : [];
+                    }
+                } catch (e) {
+                    console.warn('Kunde inte hämta framtida events för prognos:', e);
+                }
+            }
+        
+            // 3. Läs av aktuell dagsform (Biometri + Smärta)
+            const calf = parseInt(document.getElementById('inputCalf')?.value || '0', 10);
+            const knee = parseInt(document.getElementById('inputKnee')?.value || '0', 10);
+            const hip = parseInt(document.getElementById('inputHip')?.value || '0', 10);
+            const foot = parseInt(document.getElementById('inputFoot')?.value || '0', 10);
+            const sleep = parseInt(document.getElementById('inputSleep')?.value || '3', 10);
+            const readiness = parseInt(document.getElementById('inputReadiness')?.value || '3', 10);
+            const maxPain = Math.max(calf, knee, hip, foot);
+        
+            const w = appState.wellnessMetrics;
+            const analysis = appState.coachAnalysis || runCoachGenieAnalysis();
+        
+            const isRed = maxPain >= 3 || readiness === 1 || sleep === 1 ||
+                (w && (w.rhrDiff >= 4 || w.hrvDiffPct <= -20 || (w.sleepHours !== null && w.sleepHours < 5.5)));
+        
+            const isYellow = !isRed && (
+                maxPain >= 1 || readiness === 2 || sleep <= 2 || analysis.isReturnToRun || analysis.biomechWarning ||
+                (w && (w.rhrDiff >= 2 || w.hrvDiffPct <= -12 || (w.sleepHours !== null && w.sleepHours < 6.5) || (w.tsb !== null && w.tsb <= -25)))
+            );
+        
+            if (badge) {
+                if (isRed) {
+                    badge.textContent = '🔴 Dagsformsjusterad: 3d avlastning inlagd i prognos';
+                    badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30';
+                } else if (isYellow) {
+                    badge.textContent = '🟡 Dagsformsjusterad: Dämpad belastning närmaste 48h';
+                    badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30';
+                } else {
+                    badge.textContent = '🟢 Normal progression enligt plan';
+                    badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+                }
+            }
+        
+            // 4. Simulera 14 dagar framåt med Banister-modellen
+            const histLen = labels.length;
+            const projCtl = new Array(histLen - 1).fill(null).concat([histCtl[histLen - 1]]);
+            const projAtl = new Array(histLen - 1).fill(null).concat([histAtl[histLen - 1]]);
+            const projTsb = new Array(histLen - 1).fill(null).concat([histTsb[histLen - 1]]);
+        
+            let simCtl = lastCtl;
+            let simAtl = lastAtl;
+        
+            for (let d = 1; d <= 14; d++) {
+                const simDate = new Date();
+                simDate.setDate(simDate.getDate() + d);
+                const dateStr = toLocalDateString(simDate);
+                const dayOfWeekIdx = (simDate.getDay() + 6) % 7; // 0 = Mån, 6 = Sön
+        
+                // Summera belastning för dagens bokade pass (eller AI-förslag om kalendern är tom)
+                const dayEvents = futureEvents.filter(ev => String(ev.start_date_local || '').slice(0, 10) === dateStr);
+                let plannedLoad = 0;
+        
+                if (dayEvents.length > 0) {
+                    dayEvents.forEach(ev => {
+                        plannedLoad += estimateWorkoutLoad(ev.name, ev.description, ev.icu_training_load);
+                    });
+                } else {
+                    const fallback = getSmartDaySuggestion(dayOfWeekIdx, analysis, maxPain, !isRed && maxPain <= 1);
+                    plannedLoad = estimateWorkoutLoad(fallback.title, fallback.desc, null);
+                }
+        
+                // Tillämpa dagsformsfaktor på de närmaste dagarna
+                if (isRed && d <= 3) {
+                    plannedLoad = Math.min(plannedLoad, 15); // Tvingad avlastning / rehab
+                } else if (isYellow && d <= 2) {
+                    plannedLoad = Math.min(plannedLoad, 35); // Dämpad belastning / alternativ träning
+                }
+        
+                // Banister uppdatering
+                simCtl = simCtl + (plannedLoad - simCtl) / 42;
+                simAtl = simAtl + (plannedLoad - simAtl) / 7;
+                const simTsb = simCtl - simAtl;
+        
+                labels.push(dateStr.slice(5));
+                histCtl.push(null);
+                histAtl.push(null);
+                histTsb.push(null);
+        
+                projCtl.push(Math.round(simCtl * 10) / 10);
+                projAtl.push(Math.round(simAtl * 10) / 10);
+                projTsb.push(Math.round(simTsb * 10) / 10);
+            }
+        
+            // 5. Rita grafen i Chart.js
+            if (formForecastChartInstance) formForecastChartInstance.destroy();
+        
+            formForecastChartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Fitness (CTL)',
+                            data: histCtl,
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.08)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.25,
+                            fill: true
+                        },
+                        {
+                            label: 'Fitness Prognos',
+                            data: projCtl,
+                            borderColor: '#38bdf8',
+                            borderDash: [5, 5],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.25
+                        },
+                        {
+                            label: 'Fatigue (ATL)',
+                            data: histAtl,
+                            borderColor: '#fb7185',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.25
+                        },
+                        {
+                            label: 'Fatigue Prognos',
+                            data: projAtl,
+                            borderColor: '#fb7185',
+                            borderDash: [5, 5],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.25
+                        },
+                        {
+                            label: 'Form (TSB)',
+                            data: histTsb,
+                            borderColor: '#34d399',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            tension: 0.25
+                        },
+                        {
+                            label: 'Form Prognos (TSB)',
+                            data: projTsb,
+                            borderColor: '#34d399',
+                            borderDash: [5, 5],
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            tension: 0.25
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            filter: (item) => item.parsed.y !== null,
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8', font: { size: 10 }, maxTicksLimit: 12 },
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' }
+                        },
+                        y: {
+                            ticks: { color: '#94a3b8', font: { size: 10 } },
+                            grid: { color: 'rgba(51, 65, 85, 0.5)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        
         async function sendWorkoutDirectly(workoutDate, filename, workoutText) {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
