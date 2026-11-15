@@ -1747,6 +1747,48 @@ Main Set 4x
             }
         }
 
+        // Tillagd saknad funktion för att hantera kategori vid AI-rekommendationer
+        async function scheduleIntervalsWorkoutWithCategory(workoutId, encodedName, category = 'WORKOUT') {
+            const workoutName = decodeURIComponent(encodedName);
+            const targetDate = toLocalDateString();
+
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+
+            if (!apiKey || !athleteId) {
+                openSettingsModal();
+                return;
+            }
+
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+            const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
+            const payload = {
+                workout_id: workoutId,
+                start_date_local: `${targetDate}T00:00:00`,
+                type: 'Workout',
+                category: category,
+                name: workoutName
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok || response.status === 201) {
+                    alert(`✅ Passet "${workoutName}" har skickats till din kalender för idag!`);
+                } else {
+                    const errText = await response.text();
+                    alert(`Kunde inte schemalägga passet (${response.status}): ${errText}`);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Ett nätverksfel uppstod vid kommunikation med Intervals.icu.');
+            }
+        }
+
         // ================= AI VECKOSCHEMA & KALENDERHANTERING =================
         async function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
@@ -2180,7 +2222,6 @@ Main Set 4x
             if (rec.isCustomDirect) {
                 await sendWorkoutDirectly(toLocalDateString(), 'Return_to_Run_Test.txt', rec.workoutText);
             } else {
-                // Skicka med ID och säkerställ att kategori hanteras korrekt
                 await scheduleIntervalsWorkoutWithCategory(rec.id, encodeURIComponent(rec.name), 'WORKOUT');
             }
         }
@@ -2553,7 +2594,6 @@ Main Set 4x
 
                 if (act) {
                     renderActivityOverviewAndBlocks(act, streamStats);
-
                     renderPlanVsOutcome(act);
 
                     let intervals = act.icu_intervals || act.laps || act.splits_metric || act.intervals || [];
