@@ -452,6 +452,9 @@ Main Set 4x
                         <button onclick="generateAiWeeklySchedule()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
                             <i data-lucide="sparkles" class="w-4 h-4"></i> Generera Veckoschema
                         </button>
+                        <button onclick="rerollWeeklySchedule()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 rounded-xl flex items-center gap-1.5 transition">
+                            <i data-lucide="shuffle" class="w-3.5 h-3.5 text-indigo-400"></i> Ny variation
+                        </button>
                         <button id="sendWholeScheduleBtn" onclick="sendWholeScheduleToIntervals()" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
                             <i data-lucide="send" class="w-4 h-4"></i> Skicka hela veckan till klockan
                         </button>
@@ -1799,6 +1802,14 @@ Main Set 4x
         }
 
         // ================= AI VECKOSCHEMA & DRAG-AND-DROP =================
+        // Lägg till denna variabel i appState (högst upp i scriptet där appState definieras):
+        // scheduleVariationSeed: 0,
+
+        function rerollWeeklySchedule() {
+            appState.scheduleVariationSeed = (appState.scheduleVariationSeed || 0) + 1;
+            generateAiWeeklySchedule();
+        }
+
         async function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
@@ -1809,9 +1820,14 @@ Main Set 4x
                 openSettingsModal();
                 return;
             }
+
+            // Säkerställ att passbiblioteket är laddat så att generatorn kan plocka pass därifrån
+            if (!appState.libraryWorkouts || appState.libraryWorkouts.length === 0) {
+                await fetchLibraryWorkouts();
+            }
         
             container.innerHTML = `<div class="py-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
-                <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Hämtar planering och schema från Intervals.icu...
+                <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Hämtar planering och skapar varierat schema...
             </div>`;
             if (window.lucide) lucide.createIcons();
         
@@ -1849,6 +1865,11 @@ Main Set 4x
             const w = appState.wellnessMetrics;
             const isRedLight = (maxPain >= 3 || analysis.rhrDelta >= 4 || (w && w.sleepHours !== null && w.sleepHours < 5.5));
             const canTestRun = (!isRedLight && maxPain <= 1 && !analysis.biomechWarning);
+
+            // Håll koll på redan använda passnamn (både bokade och nyskapade) för att garantera variation
+            const usedTitles = new Set(scheduledEvents.map(ev => (ev.name || '').toLowerCase().trim()));
+            const baseWeekNum = getISOWeekNumber(startOfWeek);
+            const seed = appState.scheduleVariationSeed || 0;
         
             let fullDaysList = [];
         
@@ -1860,6 +1881,8 @@ Main Set 4x
                 if (dateStr < todayStr) continue;
         
                 const isNextWeek = i >= 7;
+                const weekOffset = isNextWeek ? 1 : 0;
+                const activeWeekNum = baseWeekNum + weekOffset;
                 const dayName = `${isNextWeek ? 'Nästa ' : ''}${dayNames[i % 7]}`;
                 const existingEvent = scheduledEvents.find(ev => String(ev.start_date_local || '').slice(0, 10) === dateStr);
         
@@ -1876,7 +1899,21 @@ Main Set 4x
                         desc: existingEvent.description || 'Ingen beskrivning tillgänglig.'
                     });
                 } else {
-                    let suggestion = getSmartDaySuggestion(i % 7, analysis, maxPain, canTestRun);
+                    let suggestion = getSmartDaySuggestion(
+                        i % 7,
+                        analysis,
+                        maxPain,
+                        canTestRun,
+                        isRedLight,
+                        activeWeekNum,
+                        weekOffset,
+                        seed,
+                        usedTitles
+                    );
+                    if (suggestion && suggestion.title) {
+                        usedTitles.add(suggestion.title.toLowerCase().trim());
+                        if (suggestion.workoutId) usedTitles.add(suggestion.workoutId);
+                    }
                     fullDaysList.push({
                         dateStr,
                         dayName,
@@ -1890,6 +1927,222 @@ Main Set 4x
             appState.generatedWeeklySchedule = fullDaysList;
             renderWeeklyScheduleCards();
             sendWholeBtn.classList.remove('hidden');
+        }
+
+        function pickLibraryWorkout(primaryFilter, fallbackFilter, rotationIndex, usedIdsAndTitles) {
+            const lib = appState.libraryWorkouts || [];
+            if (!lib.length) return null;
+
+            const tryPool = (pool) => {
+                if (!pool.length) return null;
+                for (let offset = 0; offset < pool.length; offset++) {
+                    const idx = (rotationIndex + offset) % pool.length;
+                    const candidate = pool[idx];
+                    const cleanName = (candidate.name || '').toLowerCase().trim();
+                    if (!usedIdsAndTitles.has(candidate.id) && !usedIdsAndTitles.has(cleanName)) {
+                        return candidate;
+                    }
+                }
+                // Om alla i poolen redan använts under 14-dagarsperioden, välj nästa i rotationsordningen
+                return pool[rotationIndex % pool.length];
+            };
+
+            const primaryMatches = lib.filter(primaryFilter);
+            const pickedPrimary = tryPool(primaryMatches);
+            if (pickedPrimary) return pickedPrimary;
+
+            if (fallbackFilter) {
+                const fallbackMatches = lib.filter(fallbackFilter);
+                const pickedFallback = tryPool(fallbackMatches);
+                if (pickedFallback) return pickedFallback;
+            }
+
+            return null;
+        }
+
+        function buildDayCardFromWorkout(workout, fallbackTag, fallbackTagClass) {
+            if (!workout) {
+                return {
+                    title: 'Inga matchande pass i biblioteket',
+                    tag: '[Saknas]',
+                    tagClass: 'bg-slate-800 text-slate-400',
+                    desc: 'Kontrollera att ditt passbibliotek är inläst under fliken Passbibliotek.',
+                    isRest: true
+                };
+            }
+
+            const name = workout.name || 'Namnlöst pass';
+            const cat = getPhilosophyCategory(name);
+            let tag = fallbackTag || `[${cat}]`;
+            let tagClass = fallbackTagClass || 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
+
+            if (cat === 'Tröskel') tagClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+            else if (cat === 'VO2max') tagClass = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+            else if (cat === 'FatMax') tagClass = 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
+            else if (cat === 'Fartlek') tagClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+            else if (cat === 'Rehab') tagClass = 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
+
+            const lower = name.toLowerCase();
+            const isRest = lower.includes('vila') || lower.includes('rorlighet') || lower.includes('rörlighet') || lower.includes('yoga');
+
+            return {
+                workoutId: workout.id,
+                title: name,
+                tag,
+                tagClass,
+                desc: workout.description || workout.workout_doc || 'Ingen beskrivning angiven i biblioteket.',
+                sportType: workout.sport_type || 'Workout',
+                isRest
+            };
+        }
+
+        function getSmartDaySuggestion(dayIndex, analysis, maxPain, canTestRun, isRedLight, weekNum, weekOffset, seed, usedTitles) {
+            const isAlt = (analysis.isReturnToRun || maxPain >= 1 || isRedLight);
+            const rot = weekNum + weekOffset + seed;
+
+            // Hjälpfunktioner för att matcha mot dina taggar och nyckelord i biblioteket
+            const hasTag = (w, tag) => (w.name || '').toLowerCase().includes(tag.toLowerCase());
+            const hasWord = (w, words) => words.some(word => (w.name || '').toLowerCase().includes(word));
+
+            // 1. MÅNDAG: Återhämtning / Rörlighet / Vila direkt från [Rehab]-pass i biblioteket
+            if (dayIndex === 0) {
+                const recoveryPass = pickLibraryWorkout(
+                    w => hasTag(w, '[Rehab]') && hasWord(w, ['vila', 'rorlighet', 'rörlighet', 'yoga', 'promenad']),
+                    w => hasTag(w, '[Rehab]'),
+                    rot,
+                    usedTitles
+                );
+                return buildDayCardFromWorkout(recoveryPass, '[Återhämtning]', 'bg-slate-700 text-slate-300');
+            }
+
+            // 2. TISDAG: Kvalitet / Tröskel (anpassat efter rött ljus, alternativträning eller grön löpning)
+            if (dayIndex === 1) {
+                if (isRedLight) {
+                    const redPass = pickLibraryWorkout(
+                        w => hasTag(w, '[Rehab]') && hasWord(w, ['rorlighet', 'yoga', 'promenad', 'vila']),
+                        w => hasTag(w, '[Rehab]'),
+                        rot,
+                        usedTitles
+                    );
+                    return buildDayCardFromWorkout(redPass, '[Avlastning]', 'bg-rose-500/10 text-rose-400 border border-rose-500/20');
+                }
+                if (isAlt) {
+                    // Vid Return-to-Run eller känning: välj alternativt kvalitetspass eller snäll fartlek ur biblioteket
+                    const altQuality = pickLibraryWorkout(
+                        w => hasTag(w, '[Rehab]') && hasWord(w, ['cykel', 'crosstrainer', 'rodd', 'aqua']),
+                        w => hasTag(w, '[Fartlek]') && hasWord(w, ['kadens', 'kort', 'svensk']),
+                        rot,
+                        usedTitles
+                    );
+                    return buildDayCardFromWorkout(altQuality, '[Kvalitet Alt]');
+                }
+                // Grönt ljus: rotera bland alla [Tröskel]-pass i ditt bibliotek
+                const thresholdRun = pickLibraryWorkout(
+                    w => hasTag(w, '[Tröskel]'),
+                    w => hasTag(w, '[VO2max]'),
+                    rot,
+                    usedTitles
+                );
+                return buildDayCardFromWorkout(thresholdRun, '[Tröskel]');
+            }
+
+            // 3. ONSDAG: Skadeförebyggande styrka & Vadrehab från biblioteket
+            if (dayIndex === 2) {
+                const strengthRehab = pickLibraryWorkout(
+                    w => hasTag(w, '[Rehab]') && hasWord(w, ['tahav', 'tåhäv', 'styrka', 'sate', 'säte', 'core', 'fot']),
+                    w => hasTag(w, '[Rehab]'),
+                    rot + 1,
+                    usedTitles
+                );
+                return buildDayCardFromWorkout(strengthRehab, '[Rehab]');
+            }
+
+            // 4. TORSDAG: Aerob distans / FatMax (skonsam kondition vid känning, annars kortare/medel [FatMax]-löpning)
+            if (dayIndex === 3) {
+                if (isRedLight || isAlt) {
+                    const altAero = pickLibraryWorkout(
+                        w => hasTag(w, '[Rehab]') && hasWord(w, ['crosstrainer', 'cykel', 'aqua', 'rodd']),
+                        w => hasTag(w, '[FatMax]') && hasWord(w, ['power', 'hiking', '60m']),
+                        rot + 2,
+                        usedTitles
+                    );
+                    return buildDayCardFromWorkout(altAero, '[FatMax Alt]');
+                }
+                const midFatmax = pickLibraryWorkout(
+                    w => hasTag(w, '[FatMax]') && !hasWord(w, ['90m', '100m', 'back_to_back']),
+                    w => hasTag(w, '[FatMax]'),
+                    rot,
+                    usedTitles
+                );
+                return buildDayCardFromWorkout(midFatmax, '[FatMax]');
+            }
+
+            // 5. FREDAG: Vila / Lätt återhämtning inför helgen
+            if (dayIndex === 4) {
+                const fridayRest = pickLibraryWorkout(
+                    w => hasTag(w, '[Rehab]') && hasWord(w, ['vila', 'promenad', 'yoga', 'rorlighet']),
+                    w => hasTag(w, '[Rehab]'),
+                    rot + 3,
+                    usedTitles
+                );
+                return buildDayCardFromWorkout(fridayRest, '[Återhämtning]', 'bg-slate-700 text-slate-300');
+            }
+
+            // 6. LÖRDAG: Långpass (Power Hiking / Alternativt långpass vid känning, annars [FatMax]-långpass)
+            if (dayIndex === 5) {
+                if (isRedLight) {
+                    const lightSat = pickLibraryWorkout(
+                        w => hasTag(w, '[Rehab]') && hasWord(w, ['promenad', 'cykel', 'crosstrainer']),
+                        w => hasTag(w, '[Rehab]'),
+                        rot,
+                        usedTitles
+                    );
+                    return buildDayCardFromWorkout(lightSat, '[Avlastning]');
+                }
+                if (isAlt) {
+                    const altLong = pickLibraryWorkout(
+                        w => (hasTag(w, '[FatMax]') && hasWord(w, ['power', 'hiking'])) || (hasTag(w, '[Rehab]') && hasWord(w, ['cykel', 'crosstrainer', 'aqua'])),
+                        w => hasTag(w, '[Rehab]'),
+                        rot + 1,
+                        usedTitles
+                    );
+                    return buildDayCardFromWorkout(altLong, '[Långpass Alt]');
+                }
+                const longFatmax = pickLibraryWorkout(
+                    w => hasTag(w, '[FatMax]'),
+                    null,
+                    rot + 1,
+                    usedTitles
+                );
+                return buildDayCardFromWorkout(longFatmax, '[FatMax]');
+            }
+
+            // 7. SÖNDAG: Fartlek / Kadens eller Skonsam kondition
+            if (isRedLight) {
+                const sunRest = pickLibraryWorkout(
+                    w => hasTag(w, '[Rehab]') && hasWord(w, ['vila', 'yoga', 'rorlighet']),
+                    w => hasTag(w, '[Rehab]'),
+                    rot + 2,
+                    usedTitles
+                );
+                return buildDayCardFromWorkout(sunRest, '[Återhämtning]');
+            }
+            if (isAlt) {
+                const altSun = pickLibraryWorkout(
+                    w => hasTag(w, '[Rehab]') && hasWord(w, ['crosstrainer', 'rodd', 'aqua', 'cykel']),
+                    w => hasTag(w, '[Fartlek]'),
+                    rot + 2,
+                    usedTitles
+                );
+                return buildDayCardFromWorkout(altSun, '[Kondition Alt]');
+            }
+            const sunFartlek = pickLibraryWorkout(
+                w => hasTag(w, '[Fartlek]'),
+                w => hasTag(w, '[FatMax]'),
+                rot,
+                usedTitles
+            );
+            return buildDayCardFromWorkout(sunFartlek, '[Fartlek]');
         }
 
         function renderWeeklyScheduleCards() {
@@ -2043,39 +2296,7 @@ Main Set 4x
             }
         }
         
-        function getSmartDaySuggestion(dayIndex, analysis, maxPain, canTestRun) {
-            const isAlt = (analysis.isReturnToRun || maxPain >= 1);
         
-            if (dayIndex === 0) {
-                return { title: 'Vila & Rörlighet', tag: '[Återhämtning]', tagClass: 'bg-slate-700 text-slate-300', desc: 'Fullständig vila. Lätt fotledsrörlighet.' };
-            } else if (dayIndex === 1) {
-                return isAlt ? {
-                    title: canTestRun ? 'Return-to-Run Test + Crosstrainer' : 'Crosstrainer Tröskel (Norska 4x4)',
-                    tag: '[Kvalitet]', tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-                    desc: canTestRun ? '- 4x (1m jogg / 2m gång)\n- 40m Crosstrainer FatMax' : '- 4x 4m Crosstrainer AT (137-142 bpm)'
-                } : {
-                    title: '[Tröskel] Norska intervaller 4x4', tag: '[Tröskel]', tagClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-                    desc: '- 10m Warmup\n- 4x 4m Tröskel (137-142 bpm)\n- 5m Cooldown'
-                };
-            } else if (dayIndex === 2) {
-                return { title: 'Tung Vadrehab & Styrka', tag: '[Rehab]', tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20', desc: '- 3x12 Raka tåhävningar\n- 3x15 Sittande tåhävningar\n- Höftlyft & Core' };
-            } else if (dayIndex === 3) {
-                return { title: 'Cykel Distans (FatMax)', tag: '[FatMax]', tagClass: 'bg-sky-500/10 text-sky-400 border border-sky-500/20', desc: '- 45m Cykel i FatMax (110-124 bpm), hög kadens 90+ rpm' };
-            } else if (dayIndex === 4) {
-                return { title: 'Vila / Rörlighet', tag: '[Återhämtning]', tagClass: 'bg-slate-700 text-slate-300', desc: 'Vilodag inför helgen.' };
-            } else if (dayIndex === 5) {
-                return isAlt ? {
-                    title: 'Långpass-ersättning: Cykel + Cross',
-                    tag: '[FatMax]', tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                    desc: '- 50m Cykel FatMax\n- 45m Crosstrainer FatMax'
-                } : {
-                    title: '[FatMax] Långpass Distans', tag: '[FatMax]', tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                    desc: '- 75m Lugn löpning i FatMax-zon'
-                };
-            } else {
-                return { title: 'Crosstrainer Fartlek + Rehab', tag: '[Fartlek]', tagClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20', desc: '- 35m Fartlek på crosstrainer\n- 15m Vadrehab' };
-            }
-        }
         
         async function deleteScheduledEvent(eventId) {
             if (!confirm('Vill du ta bort det här passet från din Intervals.icu-kalender?')) return;
