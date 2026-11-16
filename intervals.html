@@ -1929,22 +1929,25 @@ Main Set 4x
             sendWholeBtn.classList.remove('hidden');
         }
 
-        function pickLibraryWorkout(primaryFilter, fallbackFilter, rotationIndex, usedIdsAndTitles) {
+        function pickLibraryWorkout(primaryFilter, fallbackFilter, rotationIndex = 0, usedIdsAndTitles = new Set()) {
             const lib = appState.libraryWorkouts || [];
             if (!lib.length) return null;
 
+            const safeIndex = Number.isFinite(rotationIndex) ? Math.abs(Math.floor(rotationIndex)) : 0;
+            const safeUsed = usedIdsAndTitles instanceof Set ? usedIdsAndTitles : new Set();
+
             const tryPool = (pool) => {
-                if (!pool.length) return null;
+                if (!pool || !pool.length) return null;
                 for (let offset = 0; offset < pool.length; offset++) {
-                    const idx = (rotationIndex + offset) % pool.length;
+                    const idx = (safeIndex + offset) % pool.length;
                     const candidate = pool[idx];
+                    if (!candidate) continue;
                     const cleanName = (candidate.name || '').toLowerCase().trim();
-                    if (!usedIdsAndTitles.has(candidate.id) && !usedIdsAndTitles.has(cleanName)) {
+                    if (!safeUsed.has(candidate.id) && !safeUsed.has(cleanName)) {
                         return candidate;
                     }
                 }
-                // Om alla i poolen redan använts under 14-dagarsperioden, välj nästa i rotationsordningen
-                return pool[rotationIndex % pool.length];
+                return pool[safeIndex % pool.length] || null;
             };
 
             const primaryMatches = lib.filter(primaryFilter);
@@ -1959,7 +1962,7 @@ Main Set 4x
 
             return null;
         }
-
+        
         function buildDayCardFromWorkout(workout, fallbackTag, fallbackTagClass) {
             if (!workout) {
                 return {
@@ -3328,7 +3331,20 @@ Main Set 4x
             return 40;
         }
         
-        async function updateFormCurveForecast() {
+        
+
+        function renderPlanVsOutcome(act) {
+            const container = document.getElementById('complianceContainer');
+            const grid = document.getElementById('complianceGrid');
+            if (!container || !grid) return;
+        
+            const actualLoad = act.icu_training_load || 0;
+            const actualDuration = act.moving_time ? Math.round(act.moving_time / 60) : 0;
+            
+            if (actualLoad <= 0 && actualDuration <= 0) {
+                container.classList.add('hidden');
+                return;
+            }async function updateFormCurveForecast() {
             const canvas = document.getElementById('formForecastChart');
             const badge = document.getElementById('formForecastBadge');
             if (!canvas) return;
@@ -3421,6 +3437,7 @@ Main Set 4x
         
             let simCtl = lastCtl;
             let simAtl = lastAtl;
+            const simUsedTitles = new Set(futureEvents.map(ev => (ev.name || '').toLowerCase().trim()));
         
             for (let d = 1; d <= 14; d++) {
                 const simDate = new Date();
@@ -3436,7 +3453,23 @@ Main Set 4x
                         plannedLoad += estimateWorkoutLoad(ev.name, ev.description, ev.icu_training_load);
                     });
                 } else {
-                    const fallback = getSmartDaySuggestion(dayOfWeekIdx, analysis, maxPain, !isRed && maxPain <= 1);
+                    const simWeekNum = getISOWeekNumber(simDate);
+                    const simWeekOffset = d > 7 ? 1 : 0;
+                    const fallback = getSmartDaySuggestion(
+                        dayOfWeekIdx,
+                        analysis,
+                        maxPain,
+                        !isRed && maxPain <= 1,
+                        isRed,
+                        simWeekNum,
+                        simWeekOffset,
+                        appState.scheduleVariationSeed || 0,
+                        simUsedTitles
+                    );
+                    if (fallback && fallback.title) {
+                        simUsedTitles.add(fallback.title.toLowerCase().trim());
+                        if (fallback.workoutId) simUsedTitles.add(fallback.workoutId);
+                    }
                     plannedLoad = estimateWorkoutLoad(fallback.title, fallback.desc, null);
                 }
         
@@ -3493,19 +3526,6 @@ Main Set 4x
                 }
             });
         }
-
-        function renderPlanVsOutcome(act) {
-            const container = document.getElementById('complianceContainer');
-            const grid = document.getElementById('complianceGrid');
-            if (!container || !grid) return;
-        
-            const actualLoad = act.icu_training_load || 0;
-            const actualDuration = act.moving_time ? Math.round(act.moving_time / 60) : 0;
-            
-            if (actualLoad <= 0 && actualDuration <= 0) {
-                container.classList.add('hidden');
-                return;
-            }
         
             container.classList.remove('hidden');
         
