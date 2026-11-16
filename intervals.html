@@ -23,6 +23,15 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .drag-over-highlight {
+            border-color: #6366f1 !important;
+            background-color: rgba(99, 102, 241, 0.15) !important;
+            transform: scale(1.02);
+        }
+        .dragging-card {
+            opacity: 0.45;
+            border-style: dashed !important;
+        }
     </style>
 </head>
 <body class="min-h-screen pb-12">
@@ -437,7 +446,7 @@ Main Set 4x
                         <h3 class="text-sm font-bold text-white flex items-center gap-2">
                             <i data-lucide="calendar-days" class="w-4 h-4 text-indigo-400"></i> AI Veckoschema-generator
                         </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Genererar ett komplett schema för innevarande vecka och nästa vecka direkt från din kalender.</p>
+                        <p class="text-xs text-slate-400 mt-0.5">Genererar ett schema för innevarande och nästa vecka. <strong>Tips:</strong> Dra och släpp pass mellan dagarna för att flytta dem.</p>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="generateAiWeeklySchedule()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center gap-2 transition shadow">
@@ -656,6 +665,7 @@ Main Set 4x
             currentChartBuckets: [],
             aiRecommendation: null,
             generatedWeeklySchedule: [],
+            draggedScheduleIndex: null,
             wellnessHistory: [],
             wellnessMetrics: null,
             coachAnalysis: null
@@ -1466,7 +1476,7 @@ Main Set 4x
 
         function filterLibraryView() { renderLibraryGrid(); }
 
-        // ================= ROBUST BLOM- OCH INTERVALL-PARSER =================
+        // ================= ROBUST BLOCK- OCH INTERVALL-PARSER =================
         function formatWorkoutBlocksHTML(rawText) {
             if (!rawText || !rawText.trim()) {
                 return '<div class="text-[11px] text-slate-500 italic py-2">Ingen passstruktur angiven.</div>';
@@ -1788,7 +1798,7 @@ Main Set 4x
             }
         }
 
-        // ================= AI VECKOSCHEMA & KALENDERHANTERING =================
+        // ================= AI VECKOSCHEMA & DRAG-AND-DROP =================
         async function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
@@ -1878,7 +1888,15 @@ Main Set 4x
             }
         
             appState.generatedWeeklySchedule = fullDaysList;
-        
+            renderWeeklyScheduleCards();
+            sendWholeBtn.classList.remove('hidden');
+        }
+
+        function renderWeeklyScheduleCards() {
+            const container = document.getElementById('weeklyScheduleContainer');
+            const fullDaysList = appState.generatedWeeklySchedule;
+            if (!container || !fullDaysList.length) return;
+
             let currentWeekHtml = '<div class="space-y-3"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Innevarande vecka (Från och med idag)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
             let nextWeekHtml = '<div class="space-y-3 mt-8 pt-6 border-t border-slate-700/80"><h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> Nästa vecka (Framåtblick)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
         
@@ -1889,10 +1907,19 @@ Main Set 4x
                 const formattedBlocks = formatWorkoutBlocksHTML(item.desc);
 
                 const cardHtml = `
-                    <div class="bg-slate-900/70 border ${item.isExisting ? 'border-indigo-500/40' : 'border-slate-800'} rounded-2xl p-3.5 space-y-3 flex flex-col justify-between shadow-sm">
+                    <div draggable="true"
+                         ondragstart="handleScheduleDragStart(event, ${index})"
+                         ondragover="handleScheduleDragOver(event)"
+                         ondragleave="handleScheduleDragLeave(event)"
+                         ondrop="handleScheduleDrop(event, ${index})"
+                         ondragend="handleScheduleDragEnd(event)"
+                         class="bg-slate-900/70 border ${item.isExisting ? 'border-indigo-500/40' : 'border-slate-800'} rounded-2xl p-3.5 space-y-3 flex flex-col justify-between shadow-sm cursor-grab active:cursor-grabbing transition-all duration-150">
                         <div>
                             <div class="flex justify-between items-center text-[11px] text-slate-400 font-bold">
-                                <span class="text-indigo-300">${item.dayName}</span>
+                                <span class="text-indigo-300 flex items-center gap-1">
+                                    <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-500"></i>
+                                    ${item.dayName}
+                                </span>
                                 <span class="font-mono">${item.dateStr.slice(5)}</span>
                             </div>
                             <h4 class="font-bold text-white text-xs mt-1 leading-snug">${item.title}</h4>
@@ -1933,8 +1960,87 @@ Main Set 4x
             nextWeekHtml += '</div></div>';
         
             container.innerHTML = (hasCurrent ? currentWeekHtml : '') + (hasNext ? nextWeekHtml : '');
-            sendWholeBtn.classList.remove('hidden');
             if (window.lucide) lucide.createIcons();
+        }
+
+        function handleScheduleDragStart(event, index) {
+            appState.draggedScheduleIndex = index;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(index));
+            event.currentTarget.classList.add('dragging-card');
+        }
+
+        function handleScheduleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            event.currentTarget.classList.add('drag-over-highlight');
+        }
+
+        function handleScheduleDragLeave(event) {
+            event.currentTarget.classList.remove('drag-over-highlight');
+        }
+
+        function handleScheduleDragEnd(event) {
+            event.currentTarget.classList.remove('dragging-card');
+            document.querySelectorAll('.drag-over-highlight').forEach(el => el.classList.remove('drag-over-highlight'));
+        }
+
+        async function handleScheduleDrop(event, targetIndex) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over-highlight');
+
+            const sourceIndex = appState.draggedScheduleIndex;
+            appState.draggedScheduleIndex = null;
+
+            if (sourceIndex === null || sourceIndex === targetIndex) return;
+
+            const schedule = appState.generatedWeeklySchedule;
+            const sourceItem = schedule[sourceIndex];
+            const targetItem = schedule[targetIndex];
+            if (!sourceItem || !targetItem) return;
+
+            const sourceDate = sourceItem.dateStr;
+            const targetDate = targetItem.dateStr;
+
+            // Byt träningsinnehåll mellan de två dagarna medan datum och veckodagsnamn ligger kvar
+            const keysToSwap = ['isExisting', 'eventId', 'title', 'tag', 'tagClass', 'desc', 'workoutId', 'isRest', 'isCustomAlt', 'sportType'];
+            keysToSwap.forEach(key => {
+                const temp = sourceItem[key];
+                sourceItem[key] = targetItem[key];
+                targetItem[key] = temp;
+            });
+
+            renderWeeklyScheduleCards();
+
+            // Uppdatera i Intervals.icu om något av passen redan är bokat i kalendern
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            if (!apiKey || !athleteId) return;
+
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+
+            try {
+                // Om det flyttade passet (nu på targetIndex) var bokat, uppdatera dess datum till targetDate
+                if (targetItem.isExisting && targetItem.eventId) {
+                    await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${targetItem.eventId}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ start_date_local: `${targetDate}T00:00:00` })
+                    });
+                }
+
+                // Om måldagens eventuella gamla bokade pass (nu på sourceIndex) också var bokat, flytta det till sourceDate
+                if (sourceItem.isExisting && sourceItem.eventId) {
+                    await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${sourceItem.eventId}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ start_date_local: `${sourceDate}T00:00:00` })
+                    });
+                }
+            } catch (err) {
+                console.error('Fel vid uppdatering av datum i Intervals.icu:', err);
+                alert('Kunde inte uppdatera datumet i Intervals.icu-kalendern. Kontrollera din anslutning.');
+            }
         }
         
         function getSmartDaySuggestion(dayIndex, analysis, maxPain, canTestRun) {
@@ -2179,22 +2285,22 @@ Main Set 4x
             let successCount = 0;
         
             for (let item of appState.generatedWeeklySchedule) {
-                if (item.isRest) continue;
+                if (item.isRest || item.isExisting) continue;
         
                 const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
-                const payload = item.isCustomAlt
+                const payload = item.workoutId
                     ? {
+                        workout_id: item.workoutId,
+                        start_date_local: `${item.dateStr}T00:00:00`,
+                        type: 'Workout',
+                        name: item.title
+                    }
+                    : {
                         category: 'WORKOUT',
                         start_date_local: `${item.dateStr}T00:00:00`,
                         type: item.sportType || 'Workout',
                         name: item.title,
                         description: item.desc
-                    }
-                    : {
-                        workout_id: item.workoutId,
-                        start_date_local: `${item.dateStr}T00:00:00`,
-                        type: 'Workout',
-                        name: item.title
                     };
         
                 try {
@@ -2210,6 +2316,7 @@ Main Set 4x
             }
         
             alert(`✅ ${successCount} pass har skickats till din Intervals.icu-kalender!`);
+            generateAiWeeklySchedule();
         }
 
         async function sendAiRecommendedWorkout() {
@@ -2333,6 +2440,7 @@ Main Set 4x
                 await fetchWellnessHistory28d();
                 runCoachGenieAnalysis();
                 fetchTodayWellness();
+                updateFormCurveForecast();
                 setStatus('Ansluten via API');
             } catch (error) {
                 console.error(error);
@@ -2472,6 +2580,7 @@ Main Set 4x
                 if (response.ok) {
                     alert('✅ Morgonstatus & ACWR sparade till Intervals.icu!');
                     evaluateReadiness();
+                    updateFormCurveForecast();
                 } else {
                     const errText = await response.text();
                     alert(`Kunde inte spara (${response.status}): ${errText}`);
@@ -2995,7 +3104,7 @@ Main Set 4x
             if (text.includes('fatmax') || text.includes('cykel') || text.includes('crosstrainer') || text.includes('distans')) return 45;
             if (text.includes('styrka') || text.includes('gym')) return 35;
         
-            return 40; // Standardvärde för ospecificerat pass
+            return 40;
         }
         
         async function updateFormCurveForecast() {
@@ -3006,7 +3115,6 @@ Main Set 4x
             const history = [...(appState.wellnessHistory || [])].sort((a, b) => a.id.localeCompare(b.id));
             if (!history.length) return;
         
-            // 1. Extrahera historiska värden (senaste 28 dagarna)
             const labels = [];
             const histCtl = [];
             const histAtl = [];
@@ -3023,13 +3131,12 @@ Main Set 4x
                 lastCtl = ctl;
                 lastAtl = atl;
         
-                labels.push(day.id.slice(5)); // MM-DD
+                labels.push(day.id.slice(5));
                 histCtl.push(Math.round(ctl * 10) / 10);
                 histAtl.push(Math.round(atl * 10) / 10);
                 histTsb.push(Math.round(tsb * 10) / 10);
             });
         
-            // 2. Hämta framtida bokade pass från Intervals.icu (14 dagar framåt)
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
             let futureEvents = [];
@@ -3054,7 +3161,6 @@ Main Set 4x
                 }
             }
         
-            // 3. Läs av aktuell dagsform (Biometri + Smärta)
             const calf = parseInt(document.getElementById('inputCalf')?.value || '0', 10);
             const knee = parseInt(document.getElementById('inputKnee')?.value || '0', 10);
             const hip = parseInt(document.getElementById('inputHip')?.value || '0', 10);
@@ -3087,7 +3193,6 @@ Main Set 4x
                 }
             }
         
-            // 4. Simulera 14 dagar framåt med Banister-modellen
             const histLen = labels.length;
             const projCtl = new Array(histLen - 1).fill(null).concat([histCtl[histLen - 1]]);
             const projAtl = new Array(histLen - 1).fill(null).concat([histAtl[histLen - 1]]);
@@ -3100,9 +3205,8 @@ Main Set 4x
                 const simDate = new Date();
                 simDate.setDate(simDate.getDate() + d);
                 const dateStr = toLocalDateString(simDate);
-                const dayOfWeekIdx = (simDate.getDay() + 6) % 7; // 0 = Mån, 6 = Sön
+                const dayOfWeekIdx = (simDate.getDay() + 6) % 7;
         
-                // Summera belastning för dagens bokade pass (eller AI-förslag om kalendern är tom)
                 const dayEvents = futureEvents.filter(ev => String(ev.start_date_local || '').slice(0, 10) === dateStr);
                 let plannedLoad = 0;
         
@@ -3115,14 +3219,12 @@ Main Set 4x
                     plannedLoad = estimateWorkoutLoad(fallback.title, fallback.desc, null);
                 }
         
-                // Tillämpa dagsformsfaktor på de närmaste dagarna
                 if (isRed && d <= 3) {
-                    plannedLoad = Math.min(plannedLoad, 15); // Tvingad avlastning / rehab
+                    plannedLoad = Math.min(plannedLoad, 15);
                 } else if (isYellow && d <= 2) {
-                    plannedLoad = Math.min(plannedLoad, 35); // Dämpad belastning / alternativ träning
+                    plannedLoad = Math.min(plannedLoad, 35);
                 }
         
-                // Banister uppdatering
                 simCtl = simCtl + (plannedLoad - simCtl) / 42;
                 simAtl = simAtl + (plannedLoad - simAtl) / 7;
                 const simTsb = simCtl - simAtl;
@@ -3137,7 +3239,6 @@ Main Set 4x
                 projTsb.push(Math.round(simTsb * 10) / 10);
             }
         
-            // 5. Rita grafen i Chart.js
             if (formForecastChartInstance) formForecastChartInstance.destroy();
         
             formForecastChartInstance = new Chart(canvas.getContext('2d'), {
@@ -3145,59 +3246,12 @@ Main Set 4x
                 data: {
                     labels,
                     datasets: [
-                        {
-                            label: 'Fitness (CTL)',
-                            data: histCtl,
-                            borderColor: '#38bdf8',
-                            backgroundColor: 'rgba(56, 189, 248, 0.08)',
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            tension: 0.25,
-                            fill: true
-                        },
-                        {
-                            label: 'Fitness Prognos',
-                            data: projCtl,
-                            borderColor: '#38bdf8',
-                            borderDash: [5, 5],
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            tension: 0.25
-                        },
-                        {
-                            label: 'Fatigue (ATL)',
-                            data: histAtl,
-                            borderColor: '#fb7185',
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            tension: 0.25
-                        },
-                        {
-                            label: 'Fatigue Prognos',
-                            data: projAtl,
-                            borderColor: '#fb7185',
-                            borderDash: [5, 5],
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            tension: 0.25
-                        },
-                        {
-                            label: 'Form (TSB)',
-                            data: histTsb,
-                            borderColor: '#34d399',
-                            borderWidth: 2.5,
-                            pointRadius: 0,
-                            tension: 0.25
-                        },
-                        {
-                            label: 'Form Prognos (TSB)',
-                            data: projTsb,
-                            borderColor: '#34d399',
-                            borderDash: [5, 5],
-                            borderWidth: 2.5,
-                            pointRadius: 0,
-                            tension: 0.25
-                        }
+                        { label: 'Fitness (CTL)', data: histCtl, borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.08)', borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true },
+                        { label: 'Fitness Prognos', data: projCtl, borderColor: '#38bdf8', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, tension: 0.25 },
+                        { label: 'Fatigue (ATL)', data: histAtl, borderColor: '#fb7185', borderWidth: 2, pointRadius: 0, tension: 0.25 },
+                        { label: 'Fatigue Prognos', data: projAtl, borderColor: '#fb7185', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, tension: 0.25 },
+                        { label: 'Form (TSB)', data: histTsb, borderColor: '#34d399', borderWidth: 2.5, pointRadius: 0, tension: 0.25 },
+                        { label: 'Form Prognos (TSB)', data: projTsb, borderColor: '#34d399', borderDash: [5, 5], borderWidth: 2.5, pointRadius: 0, tension: 0.25 }
                     ]
                 },
                 options: {
@@ -3208,20 +3262,12 @@ Main Set 4x
                         legend: { display: false },
                         tooltip: {
                             filter: (item) => item.parsed.y !== null,
-                            callbacks: {
-                                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}`
-                            }
+                            callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}` }
                         }
                     },
                     scales: {
-                        x: {
-                            ticks: { color: '#94a3b8', font: { size: 10 }, maxTicksLimit: 12 },
-                            grid: { color: 'rgba(51, 65, 85, 0.3)' }
-                        },
-                        y: {
-                            ticks: { color: '#94a3b8', font: { size: 10 } },
-                            grid: { color: 'rgba(51, 65, 85, 0.5)' }
-                        }
+                        x: { ticks: { color: '#94a3b8', font: { size: 10 }, maxTicksLimit: 12 }, grid: { color: 'rgba(51, 65, 85, 0.3)' } },
+                        y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(51, 65, 85, 0.5)' } }
                     }
                 }
             });
