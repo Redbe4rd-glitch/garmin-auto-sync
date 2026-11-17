@@ -281,7 +281,7 @@
                 <div class="flex flex-wrap items-center gap-4 text-[10px] text-slate-300">
                     <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-sky-400 inline-block"></span> Fitness (CTL)</span>
                     <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-rose-400 inline-block"></span> Fatigue (ATL)</span>
-                    <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-emerald-400 inline-block"></span> Form (TSB: +5 till +15 = Formtopp, < -20 = Hög slitning)</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-emerald-400 inline-block"></span> Form (TSB: +5 till +15 = Formtopp, &lt; -20 = Hög slitning)</span>
                 </div>
             
                 <div class="h-64 relative">
@@ -432,7 +432,7 @@
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
                         <i data-lucide="file-plus" class="w-4 h-4 text-emerald-400"></i> Skapa & Skicka eget pass (t.ex. från Coach Genie)
                     </h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Klistra in ett anpassat pass och välj vilket datum det ska hamna på i din kalender.</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Klistra in ett anpassat pass och välj vilket datum det ska hamna på i din kalender. Appen känner automatiskt av rätt sport (Run / Elliptical / Ride / WeightTraining).</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -471,7 +471,7 @@ Main Set 4x
                         <h3 class="text-sm font-bold text-white flex items-center gap-2">
                             <i data-lucide="calendar-days" class="w-4 h-4 text-indigo-400"></i> AI Veckoschema-generator
                         </h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Genererar ett schema för innevarande och nästa vecka. <strong>Tips:</strong> Dra och släpp pass mellan dagarna för att flytta dem.</p>
+                        <p class="text-xs text-slate-400 mt-0.5">Kombinationspass delas automatiskt upp i separata pass med rätt sportprofil (Run, Elliptical, Ride) så att Garmin visar dem direkt på klockan.</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button onclick="generateAiWeeklySchedule()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center gap-1.5 transition shadow">
@@ -688,6 +688,120 @@ Main Set 4x
             if (type.includes('swim') || name.includes('sim')) return ACTIVITY_CATEGORIES.swim;
             if (type.includes('yoga') || type.includes('stretch') || type.includes('pilates') || name.includes('yoga') || name.includes('rörlighet')) return ACTIVITY_CATEGORIES.mobility;
             return ACTIVITY_CATEGORIES.other;
+        }
+
+
+        // Kartlägger passnamn/beskrivning till exakt Garmin- & Intervals.icu-sporttyp
+        function detectSportType(title = '', desc = '', explicitType = '') {
+            const explicit = (explicitType || '').trim();
+            if (explicit && ['Run', 'Elliptical', 'Ride', 'WeightTraining', 'Swim', 'Walk', 'Rowing'].includes(explicit)) {
+                return explicit;
+            }
+            const text = `${title} ${desc}`.toLowerCase();
+
+            if (text.includes('crosstrainer') || text.includes('elliptical') || text.includes('cross trainer') || / cross /.test(text)) {
+                return 'Elliptical';
+            }
+            if (text.includes('cykel') || text.includes('spinning') || text.includes('bike') || text.includes('ride') || text.includes('trainer')) {
+                return 'Ride';
+            }
+            if (text.includes('rodd') || text.includes('rowing')) {
+                return 'Rowing';
+            }
+            if (text.includes('simning') || text.includes('swim') || text.includes('aqua')) {
+                return 'Swim';
+            }
+            if (text.includes('styrka') || text.includes('tåhäv') || text.includes('tahav') || text.includes('gym') || text.includes('rehab') || text.includes('rörlighet') || text.includes('yoga') || text.includes('core') || text.includes('säte')) {
+                return 'WeightTraining';
+            }
+            if (text.includes('powerwalk') || text.includes('hiking') || text.includes('promenad')) {
+                return 'Walk';
+            }
+            if (text.includes('löpning') || text.includes('jogg') || text.includes('tröskel') || text.includes('fartlek') || text.includes('vo2') || text.includes('fatmax') || text.includes('return-to-run') || text.includes('tusing') || text.includes('intervall')) {
+                return 'Run';
+            }
+            return 'Run';
+        }
+
+
+        // Delar upp kombinationspass (t.ex. "Return-to-Run Test + Crosstrainer" eller "Cykel + Cross")
+        // i separata Garmin-kompatibla pass med rätt Intervals.icu-syntax
+        function splitComboWorkout(item) {
+            const title = (item.title || '').trim();
+            const desc = (item.desc || '').trim();
+            const lowerTitle = title.toLowerCase();
+
+            // Specialhantering för Return-to-Run + Crosstrainer
+            if (lowerTitle.includes('return-to-run') && (lowerTitle.includes('crosstrainer') || lowerTitle.includes('cross') || desc.toLowerCase().includes('crosstrainer'))) {
+                return [
+                    {
+                        title: '[FatMax] Return-to-Run Test (4x 1m jogg / 2m gång)',
+                        sportType: 'Run',
+                        desc: "- 5m Walk Warmup
+
+Main Set 4x
+- 1m FatMax Z2 (100-124 bpm)
+- 2m Walk
+
+- 3m Cooldown Walk"
+                    },
+                    {
+                        title: '[FatMax] Crosstrainer 40 min',
+                        sportType: 'Elliptical',
+                        desc: "- 5m Warmup Z1
+- 30m FatMax Z2 (105-124 bpm)
+- 5m Cooldown Z1"
+                    }
+                ];
+            }
+
+            // Generell uppdelning om titeln innehåller "+" mellan två sporter
+            if (title.includes('+')) {
+                const rawParts = title.split('+').map(p => p.trim()).filter(Boolean);
+                const lines = desc.split('
+').map(l => l.trim()).filter(Boolean);
+
+                if (rawParts.length >= 2) {
+                    return rawParts.map((partTitle, idx) => {
+                        const matchingLine = lines[idx] || '';
+                        const sportType = detectSportType(partTitle, matchingLine);
+                        let structuredDesc = matchingLine;
+
+                        // Om beskrivningen saknar Intervals-syntax, omvandla t.ex. "40 min Crosstrainer FatMax" till giltig syntax
+                        if (!structuredDesc || !structuredDesc.startsWith('-')) {
+                            const minMatch = `${partTitle} ${matchingLine}`.match(/(\d+)\s*m(in)?/i);
+                            const mins = minMatch ? parseInt(minMatch[1], 10) : 30;
+                            if (mins >= 15) {
+                                const mainMins = Math.max(5, mins - 10);
+                                structuredDesc = `- 5m Warmup Z1
+- ${mainMins}m FatMax Z2 (105-124 bpm)
+- 5m Cooldown Z1`;
+                            } else {
+                                structuredDesc = `- ${mins}m Z2 (105-124 bpm)`;
+                            }
+                        } else {
+                            // Rensa bort eventuell [Elliptical]-tagg i slutet av raden
+                            structuredDesc = structuredDesc.replace(/\[(Run|Elliptical|Ride|WeightTraining)\]/gi, '').trim();
+                        }
+
+                        return {
+                            title: partTitle,
+                            sportType,
+                            desc: structuredDesc
+                        };
+                    });
+                }
+            }
+
+            // Enskilt pass – returnera som array med 1 objekt och korrekt sportType
+            return [
+                {
+                    workoutId: item.workoutId || null,
+                    title: title,
+                    sportType: detectSportType(title, desc, item.sportType),
+                    desc: desc
+                }
+            ];
         }
 
 
@@ -1337,7 +1451,6 @@ Main Set 4x
 
 
         function runCoachGenieAnalysis() {
-            const now = new Date();
             const d7 = daysAgo(7);
             const d14 = daysAgo(14);
             const d28 = daysAgo(28);
@@ -1510,8 +1623,15 @@ Main Set 4x
                     appState.aiRecommendation = {
                         id: 'rtr-test-1',
                         name: '[FatMax] Return-to-Run Test (4x 1m jogg / 2m gång)',
+                        sportType: 'Run',
                         isCustomDirect: true,
-                        workoutText: "- 5m Walk Warmup\n\nMain Set 4x\n- 1m FatMax Z2 (100-124 bpm)\n- 2m Walk\n\n- 3m Cooldown Walk"
+                        workoutText: "- 5m Walk Warmup
+
+Main Set 4x
+- 1m FatMax Z2 (100-124 bpm)
+- 2m Walk
+
+- 3m Cooldown Walk"
                     };
                     sendBtn.classList.remove('hidden');
                 } else {
@@ -1616,8 +1736,10 @@ Main Set 4x
                 return '<div class="text-[11px] text-slate-500 italic py-2">Ingen passstruktur angiven.</div>';
             }
         
-            const cleanRaw = rawText.replace(/\\n/g, '\n');
-            const lines = cleanRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const cleanRaw = rawText.replace(/\n/g, '
+');
+            const lines = cleanRaw.split('
+').map(l => l.trim()).filter(l => l.length > 0);
             
             let html = '<div class="space-y-1.5">';
         
@@ -1644,25 +1766,25 @@ Main Set 4x
                 }
         
                 let clean = line.replace(/^[-•]\s*/, '').trim()
-                    .replace(/\b([0-9]+)\s*m\b/gi, '$1 min')
-                    .replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
+                    .replace(/ ([0-9]+)\s*m /gi, '$1 min')
+                    .replace(/ ([0-9]+)\s*s /gi, '$1 sek');
         
                 let pairCount = 1;
                 if (i + 1 < filteredLines.length) {
                     let nextLine = filteredLines[i + 1];
                     let nextClean = nextLine.replace(/^[-•]\s*/, '').trim()
-                        .replace(/\b([0-9]+)\s*m\b/gi, '$1 min')
-                        .replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
+                        .replace(/ ([0-9]+)\s*m /gi, '$1 min')
+                        .replace(/ ([0-9]+)\s*s /gi, '$1 sek');
         
                     if (i + 3 < filteredLines.length) {
-                        let thirdClean = filteredLines[i + 2].replace(/^[-•]\s*/, '').trim().replace(/\b([0-9]+)\s*m\b/gi, '$1 min').replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
-                        let fourthClean = filteredLines[i + 3].replace(/^[-•]\s*/, '').trim().replace(/\b([0-9]+)\s*m\b/gi, '$1 min').replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
+                        let thirdClean = filteredLines[i + 2].replace(/^[-•]\s*/, '').trim().replace(/ ([0-9]+)\s*m /gi, '$1 min').replace(/ ([0-9]+)\s*s /gi, '$1 sek');
+                        let fourthClean = filteredLines[i + 3].replace(/^[-•]\s*/, '').trim().replace(/ ([0-9]+)\s*m /gi, '$1 min').replace(/ ([0-9]+)\s*s /gi, '$1 sek');
                         
                         if (thirdClean === clean && fourthClean === nextClean) {
                             let p = 0;
                             while (i + p + 1 < filteredLines.length) {
-                                let testA = filteredLines[i + p]?.replace(/^[-•]\s*/, '').trim().replace(/\b([0-9]+)\s*m\b/gi, '$1 min').replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
-                                let testB = filteredLines[i + p + 1]?.replace(/^[-•]\s*/, '').trim().replace(/\b([0-9]+)\s*m\b/gi, '$1 min').replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
+                                let testA = filteredLines[i + p]?.replace(/^[-•]\s*/, '').trim().replace(/ ([0-9]+)\s*m /gi, '$1 min').replace(/ ([0-9]+)\s*s /gi, '$1 sek');
+                                let testB = filteredLines[i + p + 1]?.replace(/^[-•]\s*/, '').trim().replace(/ ([0-9]+)\s*m /gi, '$1 min').replace(/ ([0-9]+)\s*s /gi, '$1 sek');
                                 if (testA === clean && testB === nextClean) {
                                     pairCount++;
                                     p += 2;
@@ -1680,8 +1802,8 @@ Main Set 4x
                 let count = 1;
                 while (i + count < filteredLines.length) {
                     let nextClean = filteredLines[i + count].replace(/^[-•]\s*/, '').trim()
-                        .replace(/\b([0-9]+)\s*m\b/gi, '$1 min')
-                        .replace(/\b([0-9]+)\s*s\b/gi, '$1 sek');
+                        .replace(/ ([0-9]+)\s*m /gi, '$1 min')
+                        .replace(/ ([0-9]+)\s*s /gi, '$1 sek');
                     if (nextClean === clean) count++;
                     else break;
                 }
@@ -1803,7 +1925,7 @@ Main Set 4x
                 const name = w.name || 'Namnlöst pass';
                 const cat = getPhilosophyCategory(name);
                 const desc = w.description || w.workout_doc || 'Ingen beskrivning tillgänglig.';
-                const sport = w.sport_type || 'Run';
+                const sport = detectSportType(name, desc, w.sport_type);
         
                 let badgeClass = 'bg-slate-800 text-slate-300 border border-slate-700';
                 if (cat === 'Tröskel') badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
@@ -1820,7 +1942,7 @@ Main Set 4x
                             <div class="space-y-1.5 min-w-0">
                                 <div class="flex items-center gap-2">
                                     <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${badgeClass}">${cat}</span>
-                                    <span class="text-[10px] font-mono text-slate-400">${sport}</span>
+                                    <span class="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">${sport}</span>
                                 </div>
                                 <h4 class="font-bold text-white text-sm leading-snug truncate">${name}</h4>
                             </div>
@@ -1838,8 +1960,8 @@ Main Set 4x
                                     <span>Välj datum:</span>
                                     <input type="date" id="date-${w.id}" value="${todayStr}" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 font-mono">
                                 </div>
-                                <button onclick="scheduleIntervalsWorkout('${w.id}', '${encodeURIComponent(name)}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                                    <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Kalender
+                                <button onclick="scheduleIntervalsWorkout('${w.id}', '${encodeURIComponent(name)}', '${sport}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                    <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Kalender (${sport})
                                 </button>
                             </div>
                         </div>
@@ -1851,10 +1973,11 @@ Main Set 4x
         }
 
 
-        async function scheduleIntervalsWorkout(workoutId, encodedName) {
+        async function scheduleIntervalsWorkout(workoutId, encodedName, sportType = 'Run') {
             const workoutName = decodeURIComponent(encodedName);
             const dateInput = document.getElementById(`date-${workoutId}`);
             const targetDate = dateInput ? dateInput.value : toLocalDateString();
+            const resolvedSport = detectSportType(workoutName, '', sportType);
 
 
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
@@ -1871,8 +1994,9 @@ Main Set 4x
             const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
             const payload = {
                 workout_id: workoutId,
+                category: 'WORKOUT',
                 start_date_local: `${targetDate}T00:00:00`,
-                type: 'Workout',
+                type: resolvedSport,
                 name: workoutName
             };
 
@@ -1886,7 +2010,7 @@ Main Set 4x
 
 
                 if (response.ok || response.status === 201) {
-                    alert(`✅ Passet "${workoutName}" har schemalagts den ${targetDate} i din Intervals.icu-kalender!`);
+                    alert(`✅ Passet "${workoutName}" (${resolvedSport}) har schemalagts den ${targetDate} och kopplas automatiskt till rätt sport på klockan!`);
                 } else {
                     const errText = await response.text();
                     alert(`Kunde inte schemalägga passet (${response.status}): ${errText}`);
@@ -1898,9 +2022,10 @@ Main Set 4x
         }
 
 
-        async function scheduleIntervalsWorkoutWithCategory(workoutId, encodedName, category = 'WORKOUT') {
+        async function scheduleIntervalsWorkoutWithCategory(workoutId, encodedName, category = 'WORKOUT', sportType = 'Run') {
             const workoutName = decodeURIComponent(encodedName);
             const targetDate = toLocalDateString();
+            const resolvedSport = detectSportType(workoutName, '', sportType);
 
 
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
@@ -1918,7 +2043,7 @@ Main Set 4x
             const payload = {
                 workout_id: workoutId,
                 start_date_local: `${targetDate}T00:00:00`,
-                type: 'Workout',
+                type: resolvedSport,
                 category: category,
                 name: workoutName
             };
@@ -1933,7 +2058,7 @@ Main Set 4x
 
 
                 if (response.ok || response.status === 201) {
-                    alert(`✅ Passet "${workoutName}" har skickats till din kalender för idag!`);
+                    alert(`✅ Passet "${workoutName}" (${resolvedSport}) har skickats till din kalender för idag!`);
                 } else {
                     const errText = await response.text();
                     alert(`Kunde inte schemalägga passet (${response.status}): ${errText}`);
@@ -2025,19 +2150,23 @@ Main Set 4x
                 const weekOffset = isNextWeek ? 1 : 0;
                 const activeWeekNum = baseWeekNum + weekOffset;
                 const dayName = `${isNextWeek ? 'Nästa ' : ''}${dayNames[i % 7]}`;
-                const existingEvent = scheduledEvents.find(ev => String(ev.start_date_local || '').slice(0, 10) === dateStr);
+                const dayEvents = scheduledEvents.filter(ev => String(ev.start_date_local || '').slice(0, 10) === dateStr);
         
-                if (existingEvent) {
-                    fullDaysList.push({
-                        dateStr,
-                        dayName,
-                        isNextWeek,
-                        isExisting: true,
-                        eventId: existingEvent.id,
-                        title: existingEvent.name || 'Bokat pass',
-                        tag: `[${existingEvent.type || 'Pass'}]`,
-                        tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
-                        desc: existingEvent.description || 'Ingen beskrivning tillgänglig.'
+                if (dayEvents.length > 0) {
+                    dayEvents.forEach(ev => {
+                        const detectedSport = detectSportType(ev.name, ev.description, ev.type);
+                        fullDaysList.push({
+                            dateStr,
+                            dayName,
+                            isNextWeek,
+                            isExisting: true,
+                            eventId: ev.id,
+                            title: ev.name || 'Bokat pass',
+                            sportType: detectedSport,
+                            tag: `[${detectedSport}]`,
+                            tagClass: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+                            desc: ev.description || 'Ingen beskrivning tillgänglig.'
+                        });
                     });
                 } else {
                     let suggestion = getSmartDaySuggestion(
@@ -2123,8 +2252,10 @@ Main Set 4x
 
 
             const name = workout.name || 'Namnlöst pass';
+            const desc = workout.description || workout.workout_doc || 'Ingen beskrivning angiven i biblioteket.';
+            const sportType = detectSportType(name, desc, workout.sport_type);
             const cat = getPhilosophyCategory(name);
-            let tag = fallbackTag || `[${cat}]`;
+            let tag = fallbackTag || `[${sportType}]`;
             let tagClass = fallbackTagClass || 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
 
 
@@ -2144,8 +2275,8 @@ Main Set 4x
                 title: name,
                 tag,
                 tagClass,
-                desc: workout.description || workout.workout_doc || 'Ingen beskrivning angiven i biblioteket.',
-                sportType: workout.sport_type || 'Workout',
+                desc,
+                sportType,
                 isRest
             };
         }
@@ -2181,6 +2312,17 @@ Main Set 4x
                     );
                     return buildDayCardFromWorkout(redPass, '[Avlastning]', 'bg-rose-500/10 text-rose-400 border border-rose-500/20');
                 }
+                if (analysis.isReturnToRun && canTestRun) {
+                    return {
+                        title: 'Return-to-Run Test + Crosstrainer',
+                        tag: '[Run + Elliptical]',
+                        tagClass: 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
+                        desc: "- 4x (1 min jogg / 2 min gång) [Run]
+- 40 min Crosstrainer FatMax [Elliptical]",
+                        sportType: 'Run',
+                        isRest: false
+                    };
+                }
                 if (isAlt) {
                     const altQuality = pickLibraryWorkout(
                         w => hasTag(w, '[Rehab]') && hasWord(w, ['cykel', 'crosstrainer', 'rodd', 'aqua']),
@@ -2196,7 +2338,7 @@ Main Set 4x
                     rot,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(thresholdRun, '[Tröskel]');
+                return buildDayCardFromWorkout(thresholdRun, '[Tröskel · Run]');
             }
 
 
@@ -2227,7 +2369,7 @@ Main Set 4x
                     rot,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(midFatmax, '[FatMax]');
+                return buildDayCardFromWorkout(midFatmax, '[FatMax · Run]');
             }
 
 
@@ -2267,7 +2409,7 @@ Main Set 4x
                     rot + 1,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(longFatmax, '[FatMax]');
+                return buildDayCardFromWorkout(longFatmax, '[FatMax · Run]');
             }
 
 
@@ -2295,7 +2437,7 @@ Main Set 4x
                 rot,
                 usedTitles
             );
-            return buildDayCardFromWorkout(sunFartlek, '[Fartlek]');
+            return buildDayCardFromWorkout(sunFartlek, '[Fartlek · Run]');
         }
 
 
@@ -2313,6 +2455,8 @@ Main Set 4x
         
             fullDaysList.forEach((item, index) => {
                 const formattedBlocks = formatWorkoutBlocksHTML(item.desc);
+                const sportLabel = item.sportType || detectSportType(item.title, item.desc);
+                const isCombo = (item.title || '').includes('+');
 
 
                 const cardHtml = `
@@ -2332,7 +2476,10 @@ Main Set 4x
                                 <span class="font-mono">${item.dateStr.slice(5)}</span>
                             </div>
                             <h4 class="font-bold text-white text-xs mt-1 leading-snug">${item.title}</h4>
-                            <span class="inline-block mt-1.5 px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.tagClass}">${item.tag} ${item.isExisting ? ' (Bokat)' : ''}</span>
+                            <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                <span class="px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.tagClass}">${item.tag} ${item.isExisting ? '(Bokat)' : ''}</span>
+                                ${isCombo && !item.isExisting ? '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Delas i 2 Garmin-pass</span>' : `<span class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-slate-800 text-slate-300">${sportLabel}</span>`}
+                            </div>
                         </div>
                         
                         <div class="max-h-44 overflow-y-auto pr-1">
@@ -2494,23 +2641,42 @@ Main Set 4x
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
-        
-            const payload = {
-                category: 'WORKOUT',
-                start_date_local: `${item.dateStr}T00:00:00`,
-                type: 'Workout',
-                name: item.title,
-                description: item.desc
-            };
-        
+
+            // Dela upp kombinationspass i separata Garmin-pass med rätt sporttyp
+            const splitParts = splitComboWorkout(item);
+            let createdCount = 0;
+
             try {
-                const res = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events`, {
-                    method: 'POST',
-                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok || res.status === 201) {
-                    alert(`✅ Passet "${item.title}" har bokats den ${item.dateStr}!`);
+                for (const part of splitParts) {
+                    const payload = part.workoutId
+                        ? {
+                            workout_id: part.workoutId,
+                            category: 'WORKOUT',
+                            start_date_local: `${item.dateStr}T00:00:00`,
+                            type: part.sportType,
+                            name: part.title
+                        }
+                        : {
+                            category: 'WORKOUT',
+                            start_date_local: `${item.dateStr}T00:00:00`,
+                            type: part.sportType,
+                            name: part.title,
+                            description: part.desc
+                        };
+
+                    const res = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events`, {
+                        method: 'POST',
+                        headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok || res.status === 201) createdCount++;
+                }
+
+                if (createdCount > 0) {
+                    const sportsInfo = splitParts.map(p => `${p.title} (${p.sportType})`).join(' + ');
+                    alert(`✅ Bokat den ${item.dateStr}: ${sportsInfo}
+
+Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
                     generateAiWeeklySchedule();
                 } else {
                     alert('Kunde inte boka passet.');
@@ -2603,7 +2769,7 @@ Main Set 4x
             container.innerHTML = filtered.map(w => {
                 const name = w.name || 'Namnlöst pass';
                 const desc = w.description || w.workout_doc || 'Ingen beskrivning.';
-                const sport = w.sport_type || 'Run';
+                const sport = detectSportType(name, desc, w.sport_type);
         
                 return `
                     <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 flex items-start justify-between gap-3 hover:border-indigo-500/50 transition">
@@ -2614,7 +2780,7 @@ Main Set 4x
                             <h4 class="text-xs font-bold text-white truncate">${name}</h4>
                             <p class="text-[10px] text-slate-400 line-clamp-2 font-mono">${desc}</p>
                         </div>
-                        <button onclick="applyWorkoutSwap(${scheduleIndex}, '${encodeURIComponent(name)}', '${encodeURIComponent(desc)}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-semibold rounded-lg shrink-0 transition flex items-center gap-1">
+                        <button onclick="applyWorkoutSwap(${scheduleIndex}, '${encodeURIComponent(name)}', '${encodeURIComponent(desc)}', '${sport}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-semibold rounded-lg shrink-0 transition flex items-center gap-1">
                             <i data-lucide="check" class="w-3 h-3"></i> Välj
                         </button>
                     </div>
@@ -2624,7 +2790,7 @@ Main Set 4x
             if (window.lucide) lucide.createIcons();
         }
         
-        async function applyWorkoutSwap(scheduleIndex, encodedName, encodedDesc) {
+        async function applyWorkoutSwap(scheduleIndex, encodedName, encodedDesc, sportType = 'Run') {
             const item = appState.generatedWeeklySchedule[scheduleIndex];
             if (!item) return;
         
@@ -2648,6 +2814,7 @@ Main Set 4x
         
             item.title = newTitle;
             item.desc = newDesc;
+            item.sportType = detectSportType(newTitle, newDesc, sportType);
             item.isExisting = false;
         
             closeSwapModal();
@@ -2672,36 +2839,41 @@ Main Set 4x
         
             for (let item of appState.generatedWeeklySchedule) {
                 if (item.isRest || item.isExisting) continue;
+
+                const splitParts = splitComboWorkout(item);
         
-                const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
-                const payload = item.workoutId
-                    ? {
-                        workout_id: item.workoutId,
-                        start_date_local: `${item.dateStr}T00:00:00`,
-                        type: 'Workout',
-                        name: item.title
+                for (const part of splitParts) {
+                    const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
+                    const payload = part.workoutId
+                        ? {
+                            workout_id: part.workoutId,
+                            category: 'WORKOUT',
+                            start_date_local: `${item.dateStr}T00:00:00`,
+                            type: part.sportType,
+                            name: part.title
+                        }
+                        : {
+                            category: 'WORKOUT',
+                            start_date_local: `${item.dateStr}T00:00:00`,
+                            type: part.sportType,
+                            name: part.title,
+                            description: part.desc
+                        };
+            
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (response.ok || response.status === 201) successCount++;
+                    } catch (e) {
+                        console.error('Kunde inte skicka pass för', item.dateStr, e);
                     }
-                    : {
-                        category: 'WORKOUT',
-                        start_date_local: `${item.dateStr}T00:00:00`,
-                        type: item.sportType || 'Workout',
-                        name: item.title,
-                        description: item.desc
-                    };
-        
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (response.ok || response.status === 201) successCount++;
-                } catch (e) {
-                    console.error('Kunde inte skicka pass för', item.dateStr, e);
                 }
             }
         
-            alert(`✅ ${successCount} pass har skickats till din Intervals.icu-kalender!`);
+            alert(`✅ ${successCount} pass har skickats med rätt Garmin-sportprofil till din Intervals.icu-kalender!`);
             generateAiWeeklySchedule();
         }
 
@@ -2712,10 +2884,11 @@ Main Set 4x
                 return;
             }
             const rec = appState.aiRecommendation;
+            const resolvedSport = detectSportType(rec.name, rec.workoutText || rec.description || '', rec.sportType);
             if (rec.isCustomDirect) {
-                await sendWorkoutDirectly(toLocalDateString(), 'Return_to_Run_Test.txt', rec.workoutText);
+                await sendWorkoutDirectly(toLocalDateString(), rec.name, rec.workoutText, resolvedSport);
             } else {
-                await scheduleIntervalsWorkoutWithCategory(rec.id, encodeURIComponent(rec.name), 'WORKOUT');
+                await scheduleIntervalsWorkoutWithCategory(rec.id, encodeURIComponent(rec.name), 'WORKOUT', resolvedSport);
             }
         }
 
@@ -2804,7 +2977,6 @@ Main Set 4x
         }
 
 
-        // Swipe-funktion för att byta mellan huvudflikarna (Dashboard, Passbibliotek, AI Veckoschema)
         let touchStartX = 0;
         let touchEndX = 0;
 
@@ -2818,19 +2990,16 @@ Main Set 4x
         }, false);
 
         function handleSwipeGesture() {
-            const threshold = 70; // minsta avstånd för swipe
+            const threshold = 70;
             if (touchEndX < touchStartX - threshold) {
-                // Swipe vänster -> nästa flik
                 navigateToAdjacentTab(1);
             }
             if (touchEndX > touchStartX + threshold) {
-                // Swipe höger -> föregående flik
                 navigateToAdjacentTab(-1);
             }
         }
 
         function navigateToAdjacentTab(direction) {
-            // Om vi är på detaljvyn gör vi inget vid swipe
             const detailView = document.getElementById('viewDetail');
             if (!detailView.classList.contains('hidden')) return;
 
@@ -3616,8 +3785,8 @@ Main Set 4x
             }
 
 
-            const filename = name.replace(/\s+/g, '_') + '.txt';
-            await sendWorkoutDirectly(workoutDate, filename, text);
+            const sportType = detectSportType(name, text);
+            await sendWorkoutDirectly(workoutDate, name, text, sportType);
             nameInput.value = '';
             textInput.value = '';
         }
@@ -3872,7 +4041,7 @@ Main Set 4x
             });
         }
         
-        async function sendWorkoutDirectly(workoutDate, filename, workoutText) {
+        async function sendWorkoutDirectly(workoutDate, workoutTitle, workoutText, sportType = 'Run') {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
 
@@ -3883,14 +4052,15 @@ Main Set 4x
             }
 
 
+            const cleanName = workoutTitle.replace(/\.txt$/i, '');
+            const resolvedSport = detectSportType(cleanName, workoutText, sportType);
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
             const payload = {
                 category: 'WORKOUT',
                 start_date_local: `${workoutDate}T00:00:00`,
-                type: 'Run',
-                name: filename.replace(/\.txt$/i, ''),
-                filename,
+                type: resolvedSport,
+                name: cleanName,
                 description: workoutText
             };
 
@@ -3904,7 +4074,7 @@ Main Set 4x
 
 
                 if (response.ok || response.status === 201) {
-                    alert(`✅ Passet har skickats till Intervals.icu för datum ${workoutDate}!`);
+                    alert(`✅ Passet "${cleanName}" (${resolvedSport}) har skickats till Intervals.icu för datum ${workoutDate}!`);
                     fetchIntervalsData();
                 } else {
                     const errText = await response.text();
@@ -3939,3 +4109,4 @@ Main Set 4x
     </script>
 </body>
 </html>
+Bearbetad och analyserad i kod
