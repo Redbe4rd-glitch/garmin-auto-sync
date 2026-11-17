@@ -730,59 +730,68 @@ Main Set 4x
             const title = (item.title || '').trim();
             const desc = (item.desc || '').trim();
             const lowerTitle = title.toLowerCase();
-
+        
             // Specialhantering för Return-to-Run + Crosstrainer
-            if (lowerTitle.includes('return-to-run') && (lowerTitle.includes('crosstrainer') || lowerTitle.includes('cross') || desc.toLowerCase().includes('crosstrainer'))) {
+            if (
+                lowerTitle.includes('return-to-run') &&
+                (
+                    lowerTitle.includes('crosstrainer') ||
+                    lowerTitle.includes('cross') ||
+                    desc.toLowerCase().includes('crosstrainer')
+                )
+            ) {
                 return [
                     {
                         title: '[FatMax] Return-to-Run Test (4x 1m jogg / 2m gång)',
                         sportType: 'Run',
                         desc: `- 5m Walk Warmup
-
-Main Set 4x
-- 1m FatMax Z2 (100-124 bpm)
-- 2m Walk
-
-- 3m Cooldown Walk`
+        
+        Main Set 4x
+        - 1m FatMax Z2 (100-124 bpm)
+        - 2m Walk
+        
+        - 3m Cooldown Walk`
                     },
                     {
                         title: '[FatMax] Crosstrainer 40 min',
                         sportType: 'Elliptical',
                         desc: `- 5m Warmup Z1
-- 30m FatMax Z2 (105-124 bpm)
-- 5m Cooldown Z1`
+        - 30m FatMax Z2 (105-124 bpm)
+        - 5m Cooldown Z1`
                     }
                 ];
             }
-
+        
             // Generell uppdelning om titeln innehåller "+" mellan två sporter
             if (title.includes('+')) {
                 const rawParts = title.split('+').map(p => p.trim()).filter(Boolean);
                 const lines = desc.split('\n').map(l => l.trim()).filter(Boolean);
-
+        
                 if (rawParts.length >= 2) {
                     return rawParts.map((partTitle, idx) => {
                         const matchingLine = lines[idx] || '';
                         const sportType = detectSportType(partTitle, matchingLine);
                         let structuredDesc = matchingLine;
-
-                        // Om beskrivningen saknar Intervals-syntax, omvandla t.ex. "40 min Crosstrainer FatMax" till giltig syntax
+        
+                        // Om beskrivningen saknar Intervals-syntax...
                         if (!structuredDesc || !structuredDesc.startsWith('-')) {
                             const minMatch = `${partTitle} ${matchingLine}`.match(/(\d+)\s*m(in)?/i);
                             const mins = minMatch ? parseInt(minMatch[1], 10) : 30;
+        
                             if (mins >= 15) {
                                 const mainMins = Math.max(5, mins - 10);
                                 structuredDesc = `- 5m Warmup Z1
-- ${mainMins}m FatMax Z2 (105-124 bpm)
-- 5m Cooldown Z1`;
+        - ${mainMins}m FatMax Z2 (105-124 bpm)
+        - 5m Cooldown Z1`;
                             } else {
                                 structuredDesc = `- ${mins}m Z2 (105-124 bpm)`;
                             }
                         } else {
-                            // Rensa bort eventuell [Elliptical]-tagg i slutet av raden
-                            structuredDesc = structuredDesc.replace(/\[(Run|Elliptical|Ride|WeightTraining)\]/gi, '').trim();
+                            structuredDesc = structuredDesc
+                                .replace(/\[(Run|Elliptical|Ride|WeightTraining)\]/gi, '')
+                                .trim();
                         }
-
+        
                         return {
                             title: partTitle,
                             sportType,
@@ -791,8 +800,8 @@ Main Set 4x
                     });
                 }
             }
-
-            // Enskilt pass – returnera som array med 1 objekt och korrekt sportType
+        
+            // Enskilt pass
             return [
                 {
                     workoutId: item.workoutId || null,
