@@ -737,20 +737,20 @@ Main Set 4x
                     {
                         title: '[FatMax] Return-to-Run Test (4x 1m jogg / 2m gång)',
                         sportType: 'Run',
-                        desc: "- 5m Walk Warmup"
+                        desc: `- 5m Walk Warmup
 
 Main Set 4x
 - 1m FatMax Z2 (100-124 bpm)
 - 2m Walk
 
-- 3m Cooldown Walk"
+- 3m Cooldown Walk`
                     },
                     {
                         title: '[FatMax] Crosstrainer 40 min',
                         sportType: 'Elliptical',
-                        desc: "- 5m Warmup Z1"
+                        desc: `- 5m Warmup Z1
 - 30m FatMax Z2 (105-124 bpm)
-- 5m Cooldown Z1"
+- 5m Cooldown Z1`
                     }
                 ];
             }
@@ -758,8 +758,7 @@ Main Set 4x
             // Generell uppdelning om titeln innehåller "+" mellan två sporter
             if (title.includes('+')) {
                 const rawParts = title.split('+').map(p => p.trim()).filter(Boolean);
-                const lines = desc.split('
-').map(l => l.trim()).filter(Boolean);
+                const lines = desc.split('\n').map(l => l.trim()).filter(Boolean);
 
                 if (rawParts.length >= 2) {
                     return rawParts.map((partTitle, idx) => {
