@@ -3878,15 +3878,38 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             }
         
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
-            const url = `https://intervals.icu/api/v1/athlete/${athleteId}/workouts`;
-        
-            const payload = {
-                name: name,
-                type: sportType,
-                description: description
-            };
         
             try {
+                // 1. Försök hitta folder_id från ett redan inläst pass i biblioteket
+                let targetFolderId = null;
+                if (appState.libraryWorkouts && appState.libraryWorkouts.length > 0) {
+                    const existingWithFolder = appState.libraryWorkouts.find(w => w.folder_id);
+                    if (existingWithFolder) {
+                        targetFolderId = existingWithFolder.folder_id;
+                    }
+                }
+        
+                // 2. Fallback: Hämta mappar direkt från Intervals.icu och leta efter "Mina Pass"
+                if (!targetFolderId) {
+                    const folderRes = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/folders`, {
+                        headers: { 'Authorization': authHeader }
+                    });
+                    if (folderRes.ok) {
+                        const folders = await folderRes.json();
+                        const minaPassFolder = folders.find(f => (f.name || '').toLowerCase() === 'mina pass') || folders[0];
+                        if (minaPassFolder) targetFolderId = minaPassFolder.id;
+                    }
+                }
+        
+                // 3. Skicka passet inklusive folder_id
+                const url = `https://intervals.icu/api/v1/athlete/${athleteId}/workouts`;
+                const payload = {
+                    folder_id: targetFolderId,
+                    name: name,
+                    type: sportType,
+                    description: description
+                };
+        
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
@@ -3894,10 +3917,9 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
                 });
         
                 if (response.ok || response.status === 201) {
-                    alert(`✅ Passet "${name}" har sparats till ditt passbibliotek på Intervals.icu!`);
+                    alert(`✅ Passet "${name}" har sparats i mappen "Mina Pass" på Intervals.icu!`);
                     nameInput.value = '';
                     descInput.value = '';
-                    // Uppdatera biblioteket automatiskt i vyn
                     fetchLibraryWorkouts();
                 } else {
                     const errText = await response.text();
