@@ -1841,8 +1841,9 @@ Main Set 4x
                 const formattedBlocks = formatWorkoutBlocksHTML(desc);
         
                 return `
-                    <div class="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-2xl transition-all overflow-hidden self-start">
-                        <button type="button" onclick="toggleLibraryCard('${w.id}')" class="w-full p-4 text-left flex items-center justify-between gap-3 focus:outline-none">
+                <div class="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-2xl transition-all overflow-hidden self-start">
+                    <div class="w-full p-4 flex items-center justify-between gap-3">
+                        <button type="button" onclick="toggleLibraryCard('${w.id}')" class="flex-1 text-left flex items-center justify-between gap-3 focus:outline-none">
                             <div class="space-y-1.5 min-w-0">
                                 <div class="flex items-center gap-2">
                                     <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${badgeClass}">${cat}</span>
@@ -1850,27 +1851,40 @@ Main Set 4x
                                 </div>
                                 <h4 class="font-bold text-white text-sm leading-snug truncate">${name}</h4>
                             </div>
-                            <div class="p-1.5 bg-slate-800/80 text-slate-400 rounded-lg shrink-0">
-                                <i data-lucide="chevron-down" id="lib-chevron-${w.id}" class="w-4 h-4 transition-transform duration-200"></i>
-                            </div>
                         </button>
-        
-                        <div id="lib-details-${w.id}" class="hidden px-4 pb-4 pt-1 border-t border-slate-800/80 space-y-3 bg-slate-950/30">
-                            <div class="pt-2">
-                                ${formattedBlocks}
+                        
+                        <!-- Ikoner för att redigera eller snabbkopiera direkt på kortet -->
+                        <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
+                            <button onclick="openEditWorkoutModal('${w.id}')" title="Redigera pass" class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="cloneWorkoutToNew('${w.id}')" title="Spara som nytt pass (kopia)" class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition">
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <button type="button" onclick="toggleLibraryCard('${w.id}')" class="p-1.5 bg-slate-800/80 text-slate-400 rounded-lg shrink-0">
+                            <i data-lucide="chevron-down" id="lib-chevron-${w.id}" class="w-4 h-4 transition-transform duration-200"></i>
+                        </button>
+                    </div>
+
+                    <div id="lib-details-${w.id}" class="hidden px-4 pb-4 pt-1 border-t border-slate-800/80 space-y-3 bg-slate-950/30">
+                        <div class="pt-2">
+                            ${formattedBlocks}
+                        </div>
+                        <div class="pt-3 border-t border-slate-800/80 space-y-2">
+                            <div class="flex items-center justify-between text-[11px] text-slate-400">
+                                <span>Välj datum:</span>
+                                <input type="date" id="date-${w.id}" value="${todayStr}" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 font-mono">
                             </div>
-                            <div class="pt-3 border-t border-slate-800/80 space-y-2">
-                                <div class="flex items-center justify-between text-[11px] text-slate-400">
-                                    <span>Välj datum:</span>
-                                    <input type="date" id="date-${w.id}" value="${todayStr}" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 font-mono">
-                                </div>
-                                <button onclick="scheduleIntervalsWorkout('${w.id}', '${encodeURIComponent(name)}', '${sport}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                                    <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Kalender (${sport})
-                                </button>
-                            </div>
+                            <button onclick="scheduleIntervalsWorkout('${w.id}', '${encodeURIComponent(name)}', '${sport}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Kalender (${sport})
+                            </button>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
+
             }).join('');
         
             if (window.lucide) lucide.createIcons();
@@ -3931,6 +3945,138 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             }
         }
         
+// Öppna redigeringsläget eller fyll i fälten för ett specifikt pass
+function openEditWorkoutModal(workoutId) {
+    if (!appState.libraryWorkouts) return;
+    const workout = appState.libraryWorkouts.find(w => w.id === workoutId);
+    if (!workout) return;
+
+    // Fyll i fälten i din skapande/redigerandevy (t.ex. de fält vi skapade tidigare)
+    const nameInput = document.getElementById('libCreateName');
+    const sportSelect = document.getElementById('libCreateSport');
+    const descInput = document.getElementById('libCreateDesc');
+
+    if (nameInput) nameInput.value = workout.name || '';
+    if (sportSelect && workout.type) sportSelect.value = workout.type;
+    if (descInput) descInput.value = workout.description || '';
+
+    // Spara det aktiva ID:t så vi vet vilket pass som ska uppdateras vid en PUT-förfrågan
+    appState.activeEditingWorkoutId = workoutId;
+
+    // Scrolla upp till redigeringsrutan så den syns direkt
+    if (nameInput) {
+        nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        nameInput.focus();
+    }
+}
+
+// Uppdatera befintligt pass (Skriv över via PUT)
+async function updateExistingWorkout() {
+    const workoutId = appState.activeEditingWorkoutId;
+    if (!workoutId) {
+        alert('Inget pass är valt för redigering. Välj ett pass med penna-ikonen först!');
+        return;
+    }
+
+    const nameInput = document.getElementById('libCreateName');
+    const sportSelect = document.getElementById('libCreateSport');
+    const descInput = document.getElementById('libCreateDesc');
+
+    const name = nameInput.value.trim();
+    const sportType = sportSelect.value;
+    const description = normalizeWorkoutSyntax(descInput.value);
+
+    if (!name || !description) {
+        alert('Passnamn och beskrivning får inte vara tomma.');
+        return;
+    }
+
+    const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+    const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+    const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+    const url = `https://intervals.icu/api/v1/athlete/${athleteId}/workouts/${workoutId}`;
+
+    const payload = {
+        name: name,
+        type: sportType,
+        description: description
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            alert(`✅ Passet "${name}" har uppdaterats på Intervals.icu!`);
+            appState.activeEditingWorkoutId = null;
+            nameInput.value = '';
+            descInput.value = '';
+            fetchLibraryWorkouts();
+        } else {
+            const errText = await response.text();
+            alert(`Kunde inte uppdatera passet (${response.status}): ${errText}`);
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Ett nätverksfel uppstod vid uppdateringen.');
+    }
+}
+
+async function cloneWorkoutToNew(workoutId) {
+    if (!appState.libraryWorkouts) return;
+    const workout = appState.libraryWorkouts.find(w => w.id === workoutId);
+    if (!workout) return;
+
+    const newName = prompt('Vad vill du att det nya kopierade passet ska heta?', `${workout.name} (Kopia)`);
+    if (!newName) return;
+
+    const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+    const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+    if (!apiKey || !athleteId) {
+        openSettingsModal();
+        return;
+    }
+
+    const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+    let targetFolderId = workout.folder_id || null;
+    
+    if (!targetFolderId) {
+        const existingWithFolder = appState.libraryWorkouts.find(w => w.folder_id);
+        if (existingWithFolder) targetFolderId = existingWithFolder.folder_id;
+    }
+
+    const url = `https://intervals.icu/api/v1/athlete/${athleteId}/workouts`;
+    const payload = {
+        folder_id: targetFolderId,
+        name: newName,
+        type: workout.type || 'Run',
+        description: workout.description || ''
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok || response.status === 201) {
+            alert(`✅ En kopia av passet har sparats som "${newName}" i ditt bibliotek!`);
+            fetchLibraryWorkouts();
+        } else {
+            const errText = await response.text();
+            alert(`Kunde inte skapa kopia (${response.status}): ${errText}`);
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Ett nätverksfel uppstod.');
+    }
+}
+
+
         document.addEventListener('DOMContentLoaded', () => {
             updateWellnessDisplay();
             if (window.lucide) lucide.createIcons();
