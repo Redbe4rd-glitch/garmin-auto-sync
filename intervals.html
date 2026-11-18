@@ -1842,32 +1842,37 @@ Main Set 4x
         
                 return `
                 <div class="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-2xl transition-all overflow-hidden self-start">
-                    <div class="w-full p-4 flex items-center justify-between gap-3">
-                        <button type="button" onclick="toggleLibraryCard('${w.id}')" class="flex-1 text-left flex items-center justify-between gap-3 focus:outline-none">
-                            <div class="space-y-1.5 min-w-0">
-                                <div class="flex items-center gap-2">
-                                    <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${badgeClass}">${cat}</span>
-                                    <span class="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">${sport}</span>
-                                </div>
-                                <h4 class="font-bold text-white text-sm leading-snug truncate">${name}</h4>
+                    <div class="w-full p-4 flex flex-col gap-2">
+                        <!-- Översta raden: Taggar till vänster, ikoner längst till höger på samma nivå -->
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${badgeClass}">${cat}</span>
+                                <span class="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">${sport}</span>
                             </div>
-                        </button>
-                        
-                        <!-- Ikoner för att redigera eller snabbkopiera direkt på kortet -->
-                        <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
-                            <button onclick="openEditWorkoutModal('${w.id}')" title="Redigera pass" class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition">
-                                <i data-lucide="edit-3" class="w-4 h-4"></i>
-                            </button>
-                            <button onclick="cloneWorkoutToNew('${w.id}')" title="Spara som nytt pass (kopia)" class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition">
-                                <i data-lucide="copy" class="w-4 h-4"></i>
-                            </button>
+                            
+                            <!-- Mindre ikoner i samma höjd som taggarna -->
+                            <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
+                                <button onclick="openEditWorkoutModal('${w.id}')" title="Redigera pass" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded transition">
+                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="cloneWorkoutToNew('${w.id}')" title="Spara som nytt pass" class="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded transition">
+                                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
                         </div>
 
-                        <button type="button" onclick="toggleLibraryCard('${w.id}')" class="p-1.5 bg-slate-800/80 text-slate-400 rounded-lg shrink-0">
-                            <i data-lucide="chevron-down" id="lib-chevron-${w.id}" class="w-4 h-4 transition-transform duration-200"></i>
-                        </button>
+                        <!-- Andra raden: Själva passnamnet och pil-knappen -->
+                        <div class="flex items-center justify-between gap-3">
+                            <button type="button" onclick="toggleLibraryCard('${w.id}')" class="flex-1 text-left focus:outline-none min-w-0">
+                                <h4 class="font-bold text-white text-sm leading-snug truncate">${name}</h4>
+                            </button>
+                            <button type="button" onclick="toggleLibraryCard('${w.id}')" class="p-1.5 bg-slate-800/80 text-slate-400 rounded-lg shrink-0">
+                                <i data-lucide="chevron-down" id="lib-chevron-${w.id}" class="w-4 h-4 transition-transform duration-200"></i>
+                            </button>
+                        </div>
                     </div>
 
+                    <!-- Utfällbar detaljvy (oförändrad) -->
                     <div id="lib-details-${w.id}" class="hidden px-4 pb-4 pt-1 border-t border-slate-800/80 space-y-3 bg-slate-950/30">
                         <div class="pt-2">
                             ${formattedBlocks}
@@ -1884,6 +1889,7 @@ Main Set 4x
                     </div>
                 </div>
             `;
+
 
             }).join('');
         
