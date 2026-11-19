@@ -681,6 +681,54 @@ Main Set 4x
         </div>
     </div>
 
+    <!-- Redigeringsmodal för Passbibliotek -->
+    <div id="editWorkoutModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="edit-3" class="w-4 h-4 text-indigo-400"></i> Redigera bibliotekspass
+                    </h3>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Uppdatera befintligt pass eller spara som ett nytt pass.</p>
+                </div>
+                <button type="button" onclick="closeEditWorkoutModal()" class="text-slate-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+    
+            <div class="space-y-3">
+                <div>
+                    <label for="modalEditName" class="block text-xs font-medium text-slate-300 mb-1">Passnamn</label>
+                    <input id="modalEditName" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="modalEditSport" class="block text-xs font-medium text-slate-300 mb-1">Sport</label>
+                    <select id="modalEditSport" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        <option value="Run">Run (Löpning)</option>
+                        <option value="WeightTraining">WeightTraining (Styrka/Rehab/Yoga)</option>
+                        <option value="Ride">Ride (Cykel)</option>
+                        <option value="Elliptical">Elliptical (Crosstrainer)</option>
+                        <option value="Swim">Swim (Simning)</option>
+                        <option value="Walk">Walk (Promenad)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="modalEditDesc" class="block text-xs font-medium text-slate-300 mb-1">Struktur / Beskrivning</label>
+                    <textarea id="modalEditDesc" rows="7" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+            </div>
+    
+            <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                <button type="button" onclick="saveModalAsNewWorkout()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-1.5 transition">
+                    <i data-lucide="copy-plus" class="w-4 h-4"></i> Spara som Nytt
+                </button>
+                <button type="button" onclick="saveModalUpdateExisting()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-1.5 transition">
+                    <i data-lucide="save" class="w-4 h-4"></i> Uppdatera Befintligt
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         const ACTIVITY_CATEGORIES = {
             run: { key: 'run', label: 'Löpning', hex: '#6366f1', badgeClass: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30', borderClass: 'border-indigo-500/50', dotClass: 'bg-indigo-500' },
@@ -1864,7 +1912,7 @@ Main Set 4x
                                 <button onclick="openEditWorkoutModal('${w.id}')" title="Redigera pass" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded transition">
                                     <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                                 </button>
-                                <button onclick="cloneWorkoutToNew('${w.id}')" title="Spara som nytt pass" class="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded transition">
+                                <button onclick="openCloneWorkoutModal('${w.id}')" title="Kopiera och redigera" class="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded transition">
                                     <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                                 </button>
                             </div>
@@ -3959,86 +4007,149 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
                 alert('Ett nätverksfel uppstod vid sparandet.');
             }
         }
+
+        function openCloneWorkoutModal(workoutId) {
+            const workouts = appState.libraryWorkouts || [];
+            const workout = workouts.find(w => String(w.id) === String(workoutId));
+            if (!workout) {
+                alert('Hittade inte passet i biblioteket.');
+                return;
+            }
         
-// Öppna redigeringsläget eller fyll i fälten för ett specifikt pass
-function openEditWorkoutModal(workoutId) {
-    if (!appState.libraryWorkouts) return;
-    const workout = appState.libraryWorkouts.find(w => w.id === workoutId);
-    if (!workout) return;
-
-    // Fyll i fälten i din skapande/redigerandevy (t.ex. de fält vi skapade tidigare)
-    const nameInput = document.getElementById('libCreateName');
-    const sportSelect = document.getElementById('libCreateSport');
-    const descInput = document.getElementById('libCreateDesc');
-
-    if (nameInput) nameInput.value = workout.name || '';
-    if (sportSelect && workout.type) sportSelect.value = workout.type;
-    if (descInput) descInput.value = workout.description || '';
-
-    // Spara det aktiva ID:t så vi vet vilket pass som ska uppdateras vid en PUT-förfrågan
-    appState.activeEditingWorkoutId = workoutId;
-
-    // Scrolla upp till redigeringsrutan så den syns direkt
-    if (nameInput) {
-        nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        nameInput.focus();
-    }
-}
-
-// Uppdatera befintligt pass (Skriv över via PUT)
-async function updateExistingWorkout() {
-    const workoutId = appState.activeEditingWorkoutId;
-    if (!workoutId) {
-        alert('Inget pass är valt för redigering. Välj ett pass med penna-ikonen först!');
-        return;
-    }
-
-    const nameInput = document.getElementById('libCreateName');
-    const sportSelect = document.getElementById('libCreateSport');
-    const descInput = document.getElementById('libCreateDesc');
-
-    const name = nameInput.value.trim();
-    const sportType = sportSelect.value;
-    const description = normalizeWorkoutSyntax(descInput.value);
-
-    if (!name || !description) {
-        alert('Passnamn och beskrivning får inte vara tomma.');
-        return;
-    }
-
-    const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
-    const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
-    const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
-    const url = `https://intervals.icu/api/v1/athlete/${athleteId}/workouts/${workoutId}`;
-
-    const payload = {
-        name: name,
-        type: sportType,
-        description: description
-    };
-
-    try {
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (response.ok) {
-            alert(`✅ Passet "${name}" har uppdaterats på Intervals.icu!`);
+            // Nollställ aktivt redigerings-ID så vi inte råkar skriva över originalet av misstag
             appState.activeEditingWorkoutId = null;
-            nameInput.value = '';
-            descInput.value = '';
-            fetchLibraryWorkouts();
-        } else {
-            const errText = await response.text();
-            alert(`Kunde inte uppdatera passet (${response.status}): ${errText}`);
+        
+            const nameEl = document.getElementById('modalEditName');
+            const sportEl = document.getElementById('modalEditSport');
+            const descEl = document.getElementById('modalEditDesc');
+            const modalEl = document.getElementById('editWorkoutModal');
+        
+            const baseName = workout.name || 'Namnlöst pass';
+            const rawDesc = workout.description ?? workout.workout_doc ?? '';
+            const detectedSport = detectSportType(baseName, rawDesc, workout.type || workout.sport_type);
+        
+            if (nameEl) nameEl.value = `${baseName} (Kopia)`;
+            if (sportEl) sportEl.value = detectedSport;
+            if (descEl) descEl.value = rawDesc;
+        
+            if (modalEl) {
+                modalEl.classList.remove('hidden');
+                if (window.lucide) lucide.createIcons();
+            }
         }
-    } catch (error) {
-        console.error(error);
-        alert('Ett nätverksfel uppstod vid uppdateringen.');
-    }
-}
+        
+        function openEditWorkoutModal(workoutId) {
+            const workouts = appState.libraryWorkouts || [];
+            const workout = workouts.find(w => String(w.id) === String(workoutId));
+            if (!workout) {
+                alert('Hittade inte passet i biblioteket.');
+                return;
+            }
+        
+            appState.activeEditingWorkoutId = workout.id;
+        
+            const nameEl = document.getElementById('modalEditName');
+            const sportEl = document.getElementById('modalEditSport');
+            const descEl = document.getElementById('modalEditDesc');
+            const modalEl = document.getElementById('editWorkoutModal');
+        
+            const rawName = workout.name || '';
+            const rawDesc = workout.description ?? workout.workout_doc ?? '';
+            const detectedSport = detectSportType(rawName, rawDesc, workout.type || workout.sport_type);
+        
+            if (nameEl) nameEl.value = rawName;
+            if (sportEl) sportEl.value = detectedSport;
+            if (descEl) descEl.value = rawDesc;
+        
+            if (modalEl) {
+                modalEl.classList.remove('hidden');
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+        
+        function closeEditWorkoutModal() {
+            const modalEl = document.getElementById('editWorkoutModal');
+            if (modalEl) modalEl.classList.add('hidden');
+            appState.activeEditingWorkoutId = null;
+        }
+        
+        async function saveModalUpdateExisting() {
+            const workoutId = appState.activeEditingWorkoutId;
+            if (!workoutId) return;
+        
+            const name = (document.getElementById('modalEditName')?.value || '').trim();
+            const sportType = document.getElementById('modalEditSport')?.value || 'Run';
+            const description = normalizeWorkoutSyntax(document.getElementById('modalEditDesc')?.value || '');
+        
+            if (!name || !description) {
+                alert('Passnamn och beskrivning får inte vara tomma.');
+                return;
+            }
+        
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+            const url = `https://intervals.icu/api/v1/athlete/${athleteId}/workouts/${workoutId}`;
+        
+            try {
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, type: sportType, description })
+                });
+        
+                if (response.ok) {
+                    alert(`✅ Passet "${name}" har uppdaterats!`);
+                    closeEditWorkoutModal();
+                    fetchLibraryWorkouts();
+                } else {
+                    const errText = await response.text();
+                    alert(`Kunde inte uppdatera (${response.status}): ${errText}`);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Nätverksfel vid uppdatering.');
+            }
+        }
+        
+        async function saveModalAsNewWorkout() {
+            const name = (document.getElementById('modalEditName')?.value || '').trim();
+            const sportType = document.getElementById('modalEditSport')?.value || 'Run';
+            const description = normalizeWorkoutSyntax(document.getElementById('modalEditDesc')?.value || '');
+        
+            if (!name || !description) {
+                alert('Passnamn och beskrivning får inte vara tomma.');
+                return;
+            }
+        
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+        
+            const existingWithFolder = (appState.libraryWorkouts || []).find(w => w.folder_id);
+            const targetFolderId = existingWithFolder ? existingWithFolder.folder_id : null;
+        
+            const url = `https://intervals.icu/api/v1/athlete/${athleteId}/workouts`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folder_id: targetFolderId, name, type: sportType, description })
+                });
+        
+                if (response.ok || response.status === 201) {
+                    alert(`✅ Nytt pass "${name}" sparat i biblioteket!`);
+                    closeEditWorkoutModal();
+                    fetchLibraryWorkouts();
+                } else {
+                    const errText = await response.text();
+                    alert(`Kunde inte skapa nytt pass (${response.status}): ${errText}`);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Nätverksfel vid skapande.');
+            }
+        }
 
 async function cloneWorkoutToNew(workoutId) {
     if (!appState.libraryWorkouts) return;
