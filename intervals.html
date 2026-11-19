@@ -1706,11 +1706,23 @@ Main Set 4x
             let html = '<div class="space-y-1.5">';
         
             const filteredLines = lines.filter(line => {
-                const lower = line.toLowerCase();
-                if ((lower.includes('warmup') || lower.includes('uppvärmning') || lower.includes('main set')) && 
-                    (lower.includes('cooldown') || lower.includes('nedvarvning') || lower.includes('kategori') || line.length > 50)) {
+            const lower = line.toLowerCase();
+        
+            // Filtrera bort sammanslagna sammanfattningsrader som listar flera delar i samma långa rad
+            const hasCombinedSummary =
+                (lower.includes('warmup') || lower.includes('uppvärmning')) &&
+                (lower.includes('cooldown') || lower.includes('nedvarvning')) &&
+                line.length > 50;
+        
+            const hasMainSetAndCategory =
+                lower.includes('main set') &&
+                lower.includes('kategori:') &&
+                line.length > 50;
+        
+                if (hasCombinedSummary || hasMainSetAndCategory) {
                     return false;
                 }
+            
                 return true;
             });
 
