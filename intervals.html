@@ -1747,32 +1747,38 @@ Main Set 4x
         
                 let clean = formatStepUnits(line);
         
-                let pairCount = 1;
-                if (i + 1 < filteredLines.length) {
-                    let nextClean = formatStepUnits(filteredLines[i + 1]);
-        
-                    if (i + 3 < filteredLines.length) {
-                        let thirdClean = formatStepUnits(filteredLines[i + 2]);
-                        let fourthClean = formatStepUnits(filteredLines[i + 3]);
-                        
-                        if (thirdClean === clean && fourthClean === nextClean) {
-                            let p = 0;
-                            while (i + p + 1 < filteredLines.length) {
-                                let testA = formatStepUnits(filteredLines[i + p]);
-                                let testB = formatStepUnits(filteredLines[i + p + 1]);
-                                if (testA === clean && testB === nextClean) {
-                                    pairCount++;
-                                    p += 2;
-                                } else { break; }
-                            }
-                            if (pairCount > 1) {
-                                compressedItems.push({ type: 'pair', work: clean, rest: nextClean, count: pairCount });
-                                i += (pairCount * 2);
-                                continue;
-                            }
+                const isWarmupOrCooldown = (str) => {
+                const s = str.toLowerCase();
+                return s.includes('uppvärmning') || s.includes('warmup') || s.includes('nedvarvning') || s.includes('cooldown');
+            };
+            
+            let pairCount = 1;
+            if (i + 1 < filteredLines.length && !isWarmupOrCooldown(filteredLines[i]) && !isWarmupOrCooldown(filteredLines[i + 1])) {
+                let nextClean = formatStepUnits(filteredLines[i + 1]);
+            
+                if (i + 3 < filteredLines.length && !isWarmupOrCooldown(filteredLines[i + 2]) && !isWarmupOrCooldown(filteredLines[i + 3])) {
+                    let thirdClean = formatStepUnits(filteredLines[i + 2]);
+                    let fourthClean = formatStepUnits(filteredLines[i + 3]);
+            
+                    if (thirdClean === clean && fourthClean === nextClean) {
+                        let p = 0;
+                        while (i + p + 1 < filteredLines.length) {
+                            if (isWarmupOrCooldown(filteredLines[i + p]) || isWarmupOrCooldown(filteredLines[i + p + 1])) break;
+                            let testA = formatStepUnits(filteredLines[i + p]);
+                            let testB = formatStepUnits(filteredLines[i + p + 1]);
+                            if (testA === clean && testB === nextClean) {
+                                pairCount++;
+                                p += 2;
+                            } else { break; }
+                        }
+                        if (pairCount > 1) {
+                            compressedItems.push({ type: 'pair', work: clean, rest: nextClean, count: pairCount });
+                            i += (pairCount * 2);
+                            continue;
                         }
                     }
                 }
+            }
         
                 let count = 1;
                 while (i + count < filteredLines.length) {
