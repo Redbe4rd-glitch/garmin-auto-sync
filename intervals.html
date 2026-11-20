@@ -1540,18 +1540,29 @@ Main Set 4x
             const foot = parseInt(document.getElementById('inputFoot').value, 10);
             const sleep = parseInt(document.getElementById('inputSleep').value, 10);
             const readiness = parseInt(document.getElementById('inputReadiness').value, 10);
-        
+
             const analysis = appState.coachAnalysis || runCoachGenieAnalysis();
             const w = appState.wellnessMetrics;
-            const maxPain = Math.max(calf, knee, hip, foot);
-        
+            const calfTrend = typeof getRecentCalfPainTrend === 'function'
+                ? getRecentCalfPainTrend()
+                : { todayVal: calf, prev24h: calf, prev48h: calf, isRising: false };
+
+            // Särskild hantering av vad/hälsena:
+            // - 0–1/10: tillåt lugn löpning (med volymbroms om ACWR är hög eller vid återkomst)
+            // - 2–3/10: tillåt extra försiktig FatMax-löpning om det INTE stiger mot föregående dagar
+            // - >= 4/10 eller stigande trend till >= 2: pausa löpning
+            const otherPainMax = Math.max(knee, hip, foot);
+            const calfForcesStop = calf >= 4 || (calfTrend.isRising && calf >= 2);
+            const calfIsCautious = !calfForcesStop && calf >= 2;
+            const maxPainForGeneralStop = Math.max(otherPainMax, calfForcesStop ? 4 : 0);
+
             const banner = document.getElementById('readinessBanner');
             const icon = document.getElementById('readinessIcon');
             const title = document.getElementById('readinessTitle');
             const desc = document.getElementById('readinessDesc');
             const action = document.getElementById('readinessAction');
             const sendBtn = document.getElementById('sendAiRecBtn');
-        
+
             let biometricReasons = [];
             let isBiometricRed = false;
             let isBiometricYellow = false;
@@ -1571,16 +1582,28 @@ Main Set 4x
                 }
             }
 
-            const contextSummary = `Löpning 7/14/28d: ${analysis.runKm7.toFixed(1)} / ${analysis.runKm14.toFixed(1)} / ${analysis.runKm28.toFixed(1)} km | ${analysis.rhrTrendText}. ${biometricReasons.length ? 'Biometri varning: ' + biometricReasons.join(', ') + '.' : ''} ${analysis.biomechWarning}`;
-        
-            if (maxPain >= 3 || readiness === 1 || sleep === 1 || isBiometricRed) {
+            const acwrText = appState.latestAcwr > 0 ? `ACWR ${appState.latestAcwr.toFixed(2)}` : 'ACWR –';
+            const contextSummary = `Löpning 7/14/28d: ${analysis.runKm7.toFixed(1)} / ${analysis.runKm14.toFixed(1)} / ${analysis.runKm28.toFixed(1)} km | ${acwrText} | ${analysis.rhrTrendText}. ${biometricReasons.length ? 'Biometri varning: ' + biometricReasons.join(', ') + '.' : ''} ${analysis.biomechWarning}`;
+
+            const pickShortFatMaxOrAlt = () => {
+                const lib = appState.libraryWorkouts || [];
+                const shortRun = lib.find(w => {
+                    const name = (w.name || '').toLowerCase();
+                    const mins = typeof estimateWorkoutMinutes === 'function' ? estimateWorkoutMinutes(w) : 30;
+                    return name.includes('[fatmax]') && detectSportType(w.name, w.description || '') === 'Run' && mins <= 35;
+                });
+                return shortRun || lib.find(w => (w.name || '').includes('[FatMax]')) || lib[0] || null;
+            };
+
+            // 1. RÖTT LJUS: Känning >= 4, stigande vad/hälsena till >= 2, annan skadekänning >= 3, eller röd biometri
+            if (maxPainForGeneralStop >= 3 || readiness === 1 || sleep === 1 || isBiometricRed) {
                 banner.className = "bg-gradient-to-r from-rose-950/80 to-slate-800 border border-rose-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-rose-400";
                 icon.setAttribute('data-lucide', 'shield-alert');
                 title.textContent = "🔴 Rött Ljus: Avlastning & Vila";
                 desc.textContent = contextSummary;
-                action.textContent = "Ordination: Ingen löpning – kör Crosstrainer/Cykel + Vadrehab";
-        
+                action.textContent = "Ordination: Pausa löpning – kör Crosstrainer/Cykel + Vadrehab";
+
                 const rehabPass = appState.libraryWorkouts.find(w => (w.name || '').includes('[Rehab]'));
                 if (rehabPass) {
                     appState.aiRecommendation = rehabPass;
@@ -1590,60 +1613,54 @@ Main Set 4x
                     sendBtn.classList.add('hidden');
                 }
             }
-            else if (analysis.isReturnToRun) {
+            // 2. FÖRSIKTIG LÖPNING (2–3/10 ej stigande): Kort och lugn FatMax (max 20–25 min)
+            else if (calfIsCautious) {
+                banner.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
+                icon.className = "w-8 h-8 text-amber-400";
+                icon.setAttribute('data-lucide', 'shield');
+                title.textContent = `🟡 Gult Ljus: Försiktig FatMax-löpning (Hälsena ${calf}/10, stabil)`;
+                desc.textContent = contextSummary;
+                action.textContent = "Ordination: Mycket lugn FatMax-löpning (20–25 min, flackt) eller Crosstrainer";
+                appState.aiRecommendation = pickShortFatMaxOrAlt();
+                sendBtn.classList.toggle('hidden', !appState.aiRecommendation);
+            }
+            // 3. ÅTERKOMST / LÅG KÄNNING (0–1/10): Tillåt kort FatMax-löpning med volymbroms vid hög ACWR/uppehåll
+            else if (analysis.isReturnToRun || appState.latestAcwr > 1.35) {
                 banner.className = "bg-gradient-to-r from-sky-950/80 to-slate-800 border border-sky-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-sky-400";
                 icon.setAttribute('data-lucide', 'footprints');
-                title.textContent = "🔵 Return-to-Run: Kontrollerad Löpstart";
-                desc.textContent = `Du har kört ${analysis.altMin14} min alternativ träning (14d), men löpvolymen är låg. ${contextSummary}`;
-        
-                if (maxPain <= 1 && !analysis.biomechWarning && !isBiometricYellow) {
-                    action.textContent = "Testpass: 12 min (4x [1 min lugn jogg + 2 min gång])";
-                    appState.aiRecommendation = {
-                        id: 'rtr-test-1',
-                        name: '[FatMax] Return-to-Run Test (4x 1m jogg / 2m gång)',
-                        sportType: 'Run',
-                        isCustomDirect: true,
-                        workoutText: '- 5m Walk Warmup\n\nMain Set 4x\n- 1m FatMax Z2 (100-124 bpm)\n- 2m Walk\n\n- 3m Cooldown Walk'
-                    };
-                    sendBtn.classList.remove('hidden');
-                } else {
-                    action.textContent = "Ordination: 30–40 min Crosstrainer/Cykel (FatMax)";
-                    const fatmaxAlt = appState.libraryWorkouts.find(w => (w.name || '').includes('[FatMax]') || (w.name || '').includes('[Rehab]'));
-                    appState.aiRecommendation = fatmaxAlt || null;
-                    sendBtn.classList.toggle('hidden', !fatmaxAlt);
-                }
+                title.textContent = `🔵 Kontrollerad Återkomst (${calf}/10): Kort FatMax + Alternativträning`;
+                desc.textContent = `Du har kört ${analysis.altMin14} min alternativ träning (14d). ${contextSummary}`;
+                action.textContent = "Ordination: Kort FatMax-löpning (20–30 min) varvat med alternativ kondition & styrka";
+                appState.aiRecommendation = pickShortFatMaxOrAlt();
+                sendBtn.classList.toggle('hidden', !appState.aiRecommendation);
             }
-            else if (maxPain >= 1 || readiness === 2 || sleep <= 2 || isBiometricYellow || analysis.biomechWarning) {
+            // 4. LÄTT BIOMETRI- / SÖMNVARNING (men 0–1/10 i känning och normal ACWR)
+            else if (readiness === 2 || sleep <= 2 || isBiometricYellow || analysis.biomechWarning) {
                 banner.className = "bg-gradient-to-r from-amber-950/80 to-slate-800 border border-amber-500/50 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-amber-400";
                 icon.setAttribute('data-lucide', 'shield');
                 title.textContent = "🟡 Gult Ljus: Skadeförebyggande läge";
                 desc.textContent = contextSummary;
                 action.textContent = "Ordination: Kort lugn FatMax-jogg (max 30 min) eller Crosstrainer";
-                appState.aiRecommendation = appState.libraryWorkouts.find(w => (w.name || '').includes('[FatMax]')) || appState.libraryWorkouts[0];
+                appState.aiRecommendation = pickShortFatMaxOrAlt();
                 sendBtn.classList.toggle('hidden', !appState.aiRecommendation);
             }
+            // 5. GRÖNT LJUS
             else {
                 banner.className = "bg-gradient-to-r from-emerald-950/80 to-slate-800 border border-emerald-500/30 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-lg gap-4 transition-all";
                 icon.className = "w-8 h-8 text-emerald-400";
                 icon.setAttribute('data-lucide', 'shield-check');
                 title.textContent = "🟢 Grönt Ljus: Kroppen i utmärkt balans";
                 desc.textContent = contextSummary;
-        
-                if (appState.latestAcwr > 1.3) {
-                    action.textContent = "Ordination: Lugnt FatMax-pass (ACWR > 1.3)";
-                    appState.aiRecommendation = appState.libraryWorkouts.find(w => (w.name || '').includes('[FatMax]')) || appState.libraryWorkouts[0];
-                } else {
-                    action.textContent = "Ordination: Kvalitet / Tröskelpass OK";
-                    appState.aiRecommendation = appState.libraryWorkouts.find(w => (w.name || '').includes('[Tröskel]')) || appState.libraryWorkouts[0];
-                }
+                action.textContent = "Ordination: Balanserad vecka med FatMax, kvalitet & styrka";
+                appState.aiRecommendation = appState.libraryWorkouts.find(w => (w.name || '').includes('[FatMax]')) || appState.libraryWorkouts[0];
                 sendBtn.classList.toggle('hidden', !appState.aiRecommendation);
             }
-        
+
             if (window.lucide) lucide.createIcons();
         }
-
+        
         async function fetchLibraryWorkouts() {
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
@@ -2283,153 +2300,205 @@ Main Set 4x
             };
         }
 
-        function getSmartDaySuggestion(dayIndex, analysis, maxPain, canTestRun, isRedLight, weekNum, weekOffset, seed, usedTitles) {
-            const isAlt = (analysis.isReturnToRun || maxPain >= 1 || isRedLight);
-            const rot = weekNum + weekOffset + seed;
+        function estimateWorkoutMinutes(workout) {
+            if (!workout) return 30;
+            const text = `${workout.name || ''} ${workout.description || workout.workout_doc || ''}`;
+            const minMatch = text.match(/(\d+)\s*m(in)?\b/i);
+            if (minMatch) return parseInt(minMatch[1], 10);
+            const secMatches = [...text.matchAll(/(\d+)\s*s\b/gi)];
+            if (secMatches.length > 0) {
+                const totalSec = secMatches.reduce((sum, m) => sum + parseInt(m[1], 10), 0);
+                return Math.max(1, Math.round(totalSec / 60));
+            }
+            return 30;
+        }
+        
+        function getRecentCalfPainTrend() {
+            const history = Array.isArray(appState.wellnessHistory) ? [...appState.wellnessHistory].sort((a, b) => a.id.localeCompare(b.id)) : [];
+            const extractCalf = (entry) => {
+                if (!entry || !entry.comments) return null;
+                const m = String(entry.comments).match(/Vad\/Hälsena:\s*(\d+)/i);
+                return m ? parseInt(m[1], 10) : null;
+            };
+        
+            const todayVal = parseInt(document.getElementById('inputCalf')?.value || '0', 10);
+            const pastValues = history
+                .map(extractCalf)
+                .filter(v => typeof v === 'number' && !Number.isNaN(v));
+        
+            const prev24h = pastValues.length >= 2 ? pastValues[pastValues.length - 2] : (pastValues[0] ?? todayVal);
+            const prev48h = pastValues.length >= 3 ? pastValues[pastValues.length - 3] : prev24h;
+            const isRising = (todayVal > prev24h) || (todayVal > prev48h && todayVal >= 2);
+        
+            return { todayVal, prev24h, prev48h, isRising };
+        }
+        
+        function evaluateTrainingReadiness(analysis, maxPain, isRedLight) {
+            const calfTrend = getRecentCalfPainTrend();
+            const acwr = Number(appState.latestAcwr || 0);
+            const notesLower = String(document.getElementById('inputWellnessNotes')?.value || '').toLowerCase();
+            const hasBackOrHipStiffness = notesLower.includes('ländrygg') || notesLower.includes('rygg') || notesLower.includes('höft');
+        
+            // 1. RÖTT LJUS / PAUS AV LÖPNING: smärta/känning >= 3–4, stigande trend till >= 2, eller röd biometri
+            if (isRedLight || maxPain >= 4 || (calfTrend.isRising && calfTrend.todayVal >= 2)) {
+                return {
+                    mode: 'NO_RUN_REHAB',
+                    allowRunning: false,
+                    maxRunsPerWeek: 0,
+                    maxRunMinutes: 0,
+                    prioritizeMobility: true,
+                    calfTrend
+                };
+            }
+        
+            // 2. FÖRSIKTIG LÖPNING: känning 2–3 (ej stigande trend)
+            if (maxPain >= 2) {
+                return {
+                    mode: 'CAUTIOUS_RETURN',
+                    allowRunning: true,
+                    maxRunsPerWeek: 2,
+                    maxRunMinutes: acwr > 1.35 ? 25 : 30,
+                    prioritizeMobility: true,
+                    calfTrend
+                };
+            }
+        
+            // 3. ÅTERKOMST / LÅG KÄNNING (0–1): tillåt 2–3 korta FatMax-pass + alternativ kondition & styrka
+            const needsVolumeBrake = analysis.isReturnToRun || acwr > 1.35 || Boolean(analysis.biomechWarning);
+            return {
+                mode: needsVolumeBrake ? 'RETURN_WITH_BRAKE' : 'BALANCED_PROGRESSION',
+                allowRunning: true,
+                maxRunsPerWeek: needsVolumeBrake ? 3 : 3,
+                maxRunMinutes: needsVolumeBrake ? 30 : 50,
+                prioritizeMobility: hasBackOrHipStiffness || analysis.isReturnToRun,
+                calfTrend
+            };
+        }
 
+        
+        function getSmartDaySuggestion(dayIndex, analysis, maxPain, canTestRun, isRedLight, weekNum, weekOffset, seed, usedTitles) {
+            const readiness = evaluateTrainingReadiness(analysis, maxPain, isRedLight);
+            const rot = weekNum + weekOffset + seed;
+        
             const hasTag = (w, tag) => (w.name || '').toLowerCase().includes(tag.toLowerCase());
             const hasWord = (w, words) => words.some(word => (w.name || '').toLowerCase().includes(word));
-
+            const isRunWorkout = (w) => detectSportType(w.name || '', w.description || w.workout_doc || '', w.sport_type || w.type) === 'Run';
+            const isControlledRun = (w) => {
+                if (!isRunWorkout(w)) return false;
+                const lower = (w.name || '').toLowerCase();
+                const mins = estimateWorkoutMinutes(w);
+                const isHard = lower.includes('tröskel') || lower.includes('vo2') || lower.includes('intervall') || lower.includes('tusing') || lower.includes('backe');
+                if (isHard && readiness.mode !== 'BALANCED_PROGRESSION') return false;
+                if (readiness.mode === 'CAUTIOUS_RETURN' && (lower.includes('fartlek') || mins > readiness.maxRunMinutes)) return false;
+                if (readiness.maxRunMinutes > 0 && mins > readiness.maxRunMinutes + 5) return false;
+                return true;
+            };
+        
+            // Måndag: Rörlighet / Säte / Yoga (eller vadrehab om höft/rygg inte stramar)
             if (dayIndex === 0) {
-                const recoveryPass = pickLibraryWorkout(
-                    w => hasTag(w, '[Rehab]') && hasWord(w, ['vila', 'rorlighet', 'rörlighet', 'yoga', 'promenad']),
+                const monPass = pickLibraryWorkout(
+                    w => hasTag(w, '[Rehab]') && hasWord(w, readiness.prioritizeMobility ? ['rorlighet', 'rörlighet', 'yoga', 'sate', 'säte', 'core'] : ['tahav', 'tåhäv', 'styrka', 'rorlighet', 'rörlighet']),
                     w => hasTag(w, '[Rehab]'),
                     rot,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(recoveryPass, '[Återhämtning]', 'bg-slate-700 text-slate-300');
+                return buildDayCardFromWorkout(monPass, '[Rehab · Rörlighet/Säte]');
             }
-
+        
+            // Tisdag: Löppass 1 (om tillåtet), annars alternativ kondition / avlastning
             if (dayIndex === 1) {
-                if (isRedLight) {
+                if (!readiness.allowRunning) {
                     const redPass = pickLibraryWorkout(
-                        w => hasTag(w, '[Rehab]') && hasWord(w, ['rorlighet', 'yoga', 'promenad', 'vila']),
+                        w => hasTag(w, '[Rehab]') && hasWord(w, ['rorlighet', 'rörlighet', 'yoga', 'promenad', 'vila', 'cykel']),
                         w => hasTag(w, '[Rehab]'),
                         rot,
                         usedTitles
                     );
                     return buildDayCardFromWorkout(redPass, '[Avlastning]', 'bg-rose-500/10 text-rose-400 border border-rose-500/20');
                 }
-                if (analysis.isReturnToRun && canTestRun) {
-                    return {
-                        title: 'Return-to-Run Test + Crosstrainer',
-                        tag: '[Run + Elliptical]',
-                        tagClass: 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
-                        desc: '- 4x (1 min jogg / 2 min gång) [Run]\n- 40 min Crosstrainer FatMax [Elliptical]',
-                        sportType: 'Run',
-                        isRest: false
-                    };
-                }
-                if (isAlt) {
-                    const altQuality = pickLibraryWorkout(
-                        w => hasTag(w, '[Rehab]') && hasWord(w, ['cykel', 'crosstrainer', 'rodd', 'aqua']),
-                        w => hasTag(w, '[Fartlek]') && hasWord(w, ['kadens', 'kort', 'svensk']),
-                        rot,
-                        usedTitles
-                    );
-                    return buildDayCardFromWorkout(altQuality, '[Kvalitet Alt]');
-                }
-                const thresholdRun = pickLibraryWorkout(
-                    w => hasTag(w, '[Tröskel]'),
-                    w => hasTag(w, '[VO2max]'),
+                const tueRun = pickLibraryWorkout(
+                    w => isControlledRun(w) && hasTag(w, '[FatMax]'),
+                    w => isControlledRun(w),
                     rot,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(thresholdRun, '[Tröskel · Run]');
+                if (tueRun) return buildDayCardFromWorkout(tueRun, '[Löpning · FatMax]');
+                return buildDayCardFromWorkout(
+                    pickLibraryWorkout(w => hasTag(w, '[Rehab]') && hasWord(w, ['cykel', 'crosstrainer', 'rodd']), w => hasTag(w, '[Rehab]'), rot, usedTitles),
+                    '[Kvalitet Alt]'
+                );
             }
-
+        
+            // Onsdag: Alternativ kondition (Crosstrainer / Cykel / Rodd) så inte alla pass blir löpning
             if (dayIndex === 2) {
-                const strengthRehab = pickLibraryWorkout(
-                    w => hasTag(w, '[Rehab]') && hasWord(w, ['tahav', 'tåhäv', 'styrka', 'sate', 'säte', 'core', 'fot']),
+                const wedAlt = pickLibraryWorkout(
+                    w => (hasTag(w, '[Rehab]') || hasTag(w, '[FatMax]')) && hasWord(w, ['crosstrainer', 'cykel', 'rodd', 'aqua']),
                     w => hasTag(w, '[Rehab]'),
                     rot + 1,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(strengthRehab, '[Rehab]');
+                return buildDayCardFromWorkout(wedAlt, '[Alt Kondition]');
             }
-
+        
+            // Torsdag: Löppass 2 (försiktig FatMax) om maxRunsPerWeek >= 2, annars alternativ kondition
             if (dayIndex === 3) {
-                if (isRedLight || isAlt) {
-                    const altAero = pickLibraryWorkout(
-                        w => hasTag(w, '[Rehab]') && hasWord(w, ['crosstrainer', 'cykel', 'aqua', 'rodd']),
-                        w => hasTag(w, '[FatMax]') && hasWord(w, ['power', 'hiking', '60m']),
+                if (readiness.allowRunning && readiness.maxRunsPerWeek >= 2) {
+                    const thuRun = pickLibraryWorkout(
+                        w => isControlledRun(w) && hasTag(w, '[FatMax]') && !hasWord(w, ['90m', '100m', 'back_to_back']),
+                        w => isControlledRun(w),
                         rot + 2,
                         usedTitles
                     );
-                    return buildDayCardFromWorkout(altAero, '[FatMax Alt]');
+                    if (thuRun) return buildDayCardFromWorkout(thuRun, '[Löpning · Lugn]');
                 }
-                const midFatmax = pickLibraryWorkout(
-                    w => hasTag(w, '[FatMax]') && !hasWord(w, ['90m', '100m', 'back_to_back']),
-                    w => hasTag(w, '[FatMax]'),
-                    rot,
+                const thuAlt = pickLibraryWorkout(
+                    w => (hasTag(w, '[Rehab]') || hasTag(w, '[FatMax]')) && hasWord(w, ['crosstrainer', 'cykel', 'rodd', 'power', 'hiking']),
+                    w => hasTag(w, '[Rehab]'),
+                    rot + 2,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(midFatmax, '[FatMax · Run]');
+                return buildDayCardFromWorkout(thuAlt, '[FatMax Alt]');
             }
-
+        
+            // Fredag: Återhämtning / Promenad / Vila
             if (dayIndex === 4) {
-                const fridayRest = pickLibraryWorkout(
-                    w => hasTag(w, '[Rehab]') && hasWord(w, ['vila', 'promenad', 'yoga', 'rorlighet']),
+                const friPass = pickLibraryWorkout(
+                    w => hasTag(w, '[Rehab]') && hasWord(w, ['vila', 'promenad', 'yoga', 'rorlighet', 'rörlighet']),
                     w => hasTag(w, '[Rehab]'),
                     rot + 3,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(fridayRest, '[Återhämtning]', 'bg-slate-700 text-slate-300');
+                return buildDayCardFromWorkout(friPass, '[Återhämtning]', 'bg-slate-700 text-slate-300');
             }
-
+        
+            // Lördag: Löppass 3 om låg känning (0–1) och ACWR tillåter, annars Power Hiking / Cykel / Crosstrainer
             if (dayIndex === 5) {
-                if (isRedLight) {
-                    const lightSat = pickLibraryWorkout(
-                        w => hasTag(w, '[Rehab]') && hasWord(w, ['promenad', 'cykel', 'crosstrainer']),
-                        w => hasTag(w, '[Rehab]'),
-                        rot,
-                        usedTitles
-                    );
-                    return buildDayCardFromWorkout(lightSat, '[Avlastning]');
-                }
-                if (isAlt) {
-                    const altLong = pickLibraryWorkout(
-                        w => (hasTag(w, '[FatMax]') && hasWord(w, ['power', 'hiking'])) || (hasTag(w, '[Rehab]') && hasWord(w, ['cykel', 'crosstrainer', 'aqua'])),
-                        w => hasTag(w, '[Rehab]'),
+                if (readiness.allowRunning && readiness.maxRunsPerWeek >= 3 && maxPain <= 1) {
+                    const satRun = pickLibraryWorkout(
+                        w => isControlledRun(w) && hasTag(w, '[FatMax]'),
+                        w => isControlledRun(w),
                         rot + 1,
                         usedTitles
                     );
-                    return buildDayCardFromWorkout(altLong, '[Långpass Alt]');
+                    if (satRun) return buildDayCardFromWorkout(satRun, '[Löpning · FatMax]');
                 }
-                const longFatmax = pickLibraryWorkout(
-                    w => hasTag(w, '[FatMax]'),
-                    null,
+                const satAlt = pickLibraryWorkout(
+                    w => (hasTag(w, '[FatMax]') && hasWord(w, ['power', 'hiking'])) || (hasTag(w, '[Rehab]') && hasWord(w, ['cykel', 'crosstrainer', 'rodd', 'promenad'])),
+                    w => hasTag(w, '[Rehab]'),
                     rot + 1,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(longFatmax, '[FatMax · Run]');
+                return buildDayCardFromWorkout(satAlt, '[Långpass Alt]');
             }
-
-            if (isRedLight) {
-                const sunRest = pickLibraryWorkout(
-                    w => hasTag(w, '[Rehab]') && hasWord(w, ['vila', 'yoga', 'rorlighet']),
-                    w => hasTag(w, '[Rehab]'),
-                    rot + 2,
-                    usedTitles
-                );
-                return buildDayCardFromWorkout(sunRest, '[Återhämtning]');
-            }
-            if (isAlt) {
-                const altSun = pickLibraryWorkout(
-                    w => hasTag(w, '[Rehab]') && hasWord(w, ['crosstrainer', 'rodd', 'aqua', 'cykel']),
-                    w => hasTag(w, '[Fartlek]'),
-                    rot + 2,
-                    usedTitles
-                );
-                return buildDayCardFromWorkout(altSun, '[Kondition Alt]');
-            }
-            const sunFartlek = pickLibraryWorkout(
-                w => hasTag(w, '[Fartlek]'),
-                w => hasTag(w, '[FatMax]'),
-                rot,
+        
+            // Söndag: Vadrehab / Tåhävningar / Styrka (och lätt rörlighet)
+            const sunRehab = pickLibraryWorkout(
+                w => hasTag(w, '[Rehab]') && hasWord(w, ['tahav', 'tåhäv', 'vad', 'styrka', 'core', 'fot', 'rorlighet', 'rörlighet']),
+                w => hasTag(w, '[Rehab]'),
+                rot + 2,
                 usedTitles
             );
-            return buildDayCardFromWorkout(sunFartlek, '[Fartlek · Run]');
+            return buildDayCardFromWorkout(sunRehab, '[Vad & Styrka]');
         }
 
         function renderWeeklyScheduleCards() {
