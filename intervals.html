@@ -78,6 +78,9 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="openSettingsModal()" class="text-xs text-slate-400 hover:text-indigo-400 underline">Ändra API-Uppgifter</button>
+                    <button onclick="openCoachGeniePromptModal()" class="px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold rounded-full flex items-center gap-1.5 transition">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Prompt till Coach Genie
+                    </button>
                     <span id="dataCountBadge" class="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold rounded-full">-- Pass Hämtade</span>
                 </div>
             </div>
@@ -503,6 +506,9 @@ Main Set 4x
                         <button id="sendWholeScheduleBtn" onclick="sendWholeScheduleToIntervals()" class="hidden px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white rounded-xl flex items-center gap-1.5 transition shadow">
                             <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka alla
                         </button>
+                        <button onclick="openCoachGeniePromptModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-indigo-300 border border-indigo-500/30 rounded-xl flex items-center gap-1.5 transition">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Prompt till Coach Genie
+                        </button>
                     </div>
                 </div>
 
@@ -545,6 +551,9 @@ Main Set 4x
                         <div id="detailLoadingBadge" class="text-xs text-amber-400 flex items-center gap-1.5">
                             <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Hämtar...
                         </div>
+                        <button type="button" onclick="openActivityCoachGeniePrompt()" class="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Efter-passet-check
+                        </button>
                     </div>
                 </div>
 
@@ -4362,6 +4371,208 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             }
         }
 
+        function buildCoachGeniePrompt() {
+            const todayStr = toLocalDateString();
+            const calf = document.getElementById('inputCalf')?.value ?? '0';
+            const knee = document.getElementById('inputKnee')?.value ?? '0';
+            const hip = document.getElementById('inputHip')?.value ?? '0';
+            const foot = document.getElementById('inputFoot')?.value ?? '0';
+            const sleep = document.getElementById('inputSleep')?.value ?? '3';
+            const readiness = document.getElementById('inputReadiness')?.value ?? '3';
+            const notes = (document.getElementById('inputWellnessNotes')?.value || '').trim();
+        
+            const analysis = appState.coachAnalysis || (typeof runCoachGenieAnalysis === 'function' ? runCoachGenieAnalysis() : {});
+            const w = appState.wellnessMetrics || {};
+            const calfTrend = typeof getRecentCalfPainTrend === 'function' ? getRecentCalfPainTrend() : null;
+            const acwr = appState.latestAcwr ? Number(appState.latestAcwr).toFixed(2) : '–';
+        
+            const recentRuns = [...(appState.activities || [])]
+                .filter(a => classifyActivity(a).key === 'run')
+                .sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local))
+                .slice(0, 4)
+                .map(a => {
+                    const d = String(a.start_date_local || '').slice(0, 10);
+                    const km = a.distance ? `${(a.distance / 1000).toFixed(2)} km` : '–';
+                    const min = a.moving_time ? `${Math.round(a.moving_time / 60)} min` : '–';
+                    const hr = a.average_heartrate ? `${Math.round(a.average_heartrate)} bpm` : '–';
+                    return `- ${d}: ${a.name || 'Löpning'} (${km}, ${min}, snittpuls ${hr})`;
+                });
+        
+            const scheduleLines = (appState.generatedWeeklySchedule || [])
+                .map(item => `- ${item.dateStr} (${item.dayName}): ${item.title} [${item.sportType || '–'}]${item.isExisting ? ' [Bokat]' : ''}`);
+        
+            const userQuestion = (document.getElementById('coachGenieQuestionInput')?.value || '').trim()
+                || 'Ge mig din bedömning som Coach Genie och föreslå eventuella justeringar i min träning och mitt veckoschema.';
+        
+            const lines = [
+                `Hej Coach Genie! Här är min aktuella status från Garmin Hub (${todayStr}):`,
+                ``,
+                `### Fråga / fokus`,
+                userQuestion,
+                ``,
+                `### Morgonstatus & känningar`,
+                `- Vad / Hälsena: ${calf}/10${calfTrend ? ` (24h innan: ${calfTrend.prev24h}/10, 48h innan: ${calfTrend.prev48h}/10, stigande: ${calfTrend.isRising ? 'Ja' : 'Nej'})` : ''}`,
+                `- Knä / ITB: ${knee}/10 | Höft / Säte: ${hip}/10 | Fot / Benhinna: ${foot}/10`,
+                `- Sömnkvalitet: ${sleep}/5 | Känsla / Energi: ${readiness}/4`,
+                `- Notering: ${notes || 'Ingen'}`,
+                ``,
+                `### Belastning & biometri`,
+                `- ACWR (7d vs 28d löpvolym): ${acwr}`,
+                `- Löpvolym 7/14/28d: ${(analysis.runKm7 ?? 0).toFixed(1)} / ${(analysis.runKm14 ?? 0).toFixed(1)} / ${(analysis.runKm28 ?? 0).toFixed(1)} km (max löppass 14d: ${Math.round(analysis.maxRunMin14 ?? 0)} min)`,
+                `- Alternativ kondition 7/14/28d: ${analysis.altMin7 ?? 0} / ${analysis.altMin14 ?? 0} / ${analysis.altMin28 ?? 0} min`,
+                `- Vilopuls (RHR): ${w.rhr ?? '–'} bpm (28d snitt: ${w.avgRHR ?? '–'} bpm) | HRV: ${w.hrv ?? '–'} ms (${w.hrvDiffPct ?? 0}%) | Sömn: ${w.sleepHours ?? '–'}h | CTL/ATL/TSB: ${w.ctl ?? '–'}/${w.atl ?? '–'}/${w.tsb ?? '–'}`,
+                `- Return-to-run-läge: ${analysis.isReturnToRun ? 'Ja' : 'Nej'}${analysis.biomechWarning ? ` | Biomekanik: ${analysis.biomechWarning}` : ''}`,
+                ``,
+                `### Senaste löppassen`,
+                recentRuns.length ? recentRuns.join('\n') : '- Inga nyliga löppass registrerade',
+            ];
+        
+            if (scheduleLines.length > 0) {
+                lines.push(
+                    ``,
+                    `### Aktuellt schemförslag`,
+                    scheduleLines.join('\n')
+                );
+            }
+        
+            return lines.join('\n');
+        }
+        
+        function refreshCoachGeniePromptText() {
+            const out = document.getElementById('coachGeniePromptOutput');
+            if (!out) return;
+            out.value = typeof appState.customPromptBuilder === 'function'
+                ? appState.customPromptBuilder()
+                : buildCoachGeniePrompt();
+        }
+        
+        function closeCoachGeniePromptModal() {
+            const modal = document.getElementById('coachGeniePromptModal');
+            if (modal) modal.classList.add('hidden');
+            appState.customPromptBuilder = null;
+        }
+        
+        function openCoachGeniePromptModal() {
+            const modal = document.getElementById('coachGeniePromptModal');
+            const feedback = document.getElementById('coachGenieCopyFeedback');
+            if (feedback) feedback.classList.add('hidden');
+            refreshCoachGeniePromptText();
+            if (modal) {
+                modal.classList.remove('hidden');
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+                        
+        async function copyCoachGeniePrompt() {
+            const textarea = document.getElementById('coachGeniePromptOutput');
+            const feedback = document.getElementById('coachGenieCopyFeedback');
+            const text = textarea ? textarea.value : buildCoachGeniePrompt();
+        
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else if (textarea) {
+                    textarea.select();
+                    document.execCommand('copy');
+                }
+                if (feedback) {
+                    feedback.textContent = '✅ Kopierad till urklipp! Klistra in direkt i chatten.';
+                    feedback.classList.remove('hidden');
+                }
+            } catch (err) {
+                if (textarea) {
+                    textarea.focus();
+                    textarea.select();
+                }
+                if (feedback) {
+                    feedback.textContent = 'Markerade texten – tryck Ctrl/Cmd + C för att kopiera.';
+                    feedback.classList.remove('hidden');
+                }
+            }
+        }
+
+        function buildActivityCoachGeniePrompt(act, streamStats = {}) {
+            if (!act) return buildCoachGeniePrompt();
+        
+            const dateStr = String(act.start_date_local || '').slice(0, 16).replace('T', ' ');
+            const cat = classifyActivity(act);
+            const targets = getWorkoutTargets(act);
+            const distKm = act.distance ? `${(act.distance / 1000).toFixed(2)} km` : '–';
+            const durStr = formatDuration(act.moving_time);
+            const paceStr = formatPace(act.average_speed);
+            const hrAvg = act.average_heartrate ? `${Math.round(act.average_heartrate)} bpm` : '–';
+            const hrMax = act.max_heartrate ? `${Math.round(act.max_heartrate)} bpm` : '–';
+            const cadVal = act.average_cadence ? `${Math.round(act.average_cadence * 2)} spm` : '–';
+            const gctRaw = act.avg_stance_time || act.stance_time || streamStats.avgGct || 0;
+            const gctVal = gctRaw > 0 ? `${Math.round(gctRaw)} ms` : '–';
+            const balRaw = act.avg_stance_time_balance || act.stance_time_balance || streamStats.avgBal || 0;
+            const balVal = balRaw > 0 ? `${balRaw.toFixed(1)}% / ${(100 - balRaw).toFixed(1)}%` : '–';
+            const loadVal = act.icu_training_load ? Math.round(act.icu_training_load) : '–';
+            const rpeVal = act.icu_rpe ? `${act.icu_rpe}/10` : '–';
+            const feelVal = act.feel ? `${act.feel}/5` : '–';
+        
+            const calf = document.getElementById('inputCalf')?.value ?? '0';
+            const knee = document.getElementById('inputKnee')?.value ?? '0';
+            const hip = document.getElementById('inputHip')?.value ?? '0';
+            const foot = document.getElementById('inputFoot')?.value ?? '0';
+            const notes = (document.getElementById('inputWellnessNotes')?.value || '').trim();
+        
+            const splitRows = [...document.querySelectorAll('#kmSplitsTableBody tr')].slice(0, 8);
+            const kmLines = splitRows
+                .map(tr => {
+                    const cells = [...tr.querySelectorAll('td')].map(td => td.textContent.trim());
+                    if (cells.length < 6 || cells[0].includes('Saknar') || cells[0].includes('Beräknar') || cells[0].includes('Ingen')) return null;
+                    return `- ${cells[0]}: tempo ${cells[1]}, puls ${cells[2]}, kadens ${cells[3]}, GCT ${cells[4]}, balans ${cells[5]}`;
+                })
+                .filter(Boolean);
+        
+            const userQuestion = (document.getElementById('coachGenieQuestionInput')?.value || '').trim()
+                || 'Hur ser detta pass ut utifrån puls (FatMax 124 / AT 142), markontakttid (GCT), balans och min vad-/hälsenehistorik? Vad bör jag tänka på inför nästa pass och imorgon bitti?';
+        
+            const lines = [
+                `Hej Coach Genie! Här är min efter-passet-check från Garmin Hub:`,
+                ``,
+                `### Fråga / fokus`,
+                userQuestion,
+                ``,
+                `### Passdata: ${act.name || 'Träningspass'}`,
+                `- Datum & sport: ${dateStr} | ${cat.label} (${act.type || '–'}) | Klassning: ${targets.label}`,
+                `- Distans & tid: ${distKm} på ${durStr} | Snittempo: ${paceStr}`,
+                `- Puls: snitt ${hrAvg}, max ${hrMax} (FatMax ≤124 bpm, AT 142 bpm)`,
+                `- Löpdynamik: kadens ${cadVal}, GCT ${gctVal}, balans Vä/Hö ${balVal}${targets.maxGct > 0 ? ` (mål GCT ≤${targets.maxGct} ms, kadens ≥${targets.minCadence} spm)` : ''}`,
+                `- Belastning & upplevelse: Load ${loadVal}, RPE ${rpeVal}, Känsla ${feelVal}`,
+                ``,
+                `### Aktuella känningar & noteringar`,
+                `- Vad / Hälsena: ${calf}/10 | Knä / ITB: ${knee}/10 | Höft / Säte: ${hip}/10 | Fot / Benhinna: ${foot}/10`,
+                `- Notering: ${notes || 'Ingen'}`
+            ];
+        
+            if (kmLines.length > 0) {
+                lines.push(
+                    ``,
+                    `### Km-splits (urval)`,
+                    kmLines.join('\n')
+                );
+            }
+        
+            return lines.join('\n');
+        }
+        
+        function openActivityCoachGeniePrompt() {
+            const actId = appState.currentDetailActivityId;
+            const act = (appState.activities || []).find(a => String(a.id) === String(actId));
+            const streamStats = typeof computeStreamAverages === 'function' ? computeStreamAverages(appState.currentStreams) : {};
+        
+            appState.customPromptBuilder = () => buildActivityCoachGeniePrompt(act, streamStats);
+        
+            const questionInput = document.getElementById('coachGenieQuestionInput');
+            if (questionInput && !questionInput.value.trim()) {
+                questionInput.placeholder = 't.ex. Hur tolererade hälsenan och GCT detta pass – och hur ska nästa pass styras?';
+            }
+        
+            openCoachGeniePromptModal();
+        }
+        
         document.addEventListener('DOMContentLoaded', () => {
             updateWellnessDisplay();
             if (window.lucide) lucide.createIcons();
@@ -4379,5 +4590,43 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             }
         });
     </script>
+    <!-- Coach Genie Prompt Modal -->
+    <div id="coachGeniePromptModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i> Prompt till Coach Genie
+                    </h3>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Kopiera texten nedan och klistra in här så har jag all din aktuella data.</p>
+                </div>
+                <button type="button" onclick="closeCoachGeniePromptModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+    
+            <div>
+                <label for="coachGenieQuestionInput" class="block text-xs font-medium text-slate-300 mb-1">Din fråga / fundering (valfritt)</label>
+                <input id="coachGenieQuestionInput" type="text" oninput="refreshCoachGeniePromptText()" placeholder="t.ex. Hur ser du på upplägget nästa vecka med tanke på hälsenan och ACWR?" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+            </div>
+    
+            <div>
+                <label for="coachGeniePromptOutput" class="block text-xs font-medium text-slate-300 mb-1">Färdig prompt att kopiera</label>
+                <textarea id="coachGeniePromptOutput" rows="13" readonly class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none"></textarea>
+            </div>
+    
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <span id="coachGenieCopyFeedback" class="text-xs text-emerald-400 font-semibold hidden">✅ Kopierad till urklipp!</span>
+                <div class="flex items-center gap-2 ml-auto">
+                    <button type="button" onclick="copyCoachGeniePrompt()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center gap-1.5 transition shadow">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> Kopiera prompt
+                    </button>
+                    <button type="button" onclick="closeCoachGeniePromptModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white rounded-xl transition">
+                        Stäng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
