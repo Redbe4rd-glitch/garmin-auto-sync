@@ -1702,35 +1702,47 @@ Main Set 4x
         
             const cleanRaw = rawText.replace(/\r?\n/g, '\n');
             const lines = cleanRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            
+        
             let html = '<div class="space-y-1.5">';
         
             const filteredLines = lines.filter(line => {
-            const lower = line.toLowerCase();
+                const lower = line.toLowerCase();
         
-            // Filtrera bort sammanslagna sammanfattningsrader som listar flera delar i samma långa rad
-            const hasCombinedSummary =
-                (lower.includes('warmup') || lower.includes('uppvärmning')) &&
-                (lower.includes('cooldown') || lower.includes('nedvarvning')) &&
-                line.length > 50;
+                // Filtrera bort sammanslagna sammanfattningsrader som listar flera delar i samma långa rad
+                const hasCombinedSummary =
+                    (lower.includes('warmup') || lower.includes('uppvärmning')) &&
+                    (lower.includes('cooldown') || lower.includes('nedvarvning')) &&
+                    line.length > 50;
         
-            const hasMainSetAndCategory =
-                lower.includes('main set') &&
-                lower.includes('kategori:') &&
-                line.length > 50;
+                const hasMainSetAndCategory =
+                    lower.includes('main set') &&
+                    lower.includes('kategori:') &&
+                    line.length > 50;
         
                 if (hasCombinedSummary || hasMainSetAndCategory) {
                     return false;
                 }
-            
+        
                 return true;
             });
-
+        
             const formatStepUnits = (str) => str
                 .replace(/^[-•]\s*/, '')
                 .trim()
-                .replace(/(\d+)\s*m/gi, '$1 min')
-                .replace(/(\d+)\s*s/gi, '$1 sek');
+                .replace(/\b(\d+)\s*m\b/gi, '$1 min')
+                .replace(/\b(\d+)\s*s\b/gi, '$1 sek');
+        
+            const isWarmupLine = (str) => {
+                const s = String(str || '').toLowerCase();
+                return s.includes('uppvärmning') || s.includes('warmup');
+            };
+        
+            const isCooldownLine = (str) => {
+                const s = String(str || '').toLowerCase();
+                return s.includes('nedvarvning') || s.includes('cooldown');
+            };
+        
+            const isBoundaryLine = (str) => isWarmupLine(str) || isCooldownLine(str);
         
             let compressedItems = [];
             let i = 0;
@@ -1739,7 +1751,19 @@ Main Set 4x
                 let line = filteredLines[i];
                 let lower = line.toLowerCase();
         
-                if (!line.startsWith('-') && !line.includes('[') && (lower === 'warmup' || lower === 'cooldown' || lower === 'uppvärmning' || lower === 'nedvarvning' || lower === 'main set' || lower.startsWith('main set') || lower.startsWith('kategori:'))) {
+                if (
+                    !line.startsWith('-') &&
+                    !line.includes('[') &&
+                    (
+                        lower === 'warmup' ||
+                        lower === 'cooldown' ||
+                        lower === 'uppvärmning' ||
+                        lower === 'nedvarvning' ||
+                        lower === 'main set' ||
+                        lower.startsWith('main set') ||
+                        lower.startsWith('kategori:')
+                    )
+                ) {
                     compressedItems.push({ type: 'header', text: line });
                     i++;
                     continue;
@@ -1747,29 +1771,32 @@ Main Set 4x
         
                 let clean = formatStepUnits(line);
         
-                const isWarmupOrCooldown = (str) => {
-                const s = str.toLowerCase();
-                return s.includes('uppvärmning') || s.includes('warmup') || s.includes('nedvarvning') || s.includes('cooldown');
-            };
-            
-            let pairCount = 1;
-            if (i + 1 < filteredLines.length && !isWarmupOrCooldown(filteredLines[i]) && !isWarmupOrCooldown(filteredLines[i + 1])) {
-                let nextClean = formatStepUnits(filteredLines[i + 1]);
-            
-                if (i + 3 < filteredLines.length && !isWarmupOrCooldown(filteredLines[i + 2]) && !isWarmupOrCooldown(filteredLines[i + 3])) {
+                let pairCount = 0;
+                if (
+                    i + 3 < filteredLines.length &&
+                    !isBoundaryLine(filteredLines[i]) &&
+                    !isBoundaryLine(filteredLines[i + 1]) &&
+                    !isBoundaryLine(filteredLines[i + 2]) &&
+                    !isBoundaryLine(filteredLines[i + 3])
+                ) {
+                    let nextClean = formatStepUnits(filteredLines[i + 1]);
                     let thirdClean = formatStepUnits(filteredLines[i + 2]);
                     let fourthClean = formatStepUnits(filteredLines[i + 3]);
-            
+        
                     if (thirdClean === clean && fourthClean === nextClean) {
                         let p = 0;
                         while (i + p + 1 < filteredLines.length) {
-                            if (isWarmupOrCooldown(filteredLines[i + p]) || isWarmupOrCooldown(filteredLines[i + p + 1])) break;
+                            if (isBoundaryLine(filteredLines[i + p]) || isBoundaryLine(filteredLines[i + p + 1])) {
+                                break;
+                            }
                             let testA = formatStepUnits(filteredLines[i + p]);
                             let testB = formatStepUnits(filteredLines[i + p + 1]);
                             if (testA === clean && testB === nextClean) {
                                 pairCount++;
                                 p += 2;
-                            } else { break; }
+                            } else {
+                                break;
+                            }
                         }
                         if (pairCount > 1) {
                             compressedItems.push({ type: 'pair', work: clean, rest: nextClean, count: pairCount });
@@ -1778,7 +1805,6 @@ Main Set 4x
                         }
                     }
                 }
-            }
         
                 let count = 1;
                 while (i + count < filteredLines.length) {
@@ -1834,11 +1860,11 @@ Main Set 4x
                 let badgeText = 'Moment';
                 let badgeStyle = 'bg-slate-800 text-slate-400';
         
-                if (lower.includes('uppvärmning') || lower.includes('warmup')) {
+                if (isWarmupLine(line)) {
                     blockStyle = 'bg-emerald-950/30 border-emerald-500/30 text-emerald-100';
                     badgeText = 'Uppvärmning';
                     badgeStyle = 'bg-emerald-500/20 text-emerald-300';
-                } else if (lower.includes('nedvarvning') || lower.includes('cooldown')) {
+                } else if (isCooldownLine(line)) {
                     blockStyle = 'bg-sky-950/30 border-sky-500/30 text-sky-100';
                     badgeText = 'Nedvarvning';
                     badgeStyle = 'bg-sky-500/20 text-sky-300';
