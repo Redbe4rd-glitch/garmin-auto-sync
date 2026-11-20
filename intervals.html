@@ -2323,23 +2323,47 @@ Main Set 4x
         }
         
         function getRecentCalfPainTrend() {
-            const history = Array.isArray(appState.wellnessHistory) ? [...appState.wellnessHistory].sort((a, b) => a.id.localeCompare(b.id)) : [];
-            const extractCalf = (entry) => {
+            const todayStr = toLocalDateString();
+            const rawHistory = Array.isArray(appState.wellnessHistory) ? [...appState.wellnessHistory] : [];
+        
+            // Sortera kronologiskt och ta bara dagar före idag för 24h/48h-jämförelse
+            const priorEntries = rawHistory
+                .filter(entry => entry && entry.id && String(entry.id).slice(0, 10) < todayStr)
+                .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+        
+            const extractLatestCalfInComments = (entry) => {
                 if (!entry || !entry.comments) return null;
-                const m = String(entry.comments).match(/Vad\/Hälsena:\s*(\d+)/i);
-                return m ? parseInt(m[1], 10) : null;
+                // matchAll plockar sista förekomsten ifall kommentaren upprepats
+                const matches = [...String(entry.comments).matchAll(/Vad\/Hälsena:\s*(\d+)/gi)];
+                if (!matches.length) return null;
+                const val = parseInt(matches[matches.length - 1][1], 10);
+                return Number.isNaN(val) ? null : val;
             };
         
-            const todayVal = parseInt(document.getElementById('inputCalf')?.value || '0', 10);
-            const pastValues = history
-                .map(extractCalf)
+            const sliderEl = document.getElementById('inputCalf');
+            const notesEl = document.getElementById('inputWellnessNotes');
+            const sliderVal = sliderEl ? parseInt(sliderEl.value, 10) : 0;
+            const notesVal = notesEl ? extractLatestCalfInComments({ comments: notesEl.value }) : null;
+            const todayVal = notesVal !== null ? notesVal : sliderVal;
+        
+            const pastValues = priorEntries
+                .map(extractLatestCalfInComments)
                 .filter(v => typeof v === 'number' && !Number.isNaN(v));
         
-            const prev24h = pastValues.length >= 2 ? pastValues[pastValues.length - 2] : (pastValues[0] ?? todayVal);
-            const prev48h = pastValues.length >= 3 ? pastValues[pastValues.length - 3] : prev24h;
-            const isRising = (todayVal > prev24h) || (todayVal > prev48h && todayVal >= 2);
+            const prev24h = pastValues.length >= 1 ? pastValues[pastValues.length - 1] : todayVal;
+            const prev48h = pastValues.length >= 2 ? pastValues[pastValues.length - 2] : prev24h;
         
-            return { todayVal, prev24h, prev48h, isRising };
+            // Informeras i prompten om värdet gått upp mot föregående dag, men klinisk varningsstegring kräver >= 2/10
+            const isRising = todayVal > prev24h;
+            const isConcerningRise = isRising && todayVal >= 2;
+        
+            return {
+                todayVal,
+                prev24h,
+                prev48h,
+                isRising,
+                isConcerningRise
+            };
         }
         
         function evaluateTrainingReadiness(analysis, maxPain, isRedLight) {
@@ -2348,8 +2372,8 @@ Main Set 4x
             const notesLower = String(document.getElementById('inputWellnessNotes')?.value || '').toLowerCase();
             const hasBackOrHipStiffness = notesLower.includes('ländrygg') || notesLower.includes('rygg') || notesLower.includes('höft');
         
-            // 1. RÖTT LJUS / PAUS AV LÖPNING: smärta/känning >= 3–4, stigande trend till >= 2, eller röd biometri
-            if (isRedLight || maxPain >= 4 || (calfTrend.isRising && calfTrend.todayVal >= 2)) {
+            // 1. RÖTT LJUS / PAUS AV LÖPNING: smärta/känning >= 4, oroväckande stigande trend (>= 2), eller röd biometri
+            if (isRedLight || maxPain >= 4 || calfTrend.isConcerningRise) {
                 return {
                     mode: 'NO_RUN_REHAB',
                     allowRunning: false,
