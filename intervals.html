@@ -2119,14 +2119,14 @@ Main Set 4x
         async function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
-            
+        
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
             if (!apiKey || !athleteId) {
                 openSettingsModal();
                 return;
             }
-
+        
             if (!appState.libraryWorkouts || appState.libraryWorkouts.length === 0) {
                 await fetchLibraryWorkouts();
             }
@@ -2170,8 +2170,16 @@ Main Set 4x
             const w = appState.wellnessMetrics;
             const isRedLight = (maxPain >= 3 || analysis.rhrDelta >= 4 || (w && w.sleepHours !== null && w.sleepHours < 5.5));
             const canTestRun = (!isRedLight && maxPain <= 1 && !analysis.biomechWarning);
-
+        
             const usedTitles = new Set(scheduledEvents.map(ev => (ev.name || '').toLowerCase().trim()));
+            const longRunUsedByWeek = new Map();
+            const isExistingLongRun = (ev) => {
+                const name = String(ev?.name || '').toLowerCase();
+                const sport = detectSportType(ev?.name || '', ev?.description || '', ev?.type || '');
+                const mins = typeof estimateWorkoutMinutes === 'function' ? estimateWorkoutMinutes(ev) : 0;
+                return sport === 'Run' && (name.includes('långpass') || name.includes('90m') || name.includes('100m') || mins >= 60);
+            };
+        
             const baseWeekNum = getISOWeekNumber(startOfWeek);
             const seed = appState.scheduleVariationSeed || 0;
         
@@ -2181,18 +2189,26 @@ Main Set 4x
                 const dateObj = new Date(startOfWeek);
                 dateObj.setDate(startOfWeek.getDate() + i);
                 const dateStr = toLocalDateString(dateObj);
-                
+        
                 if (dateStr < todayStr) continue;
         
                 const isNextWeek = i >= 7;
                 const weekOffset = isNextWeek ? 1 : 0;
                 const activeWeekNum = baseWeekNum + weekOffset;
+                const weekKey = `${dateObj.getFullYear()}-W${activeWeekNum}`;
+                if (!longRunUsedByWeek.has(weekKey)) {
+                    longRunUsedByWeek.set(weekKey, false);
+                }
+        
                 const dayName = `${isNextWeek ? 'Nästa ' : ''}${dayNames[i % 7]}`;
                 const dayEvents = scheduledEvents.filter(ev => String(ev.start_date_local || '').slice(0, 10) === dateStr);
         
                 if (dayEvents.length > 0) {
                     dayEvents.forEach(ev => {
                         const detectedSport = detectSportType(ev.name, ev.description, ev.type);
+                        if (isExistingLongRun(ev)) {
+                            longRunUsedByWeek.set(weekKey, true);
+                        }
                         fullDaysList.push({
                             dateStr,
                             dayName,
@@ -2207,6 +2223,11 @@ Main Set 4x
                         });
                     });
                 } else {
+                    const weekState = {
+                        usedTitles,
+                        usedLongRun: Boolean(longRunUsedByWeek.get(weekKey))
+                    };
+        
                     let suggestion = getSmartDaySuggestion(
                         i % 7,
                         analysis,
@@ -2216,12 +2237,18 @@ Main Set 4x
                         activeWeekNum,
                         weekOffset,
                         seed,
-                        usedTitles
+                        usedTitles,
+                        weekState
                     );
+        
                     if (suggestion && suggestion.title) {
                         usedTitles.add(suggestion.title.toLowerCase().trim());
                         if (suggestion.workoutId) usedTitles.add(suggestion.workoutId);
+                        if (suggestion.isLongRun) {
+                            longRunUsedByWeek.set(weekKey, true);
+                        }
                     }
+        
                     fullDaysList.push({
                         dateStr,
                         dayName,
@@ -2236,7 +2263,6 @@ Main Set 4x
             renderWeeklyScheduleCards();
             sendWholeBtn.classList.remove('hidden');
         }
-
         function pickLibraryWorkout(primaryFilter, fallbackFilter, rotationIndex = 0, usedIdsAndTitles = new Set()) {
             const lib = appState.libraryWorkouts || [];
             if (!lib.length) return null;
@@ -2309,18 +2335,82 @@ Main Set 4x
             };
         }
 
-        function estimateWorkoutMinutes(workout) {
-            if (!workout) return 30;
-            const text = `${workout.name || ''} ${workout.description || workout.workout_doc || ''}`;
-            const minMatch = text.match(/(\d+)\s*m(in)?\b/i);
-            if (minMatch) return parseInt(minMatch[1], 10);
-            const secMatches = [...text.matchAll(/(\d+)\s*s\b/gi)];
-            if (secMatches.length > 0) {
-                const totalSec = secMatches.reduce((sum, m) => sum + parseInt(m[1], 10), 0);
-                return Math.max(1, Math.round(totalSec / 60));
+        
+        function estimateWorkoutMinutes(item) {
+            if (!item) return 30;
+            
+            // 1. Om Intervals.icu redan har moving_time / duration i sekunder
+            const rawSeconds = Number(item.moving_time || item.duration || 0);
+            if (rawSeconds >= 300) {
+                return Math.round(rawSeconds / 60);
             }
+            
+            const name = String(item.name || '');
+            const desc = String(item.description || '');
+            
+            // 2. Plocka tydlig totaltid i passnamnet, t.ex. "(75m)" eller "25m"
+            const titleParenMatch = name.match(/\((\d+)\s*(?:m|min)\)/i);
+            if (titleParenMatch) {
+                return parseInt(titleParenMatch[1], 10);
+            }
+            
+            // 3. Summera minuter/sekunder i beskrivningen inklusive upprepade block (t.ex. "13x" eller "13 st")
+            let totalMinutes = 0;
+            const lines = desc.split(/\r?\n/);
+            let currentRepeat = 1;
+            
+            const parseLineMinutes = (line) => {
+                let mins = 0;
+                const minMatches = [...line.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:m|min)\b/gi)];
+                for (const m of minMatches) {
+                    mins += parseFloat(m[1].replace(',', '.'));
+                }
+                const secMatches = [...line.matchAll(/(\d+)\s*(?:s|sek|sec)\b/gi)];
+                for (const s of secMatches) {
+                    mins += parseInt(s[1], 10) / 60;
+                }
+                return mins;
+            };
+            
+            for (const rawLine of lines) {
+                const line = rawLine.trim();
+                if (!line) {
+                    currentRepeat = 1;
+                    continue;
+                }
+            
+                // Start på nytt block med repetition, t.ex. "13x" eller "13 st intervallserier"
+                const blockRepeatMatch = line.match(/^(\d+)\s*(?:x|st)\b/i);
+                if (blockRepeatMatch && !line.startsWith('-')) {
+                    currentRepeat = parseInt(blockRepeatMatch[1], 10) || 1;
+                    const inlineMins = parseLineMinutes(line.replace(blockRepeatMatch[0], ''));
+                    if (inlineMins > 0) {
+                        totalMinutes += inlineMins * currentRepeat;
+                        currentRepeat = 1;
+                    }
+                    continue;
+                }
+            
+                const stepMins = parseLineMinutes(line);
+                if (stepMins > 0) {
+                    totalMinutes += stepMins * (line.startsWith('-') ? currentRepeat : 1);
+                } else if (!line.startsWith('-')) {
+                    currentRepeat = 1;
+                }
+            }
+            
+            if (totalMinutes >= 5) {
+                return Math.round(totalMinutes);
+            }
+            
+            // 4. Sista fallback: fristående siffra + m/min i namnet
+            const titleFallbackMatch = name.match(/\b(\d+)\s*(?:m|min)\b/i);
+            if (titleFallbackMatch) {
+                return parseInt(titleFallbackMatch[1], 10);
+            }
+            
             return 30;
-        }
+            }
         
         function getRecentCalfPainTrend() {
             const todayStr = toLocalDateString();
@@ -2409,22 +2499,43 @@ Main Set 4x
         }
 
         
-        function getSmartDaySuggestion(dayIndex, analysis, maxPain, canTestRun, isRedLight, weekNum, weekOffset, seed, usedTitles) {
+        function getSmartDaySuggestion(dayIndex, analysis, maxPain, canTestRun, isRedLight, weekNum, weekOffset, seed, usedTitles, weekState = {}) {
             const readiness = evaluateTrainingReadiness(analysis, maxPain, isRedLight);
             const rot = weekNum + weekOffset + seed;
+            const usedLongRun = Boolean(weekState && weekState.usedLongRun);
         
             const hasTag = (w, tag) => (w.name || '').toLowerCase().includes(tag.toLowerCase());
             const hasWord = (w, words) => words.some(word => (w.name || '').toLowerCase().includes(word));
             const isRunWorkout = (w) => detectSportType(w.name || '', w.description || w.workout_doc || '', w.sport_type || w.type) === 'Run';
-            const isControlledRun = (w) => {
+        
+            const isLongRun = (w) => {
                 if (!isRunWorkout(w)) return false;
                 const lower = (w.name || '').toLowerCase();
                 const mins = estimateWorkoutMinutes(w);
-                const isHard = lower.includes('tröskel') || lower.includes('vo2') || lower.includes('intervall') || lower.includes('tusing') || lower.includes('backe');
+                return lower.includes('långpass') || lower.includes('langpass') || lower.includes('90m') || lower.includes('100m') || mins >= 60;
+            };
+        
+            const isControlledRun = (w, allowLongRun = false) => {
+                if (!isRunWorkout(w)) return false;
+                const long = isLongRun(w);
+                if (long && (!allowLongRun || usedLongRun || readiness.mode !== 'BALANCED_PROGRESSION')) {
+                    return false;
+                }
+                const lower = (w.name || '').toLowerCase();
+                const mins = estimateWorkoutMinutes(w);
+                const isHard = lower.includes('tröskel') || lower.includes('troskel') || lower.includes('vo2') || lower.includes('intervall') || lower.includes('tusing') || lower.includes('backe');
                 if (isHard && readiness.mode !== 'BALANCED_PROGRESSION') return false;
                 if (readiness.mode === 'CAUTIOUS_RETURN' && (lower.includes('fartlek') || mins > readiness.maxRunMinutes)) return false;
-                if (readiness.maxRunMinutes > 0 && mins > readiness.maxRunMinutes + 5) return false;
+                if (!long && readiness.maxRunMinutes > 0 && mins > readiness.maxRunMinutes + 5) return false;
                 return true;
+            };
+        
+            const finalizeCard = (workout, tag, tagClass) => {
+                const card = buildDayCardFromWorkout(workout, tag, tagClass);
+                if (card && workout) {
+                    card.isLongRun = isLongRun(workout);
+                }
+                return card;
             };
         
             // Måndag: Rörlighet / Säte / Yoga (eller vadrehab om höft/rygg inte stramar)
@@ -2435,10 +2546,10 @@ Main Set 4x
                     rot,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(monPass, '[Rehab · Rörlighet/Säte]');
+                return finalizeCard(monPass, '[Rehab · Rörlighet/Säte]');
             }
         
-            // Tisdag: Löppass 1 (om tillåtet), annars alternativ kondition / avlastning
+            // Tisdag: Kortare/kontrollerat löppass 1 (aldrig långpass), annars alternativ kondition / avlastning
             if (dayIndex === 1) {
                 if (!readiness.allowRunning) {
                     const redPass = pickLibraryWorkout(
@@ -2447,22 +2558,22 @@ Main Set 4x
                         rot,
                         usedTitles
                     );
-                    return buildDayCardFromWorkout(redPass, '[Avlastning]', 'bg-rose-500/10 text-rose-400 border border-rose-500/20');
+                    return finalizeCard(redPass, '[Avlastning]', 'bg-rose-500/10 text-rose-400 border border-rose-500/20');
                 }
                 const tueRun = pickLibraryWorkout(
-                    w => isControlledRun(w) && hasTag(w, '[FatMax]'),
-                    w => isControlledRun(w),
+                    w => isControlledRun(w, false) && hasTag(w, '[FatMax]'),
+                    w => isControlledRun(w, false),
                     rot,
                     usedTitles
                 );
-                if (tueRun) return buildDayCardFromWorkout(tueRun, '[Löpning · FatMax]');
-                return buildDayCardFromWorkout(
+                if (tueRun) return finalizeCard(tueRun, '[Löpning · FatMax]');
+                return finalizeCard(
                     pickLibraryWorkout(w => hasTag(w, '[Rehab]') && hasWord(w, ['cykel', 'crosstrainer', 'rodd']), w => hasTag(w, '[Rehab]'), rot, usedTitles),
                     '[Kvalitet Alt]'
                 );
             }
         
-            // Onsdag: Alternativ kondition (Crosstrainer / Cykel / Rodd) så inte alla pass blir löpning
+            // Onsdag: Alternativ kondition (Crosstrainer / Cykel / Rodd)
             if (dayIndex === 2) {
                 const wedAlt = pickLibraryWorkout(
                     w => (hasTag(w, '[Rehab]') || hasTag(w, '[FatMax]')) && hasWord(w, ['crosstrainer', 'cykel', 'rodd', 'aqua']),
@@ -2470,19 +2581,19 @@ Main Set 4x
                     rot + 1,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(wedAlt, '[Alt Kondition]');
+                return finalizeCard(wedAlt, '[Alt Kondition]');
             }
         
-            // Torsdag: Löppass 2 (försiktig FatMax) om maxRunsPerWeek >= 2, annars alternativ kondition
+            // Torsdag: Lugnt löppass 2 (aldrig långpass) om maxRunsPerWeek >= 2, annars alternativ kondition
             if (dayIndex === 3) {
                 if (readiness.allowRunning && readiness.maxRunsPerWeek >= 2) {
                     const thuRun = pickLibraryWorkout(
-                        w => isControlledRun(w) && hasTag(w, '[FatMax]') && !hasWord(w, ['90m', '100m', 'back_to_back']),
-                        w => isControlledRun(w),
+                        w => isControlledRun(w, false) && hasTag(w, '[FatMax]') && !hasWord(w, ['90m', '100m', 'back_to_back']),
+                        w => isControlledRun(w, false),
                         rot + 2,
                         usedTitles
                     );
-                    if (thuRun) return buildDayCardFromWorkout(thuRun, '[Löpning · Lugn]');
+                    if (thuRun) return finalizeCard(thuRun, '[Löpning · Lugn]');
                 }
                 const thuAlt = pickLibraryWorkout(
                     w => (hasTag(w, '[Rehab]') || hasTag(w, '[FatMax]')) && hasWord(w, ['crosstrainer', 'cykel', 'rodd', 'power', 'hiking']),
@@ -2490,7 +2601,7 @@ Main Set 4x
                     rot + 2,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(thuAlt, '[FatMax Alt]');
+                return finalizeCard(thuAlt, '[FatMax Alt]');
             }
         
             // Fredag: Återhämtning / Promenad / Vila
@@ -2501,19 +2612,32 @@ Main Set 4x
                     rot + 3,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(friPass, '[Återhämtning]', 'bg-slate-700 text-slate-300');
+                return finalizeCard(friPass, '[Återhämtning]', 'bg-slate-700 text-slate-300');
             }
         
-            // Lördag: Löppass 3 om låg känning (0–1) och ACWR tillåter, annars Power Hiking / Cykel / Crosstrainer
+            // Lördag: Högst ETT långpass i veckan när dagsform, ACWR och maxRunsPerWeek tillåter – annars kortare FatMax eller alternativ kondition
             if (dayIndex === 5) {
                 if (readiness.allowRunning && readiness.maxRunsPerWeek >= 3 && maxPain <= 1) {
-                    const satRun = pickLibraryWorkout(
-                        w => isControlledRun(w) && hasTag(w, '[FatMax]'),
-                        w => isControlledRun(w),
-                        rot + 1,
-                        usedTitles
-                    );
-                    if (satRun) return buildDayCardFromWorkout(satRun, '[Löpning · FatMax]');
+                    const canPickLong = !usedLongRun && readiness.mode === 'BALANCED_PROGRESSION';
+                    const satRun = canPickLong
+                        ? (pickLibraryWorkout(
+                            w => isControlledRun(w, true) && hasTag(w, '[FatMax]') && isLongRun(w),
+                            w => isControlledRun(w, false) && hasTag(w, '[FatMax]'),
+                            rot + 1,
+                            usedTitles
+                        ) || pickLibraryWorkout(
+                            w => isControlledRun(w, false) && hasTag(w, '[FatMax]'),
+                            w => isControlledRun(w, false),
+                            rot + 1,
+                            usedTitles
+                        ))
+                        : pickLibraryWorkout(
+                            w => isControlledRun(w, false) && hasTag(w, '[FatMax]'),
+                            w => isControlledRun(w, false),
+                            rot + 1,
+                            usedTitles
+                        );
+                    if (satRun) return finalizeCard(satRun, '[Löpning · FatMax]');
                 }
                 const satAlt = pickLibraryWorkout(
                     w => (hasTag(w, '[FatMax]') && hasWord(w, ['power', 'hiking'])) || (hasTag(w, '[Rehab]') && hasWord(w, ['cykel', 'crosstrainer', 'rodd', 'promenad'])),
@@ -2521,7 +2645,7 @@ Main Set 4x
                     rot + 1,
                     usedTitles
                 );
-                return buildDayCardFromWorkout(satAlt, '[Långpass Alt]');
+                return finalizeCard(satAlt, '[Långpass Alt]');
             }
         
             // Söndag: Vadrehab / Tåhävningar / Styrka (och lätt rörlighet)
@@ -2531,7 +2655,7 @@ Main Set 4x
                 rot + 2,
                 usedTitles
             );
-            return buildDayCardFromWorkout(sunRehab, '[Vad & Styrka]');
+            return finalizeCard(sunRehab, '[Vad & Styrka]');
         }
 
         function renderWeeklyScheduleCards() {
