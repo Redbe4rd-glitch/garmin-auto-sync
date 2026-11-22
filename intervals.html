@@ -2685,7 +2685,7 @@ Main Set 4x
             const container = document.getElementById('weeklyScheduleContainer');
             const fullDaysList = appState.generatedWeeklySchedule;
             if (!container || !fullDaysList.length) return;
-
+        
             let currentWeekHtml = '<div class="space-y-3"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Innevarande vecka (Från och med idag)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
             let nextWeekHtml = '<div class="space-y-3 mt-8 pt-6 border-t border-slate-700/80"><h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> Nästa vecka (Framåtblick)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
         
@@ -2696,13 +2696,16 @@ Main Set 4x
                 const formattedBlocks = formatWorkoutBlocksHTML(item.desc);
                 const sportLabel = item.sportType || detectSportType(item.title, item.desc);
                 const isCombo = (item.title || '').includes('+');
-
+                const nextDayRunWarning = typeof renderNextDayRunWarningBadge === 'function'
+                    ? renderNextDayRunWarningBadge(fullDaysList, index)
+                    : '';
+        
                 const completedAct = appState.activities.find(act => String(act.start_date_local || '').slice(0, 10) === item.dateStr);
                 const hasCompleted = !!completedAct;
-                
+        
                 const cardBorderClass = hasCompleted ? 'border-2 border-emerald-500 shadow-lg shadow-emerald-950/40 bg-slate-900/90 cursor-pointer hover:border-emerald-400 transition-all' : (item.isExisting ? 'border-indigo-500/40' : 'border-slate-800');
                 const clickActionAttr = hasCompleted ? `onclick="openActivityDetail('${completedAct.id}')"` : '';
-
+        
                 const cardHtml = `
                     <div draggable="true"
                          ondragstart="handleScheduleDragStart(event, ${index})"
@@ -2725,9 +2728,10 @@ Main Set 4x
                                 <span class="px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.tagClass}">${item.tag} ${item.isExisting ? '(Bokat)' : ''}</span>
                                 ${hasCompleted ? '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> Utfört (Klicka)</span>' : ''}
                                 ${isCombo && !item.isExisting ? '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Delas i 2 Garmin-pass</span>' : `<span class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-slate-800 text-slate-300">${sportLabel}</span>`}
+                                ${nextDayRunWarning}
                             </div>
                         </div>
-                        
+        
                         <div class="max-h-44 overflow-y-auto pr-1">
                             ${formattedBlocks}
                         </div>
@@ -2748,7 +2752,7 @@ Main Set 4x
                         </div>
                     </div>
                 `;
-                
+        
                 if (item.isNextWeek) {
                     nextWeekHtml += cardHtml;
                     hasNext = true;
@@ -2790,35 +2794,47 @@ Main Set 4x
         async function handleScheduleDrop(event, targetIndex) {
             event.preventDefault();
             event.currentTarget.classList.remove('drag-over-highlight');
-
+        
             const sourceIndex = appState.draggedScheduleIndex;
             appState.draggedScheduleIndex = null;
-
+        
             if (sourceIndex === null || sourceIndex === targetIndex) return;
-
+        
             const schedule = appState.generatedWeeklySchedule;
             const sourceItem = schedule[sourceIndex];
             const targetItem = schedule[targetIndex];
             if (!sourceItem || !targetItem) return;
-
+        
             const sourceDate = sourceItem.dateStr;
             const targetDate = targetItem.dateStr;
-
-            const keysToSwap = ['isExisting', 'eventId', 'title', 'tag', 'tagClass', 'desc', 'workoutId', 'isRest', 'isCustomAlt', 'sportType'];
+        
+            const keysToSwap = [
+                'isExisting',
+                'eventId',
+                'title',
+                'tag',
+                'tagClass',
+                'desc',
+                'workoutId',
+                'isRest',
+                'isCustomAlt',
+                'sportType',
+                'isLongRun'
+            ];
             keysToSwap.forEach(key => {
                 const temp = sourceItem[key];
                 sourceItem[key] = targetItem[key];
                 targetItem[key] = temp;
             });
-
+        
             renderWeeklyScheduleCards();
-
+        
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
             if (!apiKey || !athleteId) return;
-
+        
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
-
+        
             try {
                 if (targetItem.isExisting && targetItem.eventId) {
                     await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${targetItem.eventId}`, {
@@ -2827,7 +2843,7 @@ Main Set 4x
                         body: JSON.stringify({ start_date_local: `${targetDate}T00:00:00` })
                     });
                 }
-
+        
                 if (sourceItem.isExisting && sourceItem.eventId) {
                     await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${sourceItem.eventId}`, {
                         method: 'PUT',
@@ -4743,6 +4759,172 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
         
             openCoachGeniePromptModal();
         }
+
+        function inferMusclesFromWorkout(workout) {
+            const text = `${workout?.name || ''} ${workout?.description || ''}`.toLowerCase();
+        
+            const primary = new Set();
+            const secondary = new Set();
+        
+            const addPrimary = (...keys) => keys.forEach(k => primary.add(k));
+            const addSecondary = (...keys) => {
+                keys.forEach(k => {
+                    if (!primary.has(k)) secondary.add(k);
+                });
+            };
+        
+            if (text.includes('kraft & balans') || text.includes('split squat') || text.includes('hollow hold')) {
+                addPrimary('quads', 'glutes', 'abs', 'hip_abductors');
+                addSecondary('hamstrings', 'obliques', 'adductors');
+            }
+        
+            if (text.includes('stabil start') || text.includes('back squat') || text.includes('rdl') || text.includes('vadpress')) {
+                addPrimary('quads', 'glutes', 'hamstrings', 'calves');
+                addSecondary('abs', 'obliques', 'lats', 'upper_back');
+            }
+        
+            if (text.includes('stark i steget') || text.includes('marklyft') || text.includes('hip thrust')) {
+                addPrimary('glutes', 'hamstrings', 'lats', 'abs');
+                addSecondary('quads', 'obliques', 'lower_back', 'upper_back');
+            }
+        
+            // Generell komplettering om nya övningar läggs till i beskrivningen
+            if (text.includes('squat') || text.includes('utfall') || text.includes('quad')) addPrimary('quads');
+            if (text.includes('glute') || text.includes('hip thrust') || text.includes('höft')) addPrimary('glutes');
+            if (text.includes('hamstring') || text.includes('rdl') || text.includes('marklyft')) addSecondary('hamstrings');
+            if (text.includes('vad') || text.includes('calf')) addSecondary('calves');
+            if (text.includes('lats') || text.includes('rodd') || text.includes('rygg')) addSecondary('lats', 'upper_back');
+            if (text.includes('planka') || text.includes('pallof') || text.includes('hollow') || text.includes('bål') || text.includes('ab')) {
+                addSecondary('abs', 'obliques');
+            }
+        
+            return { primary: [...primary], secondary: [...secondary] };
+        }
+        
+        function renderMuscleMapSvg(workout) {
+            const { primary, secondary } = inferMusclesFromWorkout(workout);
+            const inactiveFill = '#1e293b';
+            const primaryFill = '#f59e0b';   // Primär
+            const secondaryFill = '#facc15'; // Sekundär
+        
+            const getFill = (muscleKey) => {
+                if (primary.includes(muscleKey)) return primaryFill;
+                if (secondary.includes(muscleKey)) return secondaryFill;
+                return inactiveFill;
+            };
+        
+            return `
+            <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-4 text-slate-200">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Belastade muskelgrupper</span>
+                    <div class="flex items-center gap-3 text-[11px]">
+                        <span class="flex items-center gap-1.5">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${primaryFill}"></span>
+                            Primär
+                        </span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${secondaryFill}"></span>
+                            Sekundär
+                        </span>
+                    </div>
+                </div>
+        
+                <div class="grid grid-cols-2 gap-4 items-center justify-items-center">
+                    <!-- FRAMSIDA -->
+                    <svg viewBox="0 0 140 240" class="w-32 h-52" aria-label="Framsida muskler">
+                        <!-- Huvud & hals -->
+                        <circle cx="70" cy="22" r="12" fill="#334155" />
+                        <rect x="64" y="34" width="12" height="10" rx="3" fill="#334155" />
+        
+                        <!-- Axlar & armar -->
+                        <ellipse cx="44" cy="54" rx="9" ry="12" fill="${getFill('upper_back')}" />
+                        <ellipse cx="96" cy="54" rx="9" ry="12" fill="${getFill('upper_back')}" />
+                        <rect x="33" y="64" width="11" height="36" rx="5" fill="#334155" />
+                        <rect x="96" y="64" width="11" height="36" rx="5" fill="#334155" />
+        
+                        <!-- Bröst & mage (abs + obliques) -->
+                        <path d="M50 46 Q70 52 90 46 L86 72 L54 72 Z" fill="#334155" />
+                        <rect x="58" y="74" width="24" height="38" rx="6" fill="${getFill('abs')}" />
+                        <path d="M50 72 L57 74 L57 110 L51 106 Z" fill="${getFill('obliques')}" />
+                        <path d="M90 72 L83 74 L83 110 L89 106 Z" fill="${getFill('obliques')}" />
+        
+                        <!-- Höftabduktorer / utsida höft -->
+                        <ellipse cx="49" cy="118" rx="6" ry="10" fill="${getFill('hip_abductors')}" />
+                        <ellipse cx="91" cy="118" rx="6" ry="10" fill="${getFill('hip_abductors')}" />
+        
+                        <!-- Quads (framsida lår) -->
+                        <rect x="52" y="114" width="15" height="54" rx="7" fill="${getFill('quads')}" />
+                        <rect x="73" y="114" width="15" height="54" rx="7" fill="${getFill('quads')}" />
+        
+                        <!-- Underben / vader framsida -->
+                        <rect x="54" y="174" width="12" height="48" rx="6" fill="${getFill('calves')}" />
+                        <rect x="74" y="174" width="12" height="48" rx="6" fill="${getFill('calves')}" />
+                    </svg>
+        
+                    <!-- BAKSIDA -->
+                    <svg viewBox="0 0 140 240" class="w-32 h-52" aria-label="Baksida muskler">
+                        <!-- Huvud & hals -->
+                        <circle cx="70" cy="22" r="12" fill="#334155" />
+                        <rect x="64" y="34" width="12" height="10" rx="3" fill="#334155" />
+        
+                        <!-- Övre rygg & lats -->
+                        <path d="M48 48 L92 48 L84 96 L56 96 Z" fill="${getFill('lats')}" />
+                        <path d="M52 48 L88 48 L80 72 L60 72 Z" fill="${getFill('upper_back')}" />
+        
+                        <!-- Ländrygg -->
+                        <rect x="58" y="96" width="24" height="16" rx="4" fill="${getFill('lower_back')}" />
+        
+                        <!-- Armar -->
+                        <rect x="33" y="64" width="11" height="36" rx="5" fill="#334155" />
+                        <rect x="96" y="64" width="11" height="36" rx="5" fill="#334155" />
+        
+                        <!-- Glutes (säte) -->
+                        <ellipse cx="59" cy="122" rx="12" ry="13" fill="${getFill('glutes')}" />
+                        <ellipse cx="81" cy="122" rx="12" ry="13" fill="${getFill('glutes')}" />
+        
+                        <!-- Hamstrings (baksida lår) -->
+                        <rect x="52" y="136" width="15" height="34" rx="7" fill="${getFill('hamstrings')}" />
+                        <rect x="73" y="136" width="15" height="34" rx="7" fill="${getFill('hamstrings')}" />
+        
+                        <!-- Vader (calves) -->
+                        <ellipse cx="60" cy="192" rx="7" ry="22" fill="${getFill('calves')}" />
+                        <ellipse cx="80" cy="192" rx="7" ry="22" fill="${getFill('calves')}" />
+                    </svg>
+                </div>
+            </div>`;
+        }
+
+        function isHeavyLowerBodyWorkout(card) {
+            const text = `${card?.title || ''} ${card?.desc || ''}`.toLowerCase();
+            const isStrengthOrLower =
+                card?.sportType === 'WeightTraining' ||
+                text.includes('styrka') ||
+                text.includes('squat') ||
+                text.includes('marklyft') ||
+                text.includes('rdl') ||
+                text.includes('hip thrust') ||
+                text.includes('utfall');
+            const mins = typeof estimateWorkoutMinutes === 'function' ? estimateWorkoutMinutes(card) : 35;
+            return isStrengthOrLower && mins >= 35;
+        }
+        
+        function renderNextDayRunWarningBadge(scheduleList, index) {
+            if (!Array.isArray(scheduleList) || index < 0 || index >= scheduleList.length - 1) {
+                return '';
+            }
+            const currentCard = scheduleList[index];
+            const nextCard = scheduleList[index + 1];
+        
+            if (!isHeavyLowerBodyWorkout(currentCard)) return '';
+            if (nextCard?.sportType !== 'Run') return '';
+        
+            return `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30" title="Tungt underkroppspass dagen före löpning – håll extra koll på ben, svank och hälsena">
+                    ⚠️ Löpning imorgon
+                </span>
+            `;
+        }
+        
         
         document.addEventListener('DOMContentLoaded', () => {
             updateWellnessDisplay();
