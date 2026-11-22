@@ -832,35 +832,58 @@ Main Set 4x
             }
         
             if (title.includes('+')) {
-                const rawParts = title.split('+').map(p => p.trim()).filter(Boolean);
+                // Ta bort eventuellt prefix som "Långpass-ersättning:" innan uppdelning på "+"
+                const colonIdx = title.indexOf(':');
+                const tagPrefixMatch = title.match(/^(\[[^\]]+\])\s*/);
+                const tagPrefix = tagPrefixMatch ? `${tagPrefixMatch[1]} ` : '[FatMax] ';
+                const cleanBody = colonIdx !== -1
+                    ? title.slice(colonIdx + 1).trim()
+                    : title.replace(/^\[[^\]]+\]\s*/, '').trim();
+        
+                const rawParts = cleanBody.split('+').map(p => p.trim()).filter(Boolean);
                 const lines = desc.split('\n').map(l => l.trim()).filter(Boolean);
+        
+                const inferPartSport = (partText, matchedLine) => {
+                    const combined = `${partText} ${matchedLine}`.toLowerCase();
+                    if (/cykel|bike|cycling|spinning|trainer/i.test(combined)) return 'Ride';
+                    if (/cross|crosstrainer|elliptical|ct\b/i.test(combined)) return 'Elliptical';
+                    if (/rodd|row|rowing/i.test(combined)) return 'Rowing';
+                    if (/löp|run|jogg/i.test(combined)) return 'Run';
+                    if (/promenad|walk|hiking/i.test(combined)) return 'Walk';
+                    return detectSportType(partText, matchedLine);
+                };
+        
+                const formatCleanPartTitle = (partText, sportType, mins) => {
+                    if (sportType === 'Ride') return `${tagPrefix}Cykel ${mins} min`;
+                    if (sportType === 'Elliptical') return `${tagPrefix}Crosstrainer ${mins} min`;
+                    if (sportType === 'Rowing') return `${tagPrefix}Rodd ${mins} min`;
+                    return `${tagPrefix}${partText}`;
+                };
         
                 if (rawParts.length >= 2) {
                     return rawParts.map((partTitle, idx) => {
-                        const matchingLine = lines[idx] || '';
-                        const sportType = detectSportType(partTitle, matchingLine);
-                        let structuredDesc = matchingLine;
+                        // Matcha rad i beskrivningen som hör till just denna sport (fallback till lines[idx])
+                        const isCyclePart = /cykel|bike|cycling|spinning/i.test(partTitle);
+                        const isCrossPart = /cross|crosstrainer|elliptical|ct\b/i.test(partTitle);
+                        const sportMatchedLine = lines.find(l =>
+                            (isCyclePart && /cykel|bike|cycling|spinning/i.test(l)) ||
+                            (isCrossPart && /cross|crosstrainer|elliptical|ct\b/i.test(l))
+                        ) || lines[idx] || '';
         
-                        if (!structuredDesc || !structuredDesc.startsWith('-')) {
-                            const minMatch = `${partTitle} ${matchingLine}`.match(/(\d+)\s*m(in)?/i);
-                            const mins = minMatch ? parseInt(minMatch[1], 10) : 30;
+                        const sportType = inferPartSport(partTitle, sportMatchedLine);
+                        const minMatch = `${partTitle} ${sportMatchedLine}`.match(/(\d+)\s*m(in)?/i);
+                        const mins = minMatch ? parseInt(minMatch[1], 10) : 30;
         
-                            if (mins >= 15) {
-                                const mainMins = Math.max(5, mins - 10);
-                                structuredDesc = `- 5m Warmup Z1
-- ${mainMins}m FatMax Z2 (105-124 bpm)
-- 5m Cooldown Z1`;
-                            } else {
-                                structuredDesc = `- ${mins}m Z2 (105-124 bpm)`;
-                            }
+                        let structuredDesc = '';
+                        if (mins >= 15) {
+                            const mainMins = Math.max(5, mins - 10);
+                            structuredDesc = `- 5m Warmup Z1\n- ${mainMins}m FatMax Z2 (105-124 bpm)\n- 5m Cooldown Z1`;
                         } else {
-                            structuredDesc = structuredDesc
-                                .replace(/\[(Run|Elliptical|Ride|WeightTraining)\]/gi, '')
-                                .trim();
+                            structuredDesc = `- ${mins}m Z2 (105-124 bpm)`;
                         }
         
                         return {
-                            title: partTitle,
+                            title: formatCleanPartTitle(partTitle, sportType, mins),
                             sportType,
                             desc: normalizeWorkoutSyntax(structuredDesc)
                         };
