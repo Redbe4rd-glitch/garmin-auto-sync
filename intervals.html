@@ -1550,7 +1550,11 @@ Main Set 4x
                 }
             }
 
-            const isReturnToRun = (runKm14 < 10 || maxRunMin14 < 15);
+            const daysSinceLastRun = latestRun && latestRun.start_date_local && !Number.isNaN(new Date(latestRun.start_date_local).getTime())
+                ? Math.max(0, Math.floor((Date.now() - new Date(latestRun.start_date_local).getTime()) / (1000 * 60 * 60 * 24)))
+                : null;
+
+            const isReturnToRun = (runKm14 < 10 || maxRunMin14 < 15 || (daysSinceLastRun !== null && daysSinceLastRun >= 21));
 
             appState.coachAnalysis = {
                 runKm7, runKm14, runKm28, maxRunMin14,
@@ -1559,7 +1563,8 @@ Main Set 4x
                 altMin28: Math.round(altMin28),
                 rhrDelta, rhrTrendText,
                 biomechWarning,
-                isReturnToRun
+                isReturnToRun,
+                daysSinceLastRun
             };
 
             return appState.coachAnalysis;
@@ -2156,7 +2161,7 @@ Main Set 4x
         async function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
-            
+            const planContext = buildWeeklyCoachPlanContext(analysis, maxPain, isRedLight);
         
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
@@ -2208,9 +2213,7 @@ Main Set 4x
             const w = appState.wellnessMetrics;
             const isRedLight = (maxPain >= 3 || analysis.rhrDelta >= 4 || (w && w.sleepHours !== null && w.sleepHours < 5.5));
             const canTestRun = (!isRedLight && maxPain <= 1 && !analysis.biomechWarning);
-            const planContext = buildWeeklyCoachPlanContext(analysis, maxPain, isRedLight);
-            appState.weeklyPlanContext = planContext;
-            
+        
             const usedTitles = new Set(scheduledEvents.map(ev => (ev.name || '').toLowerCase().trim()));
             const longRunUsedByWeek = new Map();
             const isExistingLongRun = (ev) => {
@@ -2942,11 +2945,7 @@ function renderWeeklyCoachAdviceBanner(planContext) {
     const container = document.getElementById('weeklyScheduleContainer');
     const fullDaysList = appState.generatedWeeklySchedule;
     if (!container || !fullDaysList.length) return;
-   
-        const bannerHtml = typeof renderWeeklyCoachAdviceBanner === 'function' && appState.weeklyPlanContext
-        ? renderWeeklyCoachAdviceBanner(appState.weeklyPlanContext)
-        : '';
-            
+
     let currentWeekHtml = '<div class="space-y-3"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Innevarande vecka (Från och med idag)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
     let nextWeekHtml = '<div class="space-y-3 mt-8 pt-6 border-t border-slate-700/80"><h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> Nästa vecka (Framåtblick)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
 
@@ -3032,7 +3031,7 @@ function renderWeeklyCoachAdviceBanner(planContext) {
     currentWeekHtml += '</div></div>';
     nextWeekHtml += '</div></div>';
 
-    container.innerHTML = (hasCurrent ? currentWeekHtml : '') + (hasNext ? nextWeekHtml : '');
+    container.innerHTML = bannerHtml + (hasCurrent ? currentWeekHtml : '') + (hasNext ? nextWeekHtml : '');
     if (window.lucide) lucide.createIcons();
 }
 
@@ -3103,34 +3102,24 @@ function renderWeeklyCoachAdviceBanner(planContext) {
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
         
             try {
-                let anyUpdated = false;
                 if (targetItem.isExisting && targetItem.eventId) {
-                    const res1 = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${targetItem.eventId}`, {
+                    await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${targetItem.eventId}`, {
                         method: 'PUT',
                         headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ start_date_local: `${targetDate}T00:00:00` })
                     });
-                    if (!res1.ok) throw new Error(`HTTP ${res1.status} vid flytt till ${targetDate}`);
-                    anyUpdated = true;
                 }
-            
+        
                 if (sourceItem.isExisting && sourceItem.eventId) {
-                    const res2 = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${sourceItem.eventId}`, {
+                    await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events/${sourceItem.eventId}`, {
                         method: 'PUT',
                         headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ start_date_local: `${sourceDate}T00:00:00` })
                     });
-                    if (!res2.ok) throw new Error(`HTTP ${res2.status} vid flytt till ${sourceDate}`);
-                    anyUpdated = true;
-                }
-            
-                if (anyUpdated) {
-                    await generateAiWeeklySchedule();
                 }
             } catch (err) {
                 console.error('Fel vid uppdatering av datum i Intervals.icu:', err);
                 alert('Kunde inte uppdatera datumet i Intervals.icu-kalendern.');
-                await generateAiWeeklySchedule();
             }
         }
         
@@ -3195,15 +3184,14 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                     if (res.ok || res.status === 201) createdCount++;
                 }
 
-                if (createdCount === splitParts.length && createdCount > 0) {
+                if (createdCount > 0) {
                     const sportsInfo = splitParts.map(p => `${p.title} (${p.sportType})`).join(' + ');
-                    alert(`✅ Bokat den ${item.dateStr}: ${sportsInfo}\n\nPassen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
-                    generateAiWeeklySchedule();
-                } else if (createdCount > 0) {
-                    alert(`⚠️ Delvis bokat den ${item.dateStr} (${createdCount} av ${splitParts.length} pass). Kontrollera Intervals.icu-kalendern.`);
+                    alert(`✅ Bokat den ${item.dateStr}: ${sportsInfo}
+
+Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
                     generateAiWeeklySchedule();
                 } else {
-                    alert(`Kunde inte boka passet den ${item.dateStr}. Kontrollera API-nyckel, atlet-ID och passformat.`);
+                    alert('Kunde inte boka passet.');
                 }
             } catch (e) {
                 console.error(e);
@@ -3361,13 +3349,12 @@ function renderWeeklyCoachAdviceBanner(planContext) {
         
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             let successCount = 0;
-            const failedItems = [];
-
+        
             for (let item of appState.generatedWeeklySchedule) {
                 if (item.isRest || item.isExisting) continue;
 
                 const splitParts = splitComboWorkout(item);
-
+        
                 for (const part of splitParts) {
                     const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
                     const payload = part.workoutId
@@ -3385,31 +3372,22 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                             name: part.title,
                             description: normalizeWorkoutSyntax(part.desc)
                         };
-
+            
                     try {
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-                        if (response.ok || response.status === 201) {
-                            successCount++;
-                        } else {
-                            failedItems.push(`${item.dateStr} (${part.title}: HTTP ${response.status})`);
-                        }
+                        if (response.ok || response.status === 201) successCount++;
                     } catch (e) {
                         console.error('Kunde inte skicka pass för', item.dateStr, e);
-                        failedItems.push(`${item.dateStr} (${part.title}: nätverksfel)`);
                     }
                 }
             }
-
-            if (failedItems.length === 0) {
-                alert(`✅ ${successCount} pass har skickats med rätt Garmin-sportprofil till din Intervals.icu-kalender!`);
-            } else {
-                alert(`⚠️ ${successCount} pass skickades, men ${failedItems.length} misslyckades:\n- ${failedItems.join('\n- ')}`);
-            }
-            generateAiWeeklySchedule();        
+        
+            alert(`✅ ${successCount} pass har skickats med rätt Garmin-sportprofil till din Intervals.icu-kalender!`);
+            generateAiWeeklySchedule();
         }
 
         async function sendAiRecommendedWorkout() {
@@ -4247,76 +4225,14 @@ function renderWeeklyCoachAdviceBanner(planContext) {
         function estimateWorkoutLoad(title = '', desc = '', explicitLoad = null) {
             if (typeof explicitLoad === 'number' && explicitLoad > 0) return explicitLoad;
         
-            const cleanTitle = String(title || '').trim();
-            const cleanDesc = String(desc || '').trim();
-            const text = `${cleanTitle} ${cleanDesc}`.toLowerCase();
-        
-            if (
-                (text.includes('vila') || text.includes('vilodag') || text.includes('rest')) &&
-                !text.includes('intervall') &&
-                !text.includes('fartlek') &&
-                !text.includes('gång') &&
-                !text.includes('gang')
-            ) {
-                return 0;
-            }
-        
-            if (cleanTitle.includes('+') && typeof splitComboWorkout === 'function') {
-                const parts = splitComboWorkout({ title: cleanTitle, desc: cleanDesc });
-                if (Array.isArray(parts) && parts.length > 1) {
-                    return parts.reduce(
-                        (sum, part) => sum + estimateWorkoutLoad(part.title, part.desc, null),
-                        0
-                    );
-                }
-            }
-        
-            if (
-                text.includes('rehab') ||
-                text.includes('rörlighet') ||
-                text.includes('rorlighet') ||
-                text.includes('yoga') ||
-                text.includes('mobilitet')
-            ) {
-                return 20;
-            }
-            if (
-                text.includes('vo2') ||
-                text.includes('tröskel') ||
-                text.includes('troskel') ||
-                text.includes('norska') ||
-                text.includes('tusingar') ||
-                text.includes('intervall')
-            ) {
-                return 75;
-            }
-            if (
-                text.includes('långpass') ||
-                text.includes('langpass') ||
-                text.includes('75m') ||
-                text.includes('90m') ||
-                text.includes('100m')
-            ) {
-                return 65;
-            }
+            const text = `${title} ${desc}`.toLowerCase();
+            if (text.includes('vila') && !text.includes('intervall')) return 0;
+            if (text.includes('rehab') || text.includes('rörlighet') || text.includes('yoga')) return 20;
+            if (text.includes('vo2') || text.includes('tröskel') || text.includes('norska') || text.includes('tusingar') || text.includes('intervall')) return 75;
+            if (text.includes('långpass') || text.includes('75m') || text.includes('90m')) return 65;
             if (text.includes('fartlek')) return 60;
-            if (
-                text.includes('fatmax') ||
-                text.includes('cykel') ||
-                text.includes('crosstrainer') ||
-                text.includes('rodd') ||
-                text.includes('distans')
-            ) {
-                return 45;
-            }
-            if (
-                text.includes('styrka') ||
-                text.includes('gym') ||
-                text.includes('tåhäv') ||
-                text.includes('tahav')
-            ) {
-                return 35;
-            }
+            if (text.includes('fatmax') || text.includes('cykel') || text.includes('crosstrainer') || text.includes('distans')) return 45;
+            if (text.includes('styrka') || text.includes('gym')) return 35;
         
             return 40;
         }
@@ -4456,41 +4372,30 @@ function renderWeeklyCoachAdviceBanner(planContext) {
             }
         
             const histLen = labels.length;
-            const latestHistTsb = histTsb.length ? histTsb[histTsb.length - 1] : Math.round((lastCtl - lastAtl) * 10) / 10;
             const projCtl = new Array(histLen - 1).fill(null).concat([histCtl[histLen - 1]]);
             const projAtl = new Array(histLen - 1).fill(null).concat([histAtl[histLen - 1]]);
-            const projTsb = new Array(histLen - 1).fill(null).concat([latestHistTsb]);
-            
+            const projTsb = new Array(histLen - 1).fill(null).concat([histTsb[histLen - 1]]);
+        
             let simCtl = lastCtl;
             let simAtl = lastAtl;
             const simUsedTitles = new Set(futureEvents.map(ev => (ev.name || '').toLowerCase().trim()));
-            const simLongRunUsed = new Map();
-            const baseForecastDate = new Date();
-            baseForecastDate.setHours(0, 0, 0, 0);
-            const currentWeekStartMs = getStartOfWeek(baseForecastDate).getTime();
-            
+        
             for (let d = 1; d <= 14; d++) {
-                const simDate = new Date(baseForecastDate);
-                simDate.setDate(baseForecastDate.getDate() + d);
+                const simDate = new Date();
+                simDate.setDate(simDate.getDate() + d);
                 const dateStr = toLocalDateString(simDate);
                 const dayOfWeekIdx = (simDate.getDay() + 6) % 7;
-            
+        
                 const dayEvents = futureEvents.filter(ev => String(ev.start_date_local || '').slice(0, 10) === dateStr);
                 let plannedLoad = 0;
-            
+        
                 if (dayEvents.length > 0) {
                     dayEvents.forEach(ev => {
                         plannedLoad += estimateWorkoutLoad(ev.name, ev.description, ev.icu_training_load);
                     });
                 } else {
                     const simWeekNum = getISOWeekNumber(simDate);
-                    const simWeekStartMs = getStartOfWeek(simDate).getTime();
-                    const simWeekOffset = Math.max(0, Math.round((simWeekStartMs - currentWeekStartMs) / (7 * 24 * 60 * 60 * 1000)));
-                    const weekKey = `${simDate.getFullYear()}-W${simWeekNum}`;
-                    const simWeekState = {
-                        usedTitles: simUsedTitles,
-                        usedLongRun: Boolean(simLongRunUsed.get(weekKey))
-                    };
+                    const simWeekOffset = d > 7 ? 1 : 0;
                     const fallback = getSmartDaySuggestion(
                         dayOfWeekIdx,
                         analysis,
@@ -4500,13 +4405,11 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                         simWeekNum,
                         simWeekOffset,
                         appState.scheduleVariationSeed || 0,
-                        simUsedTitles,
-                        simWeekState
+                        simUsedTitles
                     );
                     if (fallback && fallback.title) {
                         simUsedTitles.add(fallback.title.toLowerCase().trim());
                         if (fallback.workoutId) simUsedTitles.add(fallback.workoutId);
-                        if (fallback.isLongRun) simLongRunUsed.set(weekKey, true);
                     }
                     plannedLoad = estimateWorkoutLoad(fallback.title, fallback.desc, null);
                 }
@@ -4786,35 +4689,6 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                 alert('Nätverksfel vid uppdatering.');
             }
         }
-
-        async function updateExistingWorkout() {
-            const activeId = appState.activeEditingWorkoutId;
-            if (activeId) {
-                const nameInput = document.getElementById('libCreateName');
-                const sportInput = document.getElementById('libCreateSport');
-                const descInput = document.getElementById('libCreateDesc');
-        
-                if (nameInput && nameInput.value.trim() && descInput && descInput.value.trim()) {
-                    const modalName = document.getElementById('modalEditName');
-                    const modalSport = document.getElementById('modalEditSport');
-                    const modalDesc = document.getElementById('modalEditDesc');
-                    if (modalName) modalName.value = nameInput.value.trim();
-                    if (modalSport && sportInput) modalSport.value = sportInput.value;
-                    if (modalDesc) modalDesc.value = descInput.value.trim();
-                    await saveModalUpdateExisting();
-                    return;
-                }
-                openEditWorkoutModal(activeId);
-                return;
-            }
-        
-            if (Array.isArray(appState.libraryWorkouts) && appState.libraryWorkouts.length > 0) {
-                alert('Välj först ett pass med redigeringsikonen (pennan) i Passbiblioteket för att markera vilket pass som ska uppdateras.');
-                switchTab('library');
-            } else {
-                alert('Inga befintliga pass hittades i biblioteket.');
-            }
-        }
         
         async function saveModalAsNewWorkout() {
             const name = (document.getElementById('modalEditName')?.value || '').trim();
@@ -4977,12 +4851,6 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                     return `- ${d}: ${a.name || 'Löpning'} (${km}, ${min}, snittpuls ${hr})`;
                 });
         
-            const daysSinceLastRun = typeof analysis.daysSinceLastRun === 'number'
-                ? analysis.daysSinceLastRun
-                : (recentRuns.length > 0
-                    ? Math.max(0, Math.floor((Date.now() - new Date(String(recentRuns[0]).slice(2, 12)).getTime()) / (1000 * 60 * 60 * 24)))
-                    : null);
-        
             const scheduleLines = (appState.generatedWeeklySchedule || [])
                 .map(item => `- ${item.dateStr} (${item.dayName}): ${item.title} [${item.sportType || '–'}]${item.isExisting ? ' [Bokat]' : ''}`);
         
@@ -5002,8 +4870,6 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                 `- Notering: ${notes || 'Ingen'}`,
                 ``,
                 `### Belastning & biometri`,
-                `- Aktivitus-trösklar: FatMax ~124 bpm | Tröskel (AT) ~142 bpm | Maxpuls ~153 bpm`,
-                `- Senaste löpning: ${daysSinceLastRun !== null && !Number.isNaN(daysSinceLastRun) ? `${daysSinceLastRun} dagar sedan` : 'Ingen registrerad'}`,
                 `- ACWR (7d vs 28d löpvolym): ${acwr}`,
                 `- Löpvolym 7/14/28d: ${(analysis.runKm7 ?? 0).toFixed(1)} / ${(analysis.runKm14 ?? 0).toFixed(1)} / ${(analysis.runKm28 ?? 0).toFixed(1)} km (max löppass 14d: ${Math.round(analysis.maxRunMin14 ?? 0)} min)`,
                 `- Alternativ kondition 7/14/28d: ${analysis.altMin7 ?? 0} / ${analysis.altMin14 ?? 0} / ${analysis.altMin28 ?? 0} min`,
@@ -5331,61 +5197,7 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                 </span>
             `;
         }
-
-        function runCoachGenieAnalysis() {
-            const d7 = daysAgo(7);
-            const d14 = daysAgo(14);
-            const d28 = daysAgo(28);
         
-            let runKm7 = 0, runKm14 = 0, runKm28 = 0;
-            let maxRunMin14 = 0;
-            let altMin7 = 0, altMin14 = 0, altMin28 = 0;
-            let latestRun = null;
-        
-            const sortedActs = [...(appState.activities || [])]
-                .filter(a => a && a.start_date_local && !Number.isNaN(new Date(a.start_date_local).getTime()))
-                .sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
-        
-            sortedActs.forEach(act => {
-                const actDate = new Date(act.start_date_local);
-                const cat = classifyActivity(act);
-                const distKm = act.distance ? act.distance / 1000 : 0;
-                const durMin = act.moving_time ? act.moving_time / 60 : 0;
-        
-                if (cat.key === 'run') {
-                    if (!latestRun) latestRun = act;
-                    if (actDate >= d28) runKm28 += distKm;
-                    if (actDate >= d14) {
-                        runKm14 += distKm;
-                        if (durMin > maxRunMin14) maxRunMin14 = durMin;
-                    }
-                    if (actDate >= d7) runKm7 += distKm;
-                } else if (['ride', 'cardio', 'swim', 'walk'].includes(cat.key)) {
-                    if (actDate >= d28) altMin28 += durMin;
-                    if (actDate >= d14) altMin14 += durMin;
-                    if (actDate >= d7) altMin7 += durMin;
-                }
-            });
-        
-            const daysSinceLastRun = latestRun
-                ? Math.max(0, Math.floor((Date.now() - new Date(latestRun.start_date_local).getTime()) / (1000 * 60 * 60 * 24)))
-                : null;
-
-            const isReturnToRun = (runKm14 < 10 || maxRunMin14 < 15 || (daysSinceLastRun !== null && daysSinceLastRun >= 21));
-
-            appState.coachAnalysis = {
-                runKm7, runKm14, runKm28, maxRunMin14,
-                altMin7: Math.round(altMin7),
-                altMin14: Math.round(altMin14),
-                altMin28: Math.round(altMin28),
-                rhrDelta, rhrTrendText,
-                biomechWarning,
-                isReturnToRun,
-                daysSinceLastRun
-            };
-        
-            return appState.coachAnalysis;
-        }
         
         document.addEventListener('DOMContentLoaded', () => {
             updateWellnessDisplay();
