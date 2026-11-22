@@ -3361,12 +3361,13 @@ function renderWeeklyCoachAdviceBanner(planContext) {
         
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             let successCount = 0;
-        
+            const failedItems = [];
+
             for (let item of appState.generatedWeeklySchedule) {
                 if (item.isRest || item.isExisting) continue;
 
                 const splitParts = splitComboWorkout(item);
-        
+
                 for (const part of splitParts) {
                     const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
                     const payload = part.workoutId
@@ -3384,22 +3385,31 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                             name: part.title,
                             description: normalizeWorkoutSyntax(part.desc)
                         };
-            
+
                     try {
                         const response = await fetch(url, {
                             method: 'POST',
                             headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-                        if (response.ok || response.status === 201) successCount++;
+                        if (response.ok || response.status === 201) {
+                            successCount++;
+                        } else {
+                            failedItems.push(`${item.dateStr} (${part.title}: HTTP ${response.status})`);
+                        }
                     } catch (e) {
                         console.error('Kunde inte skicka pass för', item.dateStr, e);
+                        failedItems.push(`${item.dateStr} (${part.title}: nätverksfel)`);
                     }
                 }
             }
-        
-            alert(`✅ ${successCount} pass har skickats med rätt Garmin-sportprofil till din Intervals.icu-kalender!`);
-            generateAiWeeklySchedule();
+
+            if (failedItems.length === 0) {
+                alert(`✅ ${successCount} pass har skickats med rätt Garmin-sportprofil till din Intervals.icu-kalender!`);
+            } else {
+                alert(`⚠️ ${successCount} pass skickades, men ${failedItems.length} misslyckades:\n- ${failedItems.join('\n- ')}`);
+            }
+            generateAiWeeklySchedule();        
         }
 
         async function sendAiRecommendedWorkout() {
@@ -4237,14 +4247,76 @@ function renderWeeklyCoachAdviceBanner(planContext) {
         function estimateWorkoutLoad(title = '', desc = '', explicitLoad = null) {
             if (typeof explicitLoad === 'number' && explicitLoad > 0) return explicitLoad;
         
-            const text = `${title} ${desc}`.toLowerCase();
-            if (text.includes('vila') && !text.includes('intervall')) return 0;
-            if (text.includes('rehab') || text.includes('rörlighet') || text.includes('yoga')) return 20;
-            if (text.includes('vo2') || text.includes('tröskel') || text.includes('norska') || text.includes('tusingar') || text.includes('intervall')) return 75;
-            if (text.includes('långpass') || text.includes('75m') || text.includes('90m')) return 65;
+            const cleanTitle = String(title || '').trim();
+            const cleanDesc = String(desc || '').trim();
+            const text = `${cleanTitle} ${cleanDesc}`.toLowerCase();
+        
+            if (
+                (text.includes('vila') || text.includes('vilodag') || text.includes('rest')) &&
+                !text.includes('intervall') &&
+                !text.includes('fartlek') &&
+                !text.includes('gång') &&
+                !text.includes('gang')
+            ) {
+                return 0;
+            }
+        
+            if (cleanTitle.includes('+') && typeof splitComboWorkout === 'function') {
+                const parts = splitComboWorkout({ title: cleanTitle, desc: cleanDesc });
+                if (Array.isArray(parts) && parts.length > 1) {
+                    return parts.reduce(
+                        (sum, part) => sum + estimateWorkoutLoad(part.title, part.desc, null),
+                        0
+                    );
+                }
+            }
+        
+            if (
+                text.includes('rehab') ||
+                text.includes('rörlighet') ||
+                text.includes('rorlighet') ||
+                text.includes('yoga') ||
+                text.includes('mobilitet')
+            ) {
+                return 20;
+            }
+            if (
+                text.includes('vo2') ||
+                text.includes('tröskel') ||
+                text.includes('troskel') ||
+                text.includes('norska') ||
+                text.includes('tusingar') ||
+                text.includes('intervall')
+            ) {
+                return 75;
+            }
+            if (
+                text.includes('långpass') ||
+                text.includes('langpass') ||
+                text.includes('75m') ||
+                text.includes('90m') ||
+                text.includes('100m')
+            ) {
+                return 65;
+            }
             if (text.includes('fartlek')) return 60;
-            if (text.includes('fatmax') || text.includes('cykel') || text.includes('crosstrainer') || text.includes('distans')) return 45;
-            if (text.includes('styrka') || text.includes('gym')) return 35;
+            if (
+                text.includes('fatmax') ||
+                text.includes('cykel') ||
+                text.includes('crosstrainer') ||
+                text.includes('rodd') ||
+                text.includes('distans')
+            ) {
+                return 45;
+            }
+            if (
+                text.includes('styrka') ||
+                text.includes('gym') ||
+                text.includes('tåhäv') ||
+                text.includes('tahav')
+            ) {
+                return 35;
+            }
         
             return 40;
         }
