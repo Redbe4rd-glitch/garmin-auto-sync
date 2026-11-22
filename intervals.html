@@ -1721,12 +1721,26 @@ Main Set 4x
             }
         }
 
-        function getPhilosophyCategory(workoutName) {
-            if (workoutName.includes('[Tröskel]')) return 'Tröskel';
-            if (workoutName.includes('[VO2max]')) return 'VO2max';
-            if (workoutName.includes('[FatMax]')) return 'FatMax';
-            if (workoutName.includes('[Fartlek]')) return 'Fartlek';
-            if (workoutName.includes('[Rehab]')) return 'Rehab';
+        function getPhilosophyCategory(workoutName = '') {
+            const name = String(workoutName || '');
+            const lower = name.toLowerCase();
+        
+            if (name.includes('[Tröskel]')) return 'Tröskel';
+            if (name.includes('[VO2max]')) return 'VO2max';
+            if (name.includes('[FatMax]')) return 'FatMax';
+            if (name.includes('[Fartlek]')) return 'Fartlek';
+            if (
+                name.includes('[Rehab]') ||
+                lower.includes('[rehab') ||
+                lower.includes('rehab hälsena') ||
+                lower.includes('rehab halsena')
+            ) {
+                return 'Rehab';
+            }
+            if (lower.includes('[styrka]') || lower.startsWith('styrka')) {
+                return 'Styrka';
+            }
+        
             return 'Övrigt';
         }
 
