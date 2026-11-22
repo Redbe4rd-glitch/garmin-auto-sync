@@ -2156,6 +2156,7 @@ Main Set 4x
         async function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
+            const planContext = buildWeeklyCoachPlanContext(analysis, maxPain, isRedLight);
         
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
@@ -2694,6 +2695,246 @@ Main Set 4x
             );
             return finalizeCard(sunRehab, '[Vad & Styrka]');
         }
+
+        function classifyWorkoutIntensity(workoutOrCard = {}) {
+    const text = `${workoutOrCard.name || workoutOrCard.title || ''} ${workoutOrCard.description || workoutOrCard.desc || ''}`.toLowerCase();
+    if (
+        text.includes('vila') &&
+        !text.includes('intervall') &&
+        !text.includes('fartlek')
+    ) {
+        return 'rest';
+    }
+    if (
+        text.includes('rehab') ||
+        text.includes('rörlighet') ||
+        text.includes('rorlighet') ||
+        text.includes('yoga') ||
+        text.includes('promenad') ||
+        text.includes('tåhäv') ||
+        text.includes('tahav') ||
+        text.includes('styrka')
+    ) {
+        return 'rehab_strength';
+    }
+    if (
+        text.includes('tröskel') ||
+        text.includes('troskel') ||
+        text.includes('vo2') ||
+        text.includes('intervall') ||
+        text.includes('tusing') ||
+        text.includes('fartlek') ||
+        text.includes('norska')
+    ) {
+        return 'hard';
+    }
+    return 'easy';
+}
+
+function isStrengthOrRehabCard(card = {}) {
+    const intensity = classifyWorkoutIntensity(card);
+    const text = `${card.title || card.name || ''} ${card.desc || card.description || ''}`.toLowerCase();
+    return (
+        intensity === 'rehab_strength' ||
+        card.sportType === 'WeightTraining' ||
+        text.includes('styrka') ||
+        text.includes('rehab') ||
+        text.includes('tåhäv') ||
+        text.includes('tahav') ||
+        text.includes('säte') ||
+        text.includes('sate') ||
+        text.includes('höft') ||
+        text.includes('hoft')
+    );
+}
+
+function buildWeeklyCoachPlanContext(analysis = {}, maxPain = 0, isRedLight = false) {
+    const readiness = typeof evaluateTrainingReadiness === 'function'
+        ? evaluateTrainingReadiness(analysis, maxPain, isRedLight)
+        : {
+            mode: isRedLight ? 'NO_RUN_REHAB' : (maxPain >= 2 ? 'CAUTIOUS_RETURN' : 'BALANCED_PROGRESSION'),
+            allowRunning: !isRedLight && maxPain < 4,
+            maxRunsPerWeek: isRedLight ? 0 : (maxPain >= 2 ? 2 : 3),
+            maxRunMinutes: isRedLight ? 0 : (maxPain >= 2 ? 25 : 50),
+            prioritizeMobility: maxPain >= 2 || Boolean(analysis.isReturnToRun),
+            calfTrend: typeof getRecentCalfPainTrend === 'function' ? getRecentCalfPainTrend() : { todayVal: maxPain, isRising: false }
+        };
+
+    const w = appState.wellnessMetrics || {};
+    const acwr = Number(appState.latestAcwr || 0);
+    const poorBiometrics = Boolean(
+        (w.sleepHours !== null && w.sleepHours !== undefined && w.sleepHours < 6) ||
+        (typeof w.hrvDiffPct === 'number' && w.hrvDiffPct <= -15) ||
+        (typeof w.rhrDiff === 'number' && w.rhrDiff >= 3)
+    );
+
+    const maxHardPerWeek = readiness.mode === 'BALANCED_PROGRESSION' && !poorBiometrics ? 2 : 1;
+    const targetStrengthPerWeek = 2;
+
+    const tips = [];
+    const warnings = [];
+
+    if (readiness.calfTrend?.todayVal >= 2 || readiness.calfTrend?.isRising) {
+        warnings.push(`Vad/hälsena: ${readiness.calfTrend.todayVal}/10${readiness.calfTrend.isRising ? ' (stigande trend)' : ''} – håll löpvolym och vadbelastning extra kontrollerade.`);
+    } else {
+        tips.push(`Vad/hälsena ligger lugnt (${readiness.calfTrend?.todayVal ?? maxPain}/10) – behåll förebyggande soleus- & vadstyrka 2×/vecka.`);
+    }
+
+    if (acwr > 1.35 || analysis.isReturnToRun) {
+        warnings.push(`ACWR ${acwr > 0 ? acwr.toFixed(2) : '–'} / återkomstläge: dämpad löptid (max ${readiness.maxRunMinutes} min) med stöd av crosstrainer/cykel.`);
+    } else {
+        tips.push(`Sikta på minst 80% lugn aerob bas (FatMax ≤124 bpm / skonsam alt. kondition) och max ${maxHardPerWeek} kvalitetsinslag/vecka.`);
+    }
+
+    if (poorBiometrics) {
+        warnings.push(`Återhämtningssignal (sömn ${w.sleepHours ?? '–'}h, HRV ${w.hrvDiffPct ?? 0}%, RHR diff ${w.rhrDiff ?? 0} bpm) – prioritera kvalitet före kvantitet.`);
+    }
+
+    return {
+        readiness,
+        poorBiometrics,
+        maxHardPerWeek,
+        targetStrengthPerWeek,
+        tips,
+        warnings,
+        counts: {
+            runs: 0,
+            hard: 0,
+            strength: 0,
+            longRuns: 0
+        }
+    };
+}
+
+function scoreLibraryCandidate(workout, dayContext = {}, planContext = {}) {
+    const name = String(workout?.name || '');
+    const desc = String(workout?.description || workout?.workout_doc || '');
+    const lower = `${name} ${desc}`.toLowerCase();
+    const sport = detectSportType(name, desc, workout?.sport_type || workout?.type);
+    const intensity = classifyWorkoutIntensity({ name, description: desc });
+    const mins = typeof estimateWorkoutMinutes === 'function' ? estimateWorkoutMinutes(workout) : 30;
+    const isLong = sport === 'Run' && (lower.includes('långpass') || lower.includes('langpass') || lower.includes('90m') || lower.includes('100m') || mins >= 60);
+
+    let score = 0;
+
+    // Undvik dubbletter i samma planeringsperiod
+    if (dayContext.usedTitles && (dayContext.usedTitles.has(name.toLowerCase().trim()) || dayContext.usedTitles.has(workout.id))) {
+        score -= 40;
+    }
+
+    // Löpningsregler
+    if (sport === 'Run') {
+        if (!planContext.readiness?.allowRunning) return -999;
+        if (planContext.counts.runs >= planContext.readiness.maxRunsPerWeek) return -500;
+        if (isLong && (planContext.counts.longRuns >= 1 || planContext.readiness.mode !== 'BALANCED_PROGRESSION')) return -400;
+        if (!isLong && planContext.readiness.maxRunMinutes > 0 && mins > planContext.readiness.maxRunMinutes + 5) {
+            score -= 80;
+        }
+        if (dayContext.preferRun) score += 35;
+        if (lower.includes('fatmax')) score += 25;
+    }
+
+    // Hård intensitet / 80/20-tak
+    if (intensity === 'hard') {
+        if (planContext.counts.hard >= planContext.maxHardPerWeek || planContext.poorBiometrics || planContext.readiness?.mode !== 'BALANCED_PROGRESSION') {
+            return -350;
+        }
+        if (dayContext.prevWasHard) score -= 120;
+        if (dayContext.preferHard) score += 25;
+    } else if (intensity === 'easy' || intensity === 'rehab_strength') {
+        if (dayContext.prevWasHard) score += 20;
+    }
+
+    // Styrka & rehab (inkl. tungt underkropp dagen före löpning)
+    const isStrength = isStrengthOrRehabCard({ title: name, desc, sportType: sport });
+    const isHeavyLower = typeof isHeavyLowerBodyWorkout === 'function'
+        ? isHeavyLowerBodyWorkout({ title: name, desc, sportType: sport })
+        : false;
+
+    if (isHeavyLower && dayContext.nextDayIsRun) {
+        score -= 250;
+    }
+
+    if (dayContext.preferStrength) {
+        if (isStrength) score += 45;
+        if (planContext.counts.strength < planContext.targetStrengthPerWeek && isStrength) score += 25;
+        if (planContext.readiness?.prioritizeMobility && (lower.includes('rörlighet') || lower.includes('rorlighet') || lower.includes('yoga') || lower.includes('säte') || lower.includes('sate'))) {
+            score += 20;
+        }
+    }
+
+    if (dayContext.preferAltCardio && ['Elliptical', 'Ride', 'Rowing', 'Walk'].includes(sport)) {
+        score += 35;
+    }
+
+    if (dayContext.preferRecovery && (intensity === 'rest' || lower.includes('promenad') || lower.includes('yoga') || lower.includes('rörlighet') || lower.includes('rorlighet'))) {
+        score += 35;
+    }
+
+    // Liten rotation baserad på seed/dag så variation-knappen ger fräscha val
+    const rotBonus = ((Number(dayContext.seed || 0) + Number(dayContext.dayIndex || 0)) % 7) * 2;
+    score += rotBonus;
+
+    return score;
+}
+
+function selectScoredLibraryWorkout(dayContext = {}, planContext = {}, fallbackFilter = null) {
+    const lib = Array.isArray(appState.libraryWorkouts) ? appState.libraryWorkouts : [];
+    if (!lib.length) return null;
+
+    const ranked = lib
+        .map(w => ({ workout: w, score: scoreLibraryCandidate(w, dayContext, planContext) }))
+        .filter(entry => entry.score > -200)
+        .sort((a, b) => b.score - a.score);
+
+    if (ranked.length > 0) {
+        return ranked[0].workout;
+    }
+
+    if (typeof fallbackFilter === 'function') {
+        const fallbackList = lib.filter(fallbackFilter);
+        if (fallbackList.length > 0) {
+            return fallbackList[(Number(dayContext.seed || 0) + Number(dayContext.dayIndex || 0)) % fallbackList.length];
+        }
+    }
+
+    return null;
+}
+
+function renderWeeklyCoachAdviceBanner(planContext) {
+    if (!planContext) return '';
+    const warningHtml = (planContext.warnings || []).map(w => `
+        <div class="text-[11px] text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1.5 flex items-start gap-2">
+            <span class="shrink-0">⚠️</span>
+            <span>${w}</span>
+        </div>
+    `).join('');
+
+    const tipsHtml = (planContext.tips || []).map(t => `
+        <div class="text-[11px] text-slate-200 bg-slate-900/70 border border-slate-800 rounded-lg px-2.5 py-1.5 flex items-start gap-2">
+            <span class="text-emerald-400 shrink-0">✓</span>
+            <span>${t}</span>
+        </div>
+    `).join('');
+
+    return `
+        <div class="bg-slate-900/80 border border-indigo-500/30 rounded-2xl p-4 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-indigo-300 uppercase tracking-wider">Coach Genie · Veckoanalys & Råd</span>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                        Löp: ${planContext.counts.runs}/${planContext.readiness.maxRunsPerWeek} · Styrka/Rehab: ${planContext.counts.strength} · Kvalitet: ${planContext.counts.hard}/${planContext.maxHardPerWeek}
+                    </span>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                ${warningHtml}
+                ${tipsHtml}
+            </div>
+        </div>
+    `;
+}
+        
 
         function renderWeeklyScheduleCards() {
     const container = document.getElementById('weeklyScheduleContainer');
