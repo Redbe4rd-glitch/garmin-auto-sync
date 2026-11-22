@@ -4977,6 +4977,12 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                     return `- ${d}: ${a.name || 'Löpning'} (${km}, ${min}, snittpuls ${hr})`;
                 });
         
+            const daysSinceLastRun = typeof analysis.daysSinceLastRun === 'number'
+                ? analysis.daysSinceLastRun
+                : (recentRuns.length > 0
+                    ? Math.max(0, Math.floor((Date.now() - new Date(String(recentRuns[0]).slice(2, 12)).getTime()) / (1000 * 60 * 60 * 24)))
+                    : null);
+        
             const scheduleLines = (appState.generatedWeeklySchedule || [])
                 .map(item => `- ${item.dateStr} (${item.dayName}): ${item.title} [${item.sportType || '–'}]${item.isExisting ? ' [Bokat]' : ''}`);
         
@@ -4996,6 +5002,8 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                 `- Notering: ${notes || 'Ingen'}`,
                 ``,
                 `### Belastning & biometri`,
+                `- Aktivitus-trösklar: FatMax ~124 bpm | Tröskel (AT) ~142 bpm | Maxpuls ~153 bpm`,
+                `- Senaste löpning: ${daysSinceLastRun !== null && !Number.isNaN(daysSinceLastRun) ? `${daysSinceLastRun} dagar sedan` : 'Ingen registrerad'}`,
                 `- ACWR (7d vs 28d löpvolym): ${acwr}`,
                 `- Löpvolym 7/14/28d: ${(analysis.runKm7 ?? 0).toFixed(1)} / ${(analysis.runKm14 ?? 0).toFixed(1)} / ${(analysis.runKm28 ?? 0).toFixed(1)} km (max löppass 14d: ${Math.round(analysis.maxRunMin14 ?? 0)} min)`,
                 `- Alternativ kondition 7/14/28d: ${analysis.altMin7 ?? 0} / ${analysis.altMin14 ?? 0} / ${analysis.altMin28 ?? 0} min`,
@@ -5323,7 +5331,61 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                 </span>
             `;
         }
+
+        function runCoachGenieAnalysis() {
+            const d7 = daysAgo(7);
+            const d14 = daysAgo(14);
+            const d28 = daysAgo(28);
         
+            let runKm7 = 0, runKm14 = 0, runKm28 = 0;
+            let maxRunMin14 = 0;
+            let altMin7 = 0, altMin14 = 0, altMin28 = 0;
+            let latestRun = null;
+        
+            const sortedActs = [...(appState.activities || [])]
+                .filter(a => a && a.start_date_local && !Number.isNaN(new Date(a.start_date_local).getTime()))
+                .sort((a, b) => new Date(b.start_date_local) - new Date(a.start_date_local));
+        
+            sortedActs.forEach(act => {
+                const actDate = new Date(act.start_date_local);
+                const cat = classifyActivity(act);
+                const distKm = act.distance ? act.distance / 1000 : 0;
+                const durMin = act.moving_time ? act.moving_time / 60 : 0;
+        
+                if (cat.key === 'run') {
+                    if (!latestRun) latestRun = act;
+                    if (actDate >= d28) runKm28 += distKm;
+                    if (actDate >= d14) {
+                        runKm14 += distKm;
+                        if (durMin > maxRunMin14) maxRunMin14 = durMin;
+                    }
+                    if (actDate >= d7) runKm7 += distKm;
+                } else if (['ride', 'cardio', 'swim', 'walk'].includes(cat.key)) {
+                    if (actDate >= d28) altMin28 += durMin;
+                    if (actDate >= d14) altMin14 += durMin;
+                    if (actDate >= d7) altMin7 += durMin;
+                }
+            });
+        
+            const daysSinceLastRun = latestRun
+                ? Math.max(0, Math.floor((Date.now() - new Date(latestRun.start_date_local).getTime()) / (1000 * 60 * 60 * 24)))
+                : null;
+
+            const isReturnToRun = (runKm14 < 10 || maxRunMin14 < 15 || (daysSinceLastRun !== null && daysSinceLastRun >= 21));
+
+            appState.coachAnalysis = {
+                runKm7, runKm14, runKm28, maxRunMin14,
+                altMin7: Math.round(altMin7),
+                altMin14: Math.round(altMin14),
+                altMin28: Math.round(altMin28),
+                rhrDelta, rhrTrendText,
+                biomechWarning,
+                isReturnToRun,
+                daysSinceLastRun
+            };
+        
+            return appState.coachAnalysis;
+        }
         
         document.addEventListener('DOMContentLoaded', () => {
             updateWellnessDisplay();
