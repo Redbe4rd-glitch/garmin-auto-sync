@@ -1971,97 +1971,97 @@ Main Set 4x
         }
         
         function renderLibraryGrid() {
-            const grid = document.getElementById('workoutLibraryGrid');
-            const searchVal = (document.getElementById('librarySearchInput').value || '').toLowerCase();
-            const activePhil = appState.currentLibraryPhilosophy;
-        
-            let filtered = appState.libraryWorkouts.filter(w => {
-                const name = w.name || '';
-                if (activePhil !== 'Alla' && !name.includes(activePhil)) return false;
-                if (searchVal && !name.toLowerCase().includes(searchVal) && !(w.description || '').toLowerCase().includes(searchVal)) return false;
-                return true;
-            });
-        
-            if (!filtered.length) {
-                grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 text-xs">Inga pass matchade ditt filter.</div>';
-                return;
-            }
-        
-            const todayStr = toLocalDateString();
-        
-            grid.innerHTML = filtered.map(w => {
-                const name = w.name || 'Namnlöst pass';
-                const cat = getPhilosophyCategory(name);
-                const desc = w.description || w.workout_doc || 'Ingen beskrivning tillgänglig.';
-                const sport = detectSportType(name, desc, w.sport_type);
-        
-                let badgeClass = 'bg-slate-800 text-slate-300 border border-slate-700';
-                if (cat === 'Tröskel') badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
-                else if (cat === 'VO2max') badgeClass = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
-                else if (cat === 'FatMax') badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-                else if (cat === 'Fartlek') badgeClass = 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
-                else if (cat === 'Rehab') badgeClass = 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
-        
-                const formattedBlocks = formatWorkoutBlocksHTML(desc);
-        
-                return `
-                <div class="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-2xl transition-all overflow-hidden self-start">
-                    <div class="w-full p-4 flex flex-col gap-2">
-                        <!-- Översta raden: Taggar till vänster, ikoner längst till höger på samma nivå -->
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${badgeClass}">${cat}</span>
-                                <span class="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">${sport}</span>
-                            </div>
-                            
-                            <!-- Mindre ikoner i samma höjd som taggarna -->
-                            <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
-                                <button onclick="openEditWorkoutModal('${w.id}')" title="Redigera pass" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded transition">
-                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                                </button>
-                                <button onclick="openCloneWorkoutModal('${w.id}')" title="Kopiera och redigera" class="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded transition">
-                                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                                </button>
-                                <button onclick="deleteLibraryWorkout('${w.id}')" title="Ta bort pass från biblioteket" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                </button>
-                            </div>
-                        </div>
+    const grid = document.getElementById('workoutLibraryGrid');
+    const searchVal = (document.getElementById('librarySearchInput').value || '').toLowerCase();
+    const activePhil = appState.currentLibraryPhilosophy;
 
-                        <!-- Andra raden: Själva passnamnet och pil-knappen -->
-                        <div class="flex items-center justify-between gap-3">
-                            <button type="button" onclick="toggleLibraryCard('${w.id}')" class="flex-1 text-left focus:outline-none min-w-0">
-                                <h4 class="font-bold text-white text-sm leading-snug truncate">${name}</h4>
-                            </button>
-                            <button type="button" onclick="toggleLibraryCard('${w.id}')" class="p-1.5 bg-slate-800/80 text-slate-400 rounded-lg shrink-0">
-                                <i data-lucide="chevron-down" id="lib-chevron-${w.id}" class="w-4 h-4 transition-transform duration-200"></i>
-                            </button>
-                        </div>
+    let filtered = appState.libraryWorkouts.filter(w => {
+        const name = w.name || '';
+        if (activePhil !== 'Alla' && !name.includes(activePhil)) return false;
+        if (searchVal && !name.toLowerCase().includes(searchVal) && !(w.description || '').toLowerCase().includes(searchVal)) return false;
+        return true;
+    });
+
+    if (!filtered.length) {
+        grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 text-xs">Inga pass matchade ditt filter.</div>';
+        return;
+    }
+
+    const todayStr = toLocalDateString();
+
+    grid.innerHTML = filtered.map(w => {
+        const name = w.name || 'Namnlöst pass';
+        const cat = getPhilosophyCategory(name);
+        const desc = w.description || w.workout_doc || 'Ingen beskrivning tillgänglig.';
+        const sport = detectSportType(name, desc, w.sport_type);
+
+        let badgeClass = 'bg-slate-800 text-slate-300 border border-slate-700';
+        if (cat === 'Tröskel') badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+        else if (cat === 'VO2max') badgeClass = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+        else if (cat === 'FatMax') badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        else if (cat === 'Fartlek') badgeClass = 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
+        else if (cat === 'Rehab') badgeClass = 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
+
+        const muscleMapHtml = renderMuscleMapSvg({ name, description: desc });
+        const formattedBlocks = formatWorkoutBlocksHTML(desc);
+
+        return `
+        <div class="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-2xl transition-all overflow-hidden self-start">
+            <div class="w-full p-4 flex flex-col gap-2">
+                <!-- Översta raden: Taggar till vänster, ikoner längst till höger på samma nivå -->
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${badgeClass}">${cat}</span>
+                        <span class="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">${sport}</span>
                     </div>
-
-                    <!-- Utfällbar detaljvy (oförändrad) -->
-                    <div id="lib-details-${w.id}" class="hidden px-4 pb-4 pt-1 border-t border-slate-800/80 space-y-3 bg-slate-950/30">
-                        <div class="pt-2">
-                            ${formattedBlocks}
-                        </div>
-                        <div class="pt-3 border-t border-slate-800/80 space-y-2">
-                            <div class="flex items-center justify-between text-[11px] text-slate-400">
-                                <span>Välj datum:</span>
-                                <input type="date" id="date-${w.id}" value="${todayStr}" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 font-mono">
-                            </div>
-                            <button onclick="scheduleIntervalsWorkout('${w.id}', '${encodeURIComponent(name)}', '${sport}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Kalender (${sport})
-                            </button>
-                        </div>
+                    
+                    <!-- Mindre ikoner i samma höjd som taggarna -->
+                    <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
+                        <button onclick="openEditWorkoutModal('${w.id}')" title="Redigera pass" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded transition">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="openCloneWorkoutModal('${w.id}')" title="Kopiera och redigera" class="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded transition">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="deleteLibraryWorkout('${w.id}')" title="Ta bort pass från biblioteket" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
                 </div>
-            `;
 
+                <!-- Andra raden: Själva passnamnet och pil-knappen -->
+                <div class="flex items-center justify-between gap-3">
+                    <button type="button" onclick="toggleLibraryCard('${w.id}')" class="flex-1 text-left focus:outline-none min-w-0">
+                        <h4 class="font-bold text-white text-sm leading-snug truncate">${name}</h4>
+                    </button>
+                    <button type="button" onclick="toggleLibraryCard('${w.id}')" class="p-1.5 bg-slate-800/80 text-slate-400 rounded-lg shrink-0">
+                        <i data-lucide="chevron-down" id="lib-chevron-${w.id}" class="w-4 h-4 transition-transform duration-200"></i>
+                    </button>
+                </div>
+            </div>
 
-            }).join('');
-        
-            if (window.lucide) lucide.createIcons();
-        }
+            <!-- Utfällbar detaljvy -->
+            <div id="lib-details-${w.id}" class="hidden px-4 pb-4 pt-1 border-t border-slate-800/80 space-y-3 bg-slate-950/30">
+                <div class="pt-2 space-y-3">
+                    ${muscleMapHtml}
+                    ${formattedBlocks}
+                </div>
+                <div class="pt-3 border-t border-slate-800/80 space-y-2">
+                    <div class="flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Välj datum:</span>
+                        <input type="date" id="date-${w.id}" value="${todayStr}" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 font-mono">
+                    </div>
+                    <button onclick="scheduleIntervalsWorkout('${w.id}', '${encodeURIComponent(name)}', '${sport}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Kalender (${sport})
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+}
 
         async function scheduleIntervalsWorkout(workoutId, encodedName, sportType = 'Run') {
             const workoutName = decodeURIComponent(encodedName);
@@ -2696,92 +2696,98 @@ Main Set 4x
         }
 
         function renderWeeklyScheduleCards() {
-            const container = document.getElementById('weeklyScheduleContainer');
-            const fullDaysList = appState.generatedWeeklySchedule;
-            if (!container || !fullDaysList.length) return;
-        
-            let currentWeekHtml = '<div class="space-y-3"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Innevarande vecka (Från och med idag)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
-            let nextWeekHtml = '<div class="space-y-3 mt-8 pt-6 border-t border-slate-700/80"><h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> Nästa vecka (Framåtblick)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
-        
-            let hasCurrent = false;
-            let hasNext = false;
-        
-            fullDaysList.forEach((item, index) => {
-                const formattedBlocks = formatWorkoutBlocksHTML(item.desc);
-                const sportLabel = item.sportType || detectSportType(item.title, item.desc);
-                const isCombo = (item.title || '').includes('+');
-                const nextDayRunWarning = typeof renderNextDayRunWarningBadge === 'function'
-                    ? renderNextDayRunWarningBadge(fullDaysList, index)
-                    : '';
-        
-                const completedAct = appState.activities.find(act => String(act.start_date_local || '').slice(0, 10) === item.dateStr);
-                const hasCompleted = !!completedAct;
-        
-                const cardBorderClass = hasCompleted ? 'border-2 border-emerald-500 shadow-lg shadow-emerald-950/40 bg-slate-900/90 cursor-pointer hover:border-emerald-400 transition-all' : (item.isExisting ? 'border-indigo-500/40' : 'border-slate-800');
-                const clickActionAttr = hasCompleted ? `onclick="openActivityDetail('${completedAct.id}')"` : '';
-        
-                const cardHtml = `
-                    <div draggable="true"
-                         ondragstart="handleScheduleDragStart(event, ${index})"
-                         ondragover="handleScheduleDragOver(event)"
-                         ondragleave="handleScheduleDragLeave(event)"
-                         ondrop="handleScheduleDrop(event, ${index})"
-                         ondragend="handleScheduleDragEnd(event)"
-                         ${clickActionAttr}
-                         class="bg-slate-900/70 border ${cardBorderClass} rounded-2xl p-3.5 space-y-3 flex flex-col justify-between shadow-sm cursor-grab active:cursor-grabbing transition-all duration-150">
-                        <div>
-                            <div class="flex justify-between items-center text-[11px] text-slate-400 font-bold">
-                                <span class="text-indigo-300 flex items-center gap-1">
-                                    <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-500"></i>
-                                    ${item.dayName}
-                                </span>
-                                <span class="font-mono">${item.dateStr.slice(5)}</span>
-                            </div>
-                            <h4 class="font-bold text-white text-xs mt-1 leading-snug">${item.title}</h4>
-                            <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                                <span class="px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.tagClass}">${item.tag} ${item.isExisting ? '(Bokat)' : ''}</span>
-                                ${hasCompleted ? '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> Utfört (Klicka)</span>' : ''}
-                                ${isCombo && !item.isExisting ? '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Delas i 2 Garmin-pass</span>' : `<span class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-slate-800 text-slate-300">${sportLabel}</span>`}
-                                ${nextDayRunWarning}
-                            </div>
-                        </div>
-        
-                        <div class="max-h-44 overflow-y-auto pr-1">
-                            ${formattedBlocks}
-                        </div>
-        
-                        <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between gap-2" ${hasCompleted ? 'onclick="event.stopPropagation()"' : ''}>
-                            ${item.isExisting ? `
-                                <button onclick="deleteScheduledEvent('${item.eventId}')" class="flex-1 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-semibold rounded-lg border border-rose-500/20 transition flex items-center justify-center gap-1">
-                                    <i data-lucide="trash-2" class="w-3 h-3"></i> Ta bort
-                                </button>
-                            ` : `
-                                <button onclick="scheduleSingleItem(${index})" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-semibold rounded-lg transition flex items-center justify-center gap-1">
-                                    <i data-lucide="send" class="w-3 h-3"></i> Boka
-                                </button>
-                            `}
-                            <button onclick="openSwapModal(${index})" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold rounded-lg border border-slate-700 transition">
-                                Byt ut
-                            </button>
-                        </div>
+    const container = document.getElementById('weeklyScheduleContainer');
+    const fullDaysList = appState.generatedWeeklySchedule;
+    if (!container || !fullDaysList.length) return;
+
+    let currentWeekHtml = '<div class="space-y-3"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Innevarande vecka (Från och med idag)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
+    let nextWeekHtml = '<div class="space-y-3 mt-8 pt-6 border-t border-slate-700/80"><h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="calendar-range" class="w-3.5 h-3.5"></i> Nästa vecka (Framåtblick)</h4><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">';
+
+    let hasCurrent = false;
+    let hasNext = false;
+
+    fullDaysList.forEach((item, index) => {
+        const formattedBlocks = formatWorkoutBlocksHTML(item.desc);
+        const compactMuscleMap = typeof renderMuscleMapSvg === 'function'
+            ? renderMuscleMapSvg({ name: item.title, description: item.desc }, { compact: true })
+            : '';
+        const sportLabel = item.sportType || detectSportType(item.title, item.desc);
+        const isCombo = (item.title || '').includes('+');
+        const nextDayRunWarning = typeof renderNextDayRunWarningBadge === 'function'
+            ? renderNextDayRunWarningBadge(fullDaysList, index)
+            : '';
+
+        const completedAct = appState.activities.find(act => String(act.start_date_local || '').slice(0, 10) === item.dateStr);
+        const hasCompleted = !!completedAct;
+
+        const cardBorderClass = hasCompleted ? 'border-2 border-emerald-500 shadow-lg shadow-emerald-950/40 bg-slate-900/90 cursor-pointer hover:border-emerald-400 transition-all' : (item.isExisting ? 'border-indigo-500/40' : 'border-slate-800');
+        const clickActionAttr = hasCompleted ? `onclick="openActivityDetail('${completedAct.id}')"` : '';
+
+        const cardHtml = `
+            <div draggable="true"
+                 ondragstart="handleScheduleDragStart(event, ${index})"
+                 ondragover="handleScheduleDragOver(event)"
+                 ondragleave="handleScheduleDragLeave(event)"
+                 ondrop="handleScheduleDrop(event, ${index})"
+                 ondragend="handleScheduleDragEnd(event)"
+                 ${clickActionAttr}
+                 class="bg-slate-900/70 border ${cardBorderClass} rounded-2xl p-3.5 space-y-3 flex flex-col justify-between shadow-sm cursor-grab active:cursor-grabbing transition-all duration-150">
+                <div>
+                    <div class="flex justify-between items-center text-[11px] text-slate-400 font-bold">
+                        <span class="text-indigo-300 flex items-center gap-1">
+                            <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-500"></i>
+                            ${item.dayName}
+                        </span>
+                        <span class="font-mono">${item.dateStr.slice(5)}</span>
                     </div>
-                `;
-        
-                if (item.isNextWeek) {
-                    nextWeekHtml += cardHtml;
-                    hasNext = true;
-                } else {
-                    currentWeekHtml += cardHtml;
-                    hasCurrent = true;
-                }
-            });
-        
-            currentWeekHtml += '</div></div>';
-            nextWeekHtml += '</div></div>';
-        
-            container.innerHTML = (hasCurrent ? currentWeekHtml : '') + (hasNext ? nextWeekHtml : '');
-            if (window.lucide) lucide.createIcons();
+                    <h4 class="font-bold text-white text-xs mt-1 leading-snug">${item.title}</h4>
+                    <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <span class="px-2 py-0.5 text-[9px] font-semibold rounded-full ${item.tagClass}">${item.tag} ${item.isExisting ? '(Bokat)' : ''}</span>
+                        ${hasCompleted ? '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> Utfört (Klicka)</span>' : ''}
+                        ${isCombo && !item.isExisting ? '<span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Delas i 2 Garmin-pass</span>' : `<span class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-slate-800 text-slate-300">${sportLabel}</span>`}
+                        ${nextDayRunWarning}
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="max-h-44 overflow-y-auto pr-1">
+                        ${formattedBlocks}
+                    </div>
+                    ${compactMuscleMap}
+                </div>
+
+                <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between gap-2" ${hasCompleted ? 'onclick="event.stopPropagation()"' : ''}>
+                    ${item.isExisting ? `
+                        <button onclick="deleteScheduledEvent('${item.eventId}')" class="flex-1 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-[10px] font-semibold rounded-lg border border-rose-500/20 transition flex items-center justify-center gap-1">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> Ta bort
+                        </button>
+                    ` : `
+                        <button onclick="scheduleSingleItem(${index})" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-semibold rounded-lg transition flex items-center justify-center gap-1">
+                            <i data-lucide="send" class="w-3 h-3"></i> Boka
+                        </button>
+                    `}
+                    <button onclick="openSwapModal(${index})" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold rounded-lg border border-slate-700 transition">
+                        Byt ut
+                    </button>
+                </div>
+            </div>
+        `;
+
+        if (item.isNextWeek) {
+            nextWeekHtml += cardHtml;
+            hasNext = true;
+        } else {
+            currentWeekHtml += cardHtml;
+            hasCurrent = true;
         }
+    });
+
+    currentWeekHtml += '</div></div>';
+    nextWeekHtml += '</div></div>';
+
+    container.innerHTML = (hasCurrent ? currentWeekHtml : '') + (hasNext ? nextWeekHtml : '');
+    if (window.lucide) lucide.createIcons();
+}
 
         function handleScheduleDragStart(event, index) {
             appState.draggedScheduleIndex = index;
@@ -4815,8 +4821,10 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             return { primary: [...primary], secondary: [...secondary] };
         }
         
-        function renderMuscleMapSvg(workout) {
+        function renderMuscleMapSvg(workout, { compact = false } = {}) {
             const { primary, secondary } = inferMusclesFromWorkout(workout);
+            if (!primary.length && !secondary.length) return '';
+        
             const inactiveFill = '#1e293b';
             const primaryFill = '#f59e0b';   // Primär
             const secondaryFill = '#facc15'; // Sekundär
@@ -4827,85 +4835,90 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
                 return inactiveFill;
             };
         
+            const svgSizeClass = compact ? 'w-14 h-24' : 'w-32 h-52';
+            const boxClass = compact
+                ? 'rounded-lg bg-slate-950/60 border border-slate-800/90 px-2.5 py-1.5 text-slate-200'
+                : 'rounded-xl bg-slate-900/90 border border-slate-800 p-4 text-slate-200';
+            const gridGapClass = compact ? 'gap-2 py-0.5' : 'gap-4 py-1';
+        
+            const frontSvg = `
+                <svg viewBox="0 0 140 240" class="${svgSizeClass}" aria-label="Framsida muskler">
+                    <circle cx="70" cy="22" r="12" fill="#334155" />
+                    <rect x="64" y="34" width="12" height="10" rx="3" fill="#334155" />
+                    <ellipse cx="44" cy="54" rx="9" ry="12" fill="${getFill('upper_back')}" />
+                    <ellipse cx="96" cy="54" rx="9" ry="12" fill="${getFill('upper_back')}" />
+                    <rect x="33" y="64" width="11" height="36" rx="5" fill="#334155" />
+                    <rect x="96" y="64" width="11" height="36" rx="5" fill="#334155" />
+                    <path d="M50 46 Q70 52 90 46 L86 72 L54 72 Z" fill="#334155" />
+                    <rect x="58" y="74" width="24" height="38" rx="6" fill="${getFill('abs')}" />
+                    <path d="M50 72 L57 74 L57 110 L51 106 Z" fill="${getFill('obliques')}" />
+                    <path d="M90 72 L83 74 L83 110 L89 106 Z" fill="${getFill('obliques')}" />
+                    <ellipse cx="49" cy="118" rx="6" ry="10" fill="${getFill('hip_abductors')}" />
+                    <ellipse cx="91" cy="118" rx="6" ry="10" fill="${getFill('hip_abductors')}" />
+                    <rect x="52" y="114" width="15" height="54" rx="7" fill="${getFill('quads')}" />
+                    <rect x="73" y="114" width="15" height="54" rx="7" fill="${getFill('quads')}" />
+                    <rect x="54" y="174" width="12" height="48" rx="6" fill="${getFill('calves')}" />
+                    <rect x="74" y="174" width="12" height="48" rx="6" fill="${getFill('calves')}" />
+                </svg>
+            `;
+        
+            const backSvg = `
+                <svg viewBox="0 0 140 240" class="${svgSizeClass}" aria-label="Baksida muskler">
+                    <circle cx="70" cy="22" r="12" fill="#334155" />
+                    <rect x="64" y="34" width="12" height="10" rx="3" fill="#334155" />
+                    <path d="M48 48 L92 48 L84 96 L56 96 Z" fill="${getFill('lats')}" />
+                    <path d="M52 48 L88 48 L80 72 L60 72 Z" fill="${getFill('upper_back')}" />
+                    <rect x="58" y="96" width="24" height="16" rx="4" fill="${getFill('lower_back')}" />
+                    <rect x="33" y="64" width="11" height="36" rx="5" fill="#334155" />
+                    <rect x="96" y="64" width="11" height="36" rx="5" fill="#334155" />
+                    <ellipse cx="59" cy="122" rx="12" ry="13" fill="${getFill('glutes')}" />
+                    <ellipse cx="81" cy="122" rx="12" ry="13" fill="${getFill('glutes')}" />
+                    <rect x="52" y="136" width="15" height="34" rx="7" fill="${getFill('hamstrings')}" />
+                    <rect x="73" y="136" width="15" height="34" rx="7" fill="${getFill('hamstrings')}" />
+                    <ellipse cx="60" cy="192" rx="7" ry="22" fill="${getFill('calves')}" />
+                    <ellipse cx="80" cy="192" rx="7" ry="22" fill="${getFill('calves')}" />
+                </svg>
+            `;
+        
+            if (compact) {
+                return `
+                    <div class="${boxClass}">
+                        <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                            <span class="font-semibold text-slate-300">Muskler</span>
+                            <span class="flex items-center gap-2">
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background:${primaryFill}"></span>Primär</span>
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background:${secondaryFill}"></span>Sekundär</span>
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-around ${gridGapClass}">
+                            ${frontSvg}
+                            ${backSvg}
+                        </div>
+                    </div>
+                `;
+            }
+        
             return `
-            <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-4 text-slate-200">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Belastade muskelgrupper</span>
-                    <div class="flex items-center gap-3 text-[11px]">
-                        <span class="flex items-center gap-1.5">
-                            <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${primaryFill}"></span>
-                            Primär
-                        </span>
-                        <span class="flex items-center gap-1.5">
-                            <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${secondaryFill}"></span>
-                            Sekundär
-                        </span>
+                <div class="${boxClass}">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Belastade muskelgrupper</span>
+                        <div class="flex items-center gap-3 text-[11px]">
+                            <span class="flex items-center gap-1.5">
+                                <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${primaryFill}"></span>
+                                Primär
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${secondaryFill}"></span>
+                                Sekundär
+                            </span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 ${gridGapClass} items-center justify-items-center">
+                        ${frontSvg}
+                        ${backSvg}
                     </div>
                 </div>
-        
-                <div class="grid grid-cols-2 gap-4 items-center justify-items-center">
-                    <!-- FRAMSIDA -->
-                    <svg viewBox="0 0 140 240" class="w-32 h-52" aria-label="Framsida muskler">
-                        <!-- Huvud & hals -->
-                        <circle cx="70" cy="22" r="12" fill="#334155" />
-                        <rect x="64" y="34" width="12" height="10" rx="3" fill="#334155" />
-        
-                        <!-- Axlar & armar -->
-                        <ellipse cx="44" cy="54" rx="9" ry="12" fill="${getFill('upper_back')}" />
-                        <ellipse cx="96" cy="54" rx="9" ry="12" fill="${getFill('upper_back')}" />
-                        <rect x="33" y="64" width="11" height="36" rx="5" fill="#334155" />
-                        <rect x="96" y="64" width="11" height="36" rx="5" fill="#334155" />
-        
-                        <!-- Bröst & mage (abs + obliques) -->
-                        <path d="M50 46 Q70 52 90 46 L86 72 L54 72 Z" fill="#334155" />
-                        <rect x="58" y="74" width="24" height="38" rx="6" fill="${getFill('abs')}" />
-                        <path d="M50 72 L57 74 L57 110 L51 106 Z" fill="${getFill('obliques')}" />
-                        <path d="M90 72 L83 74 L83 110 L89 106 Z" fill="${getFill('obliques')}" />
-        
-                        <!-- Höftabduktorer / utsida höft -->
-                        <ellipse cx="49" cy="118" rx="6" ry="10" fill="${getFill('hip_abductors')}" />
-                        <ellipse cx="91" cy="118" rx="6" ry="10" fill="${getFill('hip_abductors')}" />
-        
-                        <!-- Quads (framsida lår) -->
-                        <rect x="52" y="114" width="15" height="54" rx="7" fill="${getFill('quads')}" />
-                        <rect x="73" y="114" width="15" height="54" rx="7" fill="${getFill('quads')}" />
-        
-                        <!-- Underben / vader framsida -->
-                        <rect x="54" y="174" width="12" height="48" rx="6" fill="${getFill('calves')}" />
-                        <rect x="74" y="174" width="12" height="48" rx="6" fill="${getFill('calves')}" />
-                    </svg>
-        
-                    <!-- BAKSIDA -->
-                    <svg viewBox="0 0 140 240" class="w-32 h-52" aria-label="Baksida muskler">
-                        <!-- Huvud & hals -->
-                        <circle cx="70" cy="22" r="12" fill="#334155" />
-                        <rect x="64" y="34" width="12" height="10" rx="3" fill="#334155" />
-        
-                        <!-- Övre rygg & lats -->
-                        <path d="M48 48 L92 48 L84 96 L56 96 Z" fill="${getFill('lats')}" />
-                        <path d="M52 48 L88 48 L80 72 L60 72 Z" fill="${getFill('upper_back')}" />
-        
-                        <!-- Ländrygg -->
-                        <rect x="58" y="96" width="24" height="16" rx="4" fill="${getFill('lower_back')}" />
-        
-                        <!-- Armar -->
-                        <rect x="33" y="64" width="11" height="36" rx="5" fill="#334155" />
-                        <rect x="96" y="64" width="11" height="36" rx="5" fill="#334155" />
-        
-                        <!-- Glutes (säte) -->
-                        <ellipse cx="59" cy="122" rx="12" ry="13" fill="${getFill('glutes')}" />
-                        <ellipse cx="81" cy="122" rx="12" ry="13" fill="${getFill('glutes')}" />
-        
-                        <!-- Hamstrings (baksida lår) -->
-                        <rect x="52" y="136" width="15" height="34" rx="7" fill="${getFill('hamstrings')}" />
-                        <rect x="73" y="136" width="15" height="34" rx="7" fill="${getFill('hamstrings')}" />
-        
-                        <!-- Vader (calves) -->
-                        <ellipse cx="60" cy="192" rx="7" ry="22" fill="${getFill('calves')}" />
-                        <ellipse cx="80" cy="192" rx="7" ry="22" fill="${getFill('calves')}" />
-                    </svg>
-                </div>
-            </div>`;
+            `;
         }
 
         function isHeavyLowerBodyWorkout(card) {
