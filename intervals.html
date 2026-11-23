@@ -2161,7 +2161,6 @@ Main Set 4x
         async function generateAiWeeklySchedule() {
             const container = document.getElementById('weeklyScheduleContainer');
             const sendWholeBtn = document.getElementById('sendWholeScheduleBtn');
-            const planContext = buildWeeklyCoachPlanContext(analysis, maxPain, isRedLight);
         
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
@@ -2213,6 +2212,8 @@ Main Set 4x
             const w = appState.wellnessMetrics;
             const isRedLight = (maxPain >= 3 || analysis.rhrDelta >= 4 || (w && w.sleepHours !== null && w.sleepHours < 5.5));
             const canTestRun = (!isRedLight && maxPain <= 1 && !analysis.biomechWarning);
+            const planContext = buildWeeklyCoachPlanContext(analysis, maxPain, isRedLight);
+            appState.lastWeeklyPlanContext = planContext;
         
             const usedTitles = new Set(scheduledEvents.map(ev => (ev.name || '').toLowerCase().trim()));
             const longRunUsedByWeek = new Map();
@@ -3030,6 +3031,20 @@ function renderWeeklyCoachAdviceBanner(planContext) {
 
     currentWeekHtml += '</div></div>';
     nextWeekHtml += '</div></div>';
+
+    const activePlanContext = appState.lastWeeklyPlanContext || buildWeeklyCoachPlanContext(
+        appState.coachAnalysis || runCoachGenieAnalysis(),
+        Math.max(
+            parseInt(document.getElementById('inputCalf')?.value || '0', 10),
+            parseInt(document.getElementById('inputKnee')?.value || '0', 10),
+            parseInt(document.getElementById('inputHip')?.value || '0', 10),
+            parseInt(document.getElementById('inputFoot')?.value || '0', 10)
+        ),
+        false
+    );
+    const bannerHtml = typeof renderWeeklyCoachAdviceBanner === 'function'
+        ? renderWeeklyCoachAdviceBanner(activePlanContext)
+        : '';
 
     container.innerHTML = bannerHtml + (hasCurrent ? currentWeekHtml : '') + (hasNext ? nextWeekHtml : '');
     if (window.lucide) lucide.createIcons();
