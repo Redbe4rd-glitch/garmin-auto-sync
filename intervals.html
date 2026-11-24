@@ -814,6 +814,27 @@ Main Set 4x
                 .trim();
         }
 
+        // Passtexten (Intervals-syntax) ligger i "description". workout_doc är ett objekt och får aldrig användas som text.
+        function getWorkoutText(w) {
+            return (w && typeof w.description === 'string') ? w.description : '';
+        }
+
+        // Intervals.icu kopierar INTE strukturen från workout_id när ett event skapas,
+        // därför skickas passtexten alltid med som description (annars blir passet tomt).
+        function buildEventPayload({ dateStr, name, sportType, description, workoutId = null, category = 'WORKOUT' }) {
+            let desc = normalizeWorkoutSyntax(description || '');
+            if (/^Ingen (beskrivning|passstruktur)/i.test(desc) || desc === '[object Object]') desc = '';
+            const payload = {
+                category: category,
+                start_date_local: `${dateStr}T00:00:00`,
+                type: sportType,
+                name: name
+            };
+            if (workoutId) payload.workout_id = workoutId;
+            if (desc) payload.description = desc;
+            return payload;
+        }
+
         function splitComboWorkout(item) {
             const title = (item.title || '').trim();
             const desc = normalizeWorkoutSyntax(item.desc || '');
@@ -2014,7 +2035,7 @@ Main Set 4x
             grid.innerHTML = filtered.map(w => {
                 const name = w.name || 'Namnlöst pass';
                 const cat = getPhilosophyCategory(name);
-                const desc = w.description || w.workout_doc || 'Ingen beskrivning tillgänglig.';
+                const desc = w.description || 'Ingen beskrivning tillgänglig.';
                 const sport = detectSportType(name, desc, w.type || w.sport_type);
                 
                 let badgeClass = 'bg-slate-800 text-slate-300 border border-slate-700';
@@ -2105,13 +2126,13 @@ Main Set 4x
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
-            const payload = {
-                workout_id: workoutId,
-                category: 'WORKOUT',
-                start_date_local: `${targetDate}T00:00:00`,
-                type: resolvedSport,
-                name: workoutName
-            };
+            const payload = buildEventPayload({
+                dateStr: targetDate,
+                name: workoutName,
+                sportType: resolvedSport,
+                description: getWorkoutText(libWorkout),
+                workoutId: workoutId
+            });
 
             try {
                 const response = await fetch(url, {
@@ -2135,7 +2156,10 @@ Main Set 4x
         async function scheduleIntervalsWorkoutWithCategory(workoutId, encodedName, category = 'WORKOUT', sportType = 'Run') {
             const workoutName = decodeURIComponent(encodedName);
             const targetDate = toLocalDateString();
-            const resolvedSport = detectSportType(workoutName, '', sportType);
+            const libWorkout = (appState.libraryWorkouts || []).find(w => String(w.id) === String(workoutId));
+            const resolvedSport = (libWorkout && libWorkout.type)
+                ? libWorkout.type
+                : detectSportType(workoutName, getWorkoutText(libWorkout), sportType);
 
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
@@ -2147,13 +2171,14 @@ Main Set 4x
 
             const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
             const url = `https://intervals.icu/api/v1/athlete/${athleteId}/events`;
-            const payload = {
-                workout_id: workoutId,
-                start_date_local: `${targetDate}T00:00:00`,
-                type: resolvedSport,
-                category: category,
-                name: workoutName
-            };
+            const payload = buildEventPayload({
+                dateStr: targetDate,
+                name: workoutName,
+                sportType: resolvedSport,
+                description: getWorkoutText(libWorkout),
+                workoutId: workoutId,
+                category: category
+            });
 
             try {
                 const response = await fetch(url, {
@@ -2374,7 +2399,7 @@ Main Set 4x
             }
 
             const name = workout.name || 'Namnlöst pass';
-            const desc = workout.description || workout.workout_doc || 'Ingen beskrivning angiven i biblioteket.';
+            const desc = workout.description || 'Ingen beskrivning angiven i biblioteket.';
             const sportType = detectSportType(name, desc, workout.type || workout.sport_type);
             const cat = getPhilosophyCategory(name);
             let tag = fallbackTag || `[${sportType}]`;
@@ -2571,7 +2596,7 @@ Main Set 4x
         
             const hasTag = (w, tag) => (w.name || '').toLowerCase().includes(tag.toLowerCase());
             const hasWord = (w, words) => words.some(word => (w.name || '').toLowerCase().includes(word));
-            const isRunWorkout = (w) => detectSportType(w.name || '', w.description || w.workout_doc || '', w.sport_type || w.type) === 'Run';
+            const isRunWorkout = (w) => detectSportType(w.name || '', w.description || '', w.sport_type || w.type) === 'Run';
         
             const isLongRun = (w) => {
                 if (!isRunWorkout(w)) return false;
@@ -2835,7 +2860,7 @@ function buildWeeklyCoachPlanContext(analysis = {}, maxPain = 0, isRedLight = fa
 
 function scoreLibraryCandidate(workout, dayContext = {}, planContext = {}) {
     const name = String(workout?.name || '');
-    const desc = String(workout?.description || workout?.workout_doc || '');
+    const desc = String(workout?.description || '');
     const lower = `${name} ${desc}`.toLowerCase();
     const sport = detectSportType(name, desc, workout?.sport_type || workout?.type);
     const intensity = classifyWorkoutIntensity({ name, description: desc });
@@ -3201,21 +3226,13 @@ function renderWeeklyCoachAdviceBanner(planContext) {
                         : null;
                     const finalSport = (libWorkout && libWorkout.type) ? libWorkout.type : part.sportType;
                     
-                    const payload = part.workoutId
-                        ? {
-                            workout_id: part.workoutId,
-                            category: 'WORKOUT',
-                            start_date_local: `${item.dateStr}T00:00:00`,
-                            type: finalSport,
-                            name: part.title
-                        }
-                        : {
-                            category: 'WORKOUT',
-                            start_date_local: `${item.dateStr}T00:00:00`,
-                            type: finalSport,
-                            name: part.title,
-                            description: normalizeWorkoutSyntax(part.desc)
-                        };
+                    const payload = buildEventPayload({
+                        dateStr: item.dateStr,
+                        name: part.title,
+                        sportType: finalSport,
+                        description: getWorkoutText(libWorkout) || part.desc,
+                        workoutId: part.workoutId || null
+                    });
 
                     const res = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events`, {
                         method: 'POST',
@@ -3321,7 +3338,7 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
         
             container.innerHTML = filtered.map(w => {
                 const name = w.name || 'Namnlöst pass';
-                const desc = w.description || w.workout_doc || 'Ingen beskrivning.';
+                const desc = w.description || 'Ingen beskrivning.';
                 const sport = detectSportType(name, desc, w.type || w.sport_type);
                 
                 return `
@@ -3403,21 +3420,13 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
                         : null;
                     const finalSport = (libWorkout && libWorkout.type) ? libWorkout.type : part.sportType;
                     
-                    const payload = part.workoutId
-                        ? {
-                            workout_id: part.workoutId,
-                            category: 'WORKOUT',
-                            start_date_local: `${item.dateStr}T00:00:00`,
-                            type: finalSport,
-                            name: part.title
-                        }
-                        : {
-                            category: 'WORKOUT',
-                            start_date_local: `${item.dateStr}T00:00:00`,
-                            type: finalSport,
-                            name: part.title,
-                            description: normalizeWorkoutSyntax(part.desc)
-                        };
+                    const payload = buildEventPayload({
+                        dateStr: item.dateStr,
+                        name: part.title,
+                        sportType: finalSport,
+                        description: getWorkoutText(libWorkout) || part.desc,
+                        workoutId: part.workoutId || null
+                    });
             
                     try {
                         const response = await fetch(url, {
@@ -4649,7 +4658,7 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             const modalEl = document.getElementById('editWorkoutModal');
         
             const baseName = workout.name || 'Namnlöst pass';
-            const rawDesc = workout.description ?? workout.workout_doc ?? '';
+            const rawDesc = workout.description ?? '';
             const detectedSport = detectSportType(baseName, rawDesc, workout.type || workout.sport_type);
         
             if (nameEl) nameEl.value = `${baseName} (Kopia)`;
@@ -4678,7 +4687,7 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             const modalEl = document.getElementById('editWorkoutModal');
         
             const rawName = workout.name || '';
-            const rawDesc = workout.description ?? workout.workout_doc ?? '';
+            const rawDesc = workout.description ?? '';
             const detectedSport = detectSportType(rawName, rawDesc, workout.type || workout.sport_type);
         
             if (nameEl) nameEl.value = rawName;
