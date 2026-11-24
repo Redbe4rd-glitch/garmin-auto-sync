@@ -717,6 +717,7 @@ Main Set 4x
                         <option value="WeightTraining">WeightTraining (Styrka/Rehab/Yoga)</option>
                         <option value="Ride">Ride (Cykel)</option>
                         <option value="Elliptical">Elliptical (Crosstrainer)</option>
+                        <option value="Rowing">Rowing (Rodd)</option>
                         <option value="Swim">Swim (Simning)</option>
                         <option value="Walk">Walk (Promenad)</option>
                     </select>
@@ -766,31 +767,40 @@ Main Set 4x
 
         function detectSportType(title = '', desc = '', explicitType = '') {
             const explicit = (explicitType || '').trim();
-            if (explicit && ['Run', 'Elliptical', 'Ride', 'WeightTraining', 'Swim', 'Walk', 'Rowing'].includes(explicit)) {
+            const supported = ['Run', 'Elliptical', 'Ride', 'WeightTraining', 'Swim', 'Walk', 'Rowing'];
+            if (explicit && supported.includes(explicit)) {
                 return explicit;
             }
-            const text = `${title} ${desc}`.toLowerCase();
-
-            if (text.includes('crosstrainer') || text.includes('elliptical') || text.includes('cross trainer') || / cross /.test(text)) {
-                return 'Elliptical';
-            }
-            if (text.includes('cykel') || text.includes('spinning') || text.includes('bike') || text.includes('ride') || text.includes('trainer')) {
-                return 'Ride';
-            }
-            if (text.includes('rodd') || text.includes('rowing')) {
-                return 'Rowing';
-            }
-            if (text.includes('simning') || text.includes('swim') || text.includes('aqua')) {
-                return 'Swim';
-            }
-            if (text.includes('styrka') || text.includes('tåhäv') || text.includes('tahav') || text.includes('gym') || text.includes('rehab') || text.includes('rörlighet') || text.includes('yoga') || text.includes('core') || text.includes('säte')) {
+        
+            // Gissa i första hand på passets titel så en enskild maskinövning i beskrivningen inte skriver över sporten
+            const titleLower = String(title || '').toLowerCase();
+            const fullText = `${title} ${desc}`.toLowerCase();
+        
+            if (titleLower.includes('[styrka]') || titleLower.includes('[rehab')) {
+                if (titleLower.includes('promenad') || titleLower.includes('walk')) return 'Walk';
+                if (titleLower.includes('cykel') || titleLower.includes('bike') || titleLower.includes('ride')) return 'Ride';
+                if (titleLower.includes('crosstrainer') || titleLower.includes('elliptical')) return 'Elliptical';
+                if (titleLower.includes('rodd') || titleLower.includes('rowing')) return 'Rowing';
                 return 'WeightTraining';
             }
-            if (text.includes('powerwalk') || text.includes('hiking') || text.includes('promenad')) {
+        
+            if (fullText.includes('powerwalk') || fullText.includes('hiking') || fullText.includes('promenad')) {
                 return 'Walk';
             }
-            if (text.includes('löpning') || text.includes('jogg') || text.includes('tröskel') || text.includes('fartlek') || text.includes('vo2') || text.includes('fatmax') || text.includes('return-to-run') || text.includes('tusing') || text.includes('intervall')) {
-                return 'Run';
+            if (fullText.includes('crosstrainer') || fullText.includes('elliptical') || fullText.includes('cross trainer') || / cross /.test(fullText)) {
+                return 'Elliptical';
+            }
+            if (fullText.includes('cykel') || fullText.includes('spinning') || fullText.includes('bike') || fullText.includes('ride') || fullText.includes('trainer')) {
+                return 'Ride';
+            }
+            if (fullText.includes('rodd') || fullText.includes('rowing')) {
+                return 'Rowing';
+            }
+            if (fullText.includes('simning') || fullText.includes('swim') || fullText.includes('aqua')) {
+                return 'Swim';
+            }
+            if (fullText.includes('styrka') || fullText.includes('tåhäv') || fullText.includes('tahav') || fullText.includes('gym') || fullText.includes('rehab') || fullText.includes('rörlighet') || fullText.includes('yoga') || fullText.includes('core') || fullText.includes('säte')) {
+                return 'WeightTraining';
             }
             return 'Run';
         }
@@ -1976,103 +1986,114 @@ Main Set 4x
         }
         
         function renderLibraryGrid() {
-    const grid = document.getElementById('workoutLibraryGrid');
-    const searchVal = (document.getElementById('librarySearchInput').value || '').toLowerCase();
-    const activePhil = appState.currentLibraryPhilosophy;
-
-    let filtered = appState.libraryWorkouts.filter(w => {
-        const name = w.name || '';
-        if (activePhil !== 'Alla' && !name.includes(activePhil)) return false;
-        if (searchVal && !name.toLowerCase().includes(searchVal) && !(w.description || '').toLowerCase().includes(searchVal)) return false;
-        return true;
-    });
-
-    if (!filtered.length) {
-        grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 text-xs">Inga pass matchade ditt filter.</div>';
-        return;
-    }
-
-    const todayStr = toLocalDateString();
-
-    grid.innerHTML = filtered.map(w => {
-        const name = w.name || 'Namnlöst pass';
-        const cat = getPhilosophyCategory(name);
-        const desc = w.description || w.workout_doc || 'Ingen beskrivning tillgänglig.';
-        const sport = detectSportType(name, desc, w.sport_type);
-
-        let badgeClass = 'bg-slate-800 text-slate-300 border border-slate-700';
-        if (cat === 'Tröskel') badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
-        else if (cat === 'VO2max') badgeClass = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
-        else if (cat === 'FatMax') badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-        else if (cat === 'Fartlek') badgeClass = 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
-        else if (cat === 'Rehab') badgeClass = 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
-
-        const muscleMapHtml = renderMuscleMapSvg({ name, description: desc });
-        const formattedBlocks = formatWorkoutBlocksHTML(desc);
-
-        return `
-        <div class="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-2xl transition-all overflow-hidden self-start">
-            <div class="w-full p-4 flex flex-col gap-2">
-                <!-- Översta raden: Taggar till vänster, ikoner längst till höger på samma nivå -->
-                <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${badgeClass}">${cat}</span>
-                        <span class="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">${sport}</span>
+            const grid = document.getElementById('workoutLibraryGrid');
+            const searchVal = (document.getElementById('librarySearchInput').value || '').toLowerCase();
+            const activePhil = appState.currentLibraryPhilosophy;
+        
+            let filtered = appState.libraryWorkouts.filter(w => {
+                const name = w.name || '';
+                const lowerName = name.toLowerCase();
+                if (activePhil !== 'Alla') {
+                    if (activePhil === '[Rehab]') {
+                        if (!lowerName.includes('[rehab')) return false;
+                    } else if (!lowerName.includes(activePhil.toLowerCase())) {
+                        return false;
+                    }
+                }
+                if (searchVal && !lowerName.includes(searchVal) && !(w.description || '').toLowerCase().includes(searchVal)) return false;
+                return true;
+            });
+        
+            if (!filtered.length) {
+                grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500 text-xs">Inga pass matchade ditt filter.</div>';
+                return;
+            }
+        
+            const todayStr = toLocalDateString();
+        
+            grid.innerHTML = filtered.map(w => {
+                const name = w.name || 'Namnlöst pass';
+                const cat = getPhilosophyCategory(name);
+                const desc = w.description || w.workout_doc || 'Ingen beskrivning tillgänglig.';
+                const sport = detectSportType(name, desc, w.type || w.sport_type);
+                
+                let badgeClass = 'bg-slate-800 text-slate-300 border border-slate-700';
+                if (cat === 'Tröskel') badgeClass = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+                else if (cat === 'VO2max') badgeClass = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                else if (cat === 'FatMax') badgeClass = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                else if (cat === 'Fartlek') badgeClass = 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20';
+                else if (cat === 'Rehab') badgeClass = 'bg-sky-500/10 text-sky-400 border border-sky-500/20';
+        
+                const muscleMapHtml = renderMuscleMapSvg({ name, description: desc });
+                const formattedBlocks = formatWorkoutBlocksHTML(desc);
+        
+                return `
+                <div class="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-2xl transition-all overflow-hidden self-start">
+                    <div class="w-full p-4 flex flex-col gap-2">
+                        <!-- Översta raden: Taggar till vänster, ikoner längst till höger på samma nivå -->
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${badgeClass}">${cat}</span>
+                                <span class="text-[10px] font-mono text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">${sport}</span>
+                            </div>
+                            
+                            <!-- Mindre ikoner i samma höjd som taggarna -->
+                            <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
+                                <button onclick="openEditWorkoutModal('${w.id}')" title="Redigera pass" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded transition">
+                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="openCloneWorkoutModal('${w.id}')" title="Kopiera och redigera" class="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded transition">
+                                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="deleteLibraryWorkout('${w.id}')" title="Ta bort pass från biblioteket" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+        
+                        <!-- Andra raden: Själva passnamnet och pil-knappen -->
+                        <div class="flex items-center justify-between gap-3">
+                            <button type="button" onclick="toggleLibraryCard('${w.id}')" class="flex-1 text-left focus:outline-none min-w-0">
+                                <h4 class="font-bold text-white text-sm leading-snug truncate">${name}</h4>
+                            </button>
+                            <button type="button" onclick="toggleLibraryCard('${w.id}')" class="p-1.5 bg-slate-800/80 text-slate-400 rounded-lg shrink-0">
+                                <i data-lucide="chevron-down" id="lib-chevron-${w.id}" class="w-4 h-4 transition-transform duration-200"></i>
+                            </button>
+                        </div>
                     </div>
-                    
-                    <!-- Mindre ikoner i samma höjd som taggarna -->
-                    <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
-                        <button onclick="openEditWorkoutModal('${w.id}')" title="Redigera pass" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded transition">
-                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                        </button>
-                        <button onclick="openCloneWorkoutModal('${w.id}')" title="Kopiera och redigera" class="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded transition">
-                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                        </button>
-                        <button onclick="deleteLibraryWorkout('${w.id}')" title="Ta bort pass från biblioteket" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition">
-                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        </button>
+        
+                    <!-- Utfällbar detaljvy -->
+                    <div id="lib-details-${w.id}" class="hidden px-4 pb-4 pt-1 border-t border-slate-800/80 space-y-3 bg-slate-950/30">
+                        <div class="pt-2 space-y-3">
+                            ${muscleMapHtml}
+                            ${formattedBlocks}
+                        </div>
+                        <div class="pt-3 border-t border-slate-800/80 space-y-2">
+                            <div class="flex items-center justify-between text-[11px] text-slate-400">
+                                <span>Välj datum:</span>
+                                <input type="date" id="date-${w.id}" value="${todayStr}" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 font-mono">
+                            </div>
+                            <button onclick="scheduleIntervalsWorkout('${w.id}', '${encodeURIComponent(name)}', '${sport}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Kalender (${sport})
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Andra raden: Själva passnamnet och pil-knappen -->
-                <div class="flex items-center justify-between gap-3">
-                    <button type="button" onclick="toggleLibraryCard('${w.id}')" class="flex-1 text-left focus:outline-none min-w-0">
-                        <h4 class="font-bold text-white text-sm leading-snug truncate">${name}</h4>
-                    </button>
-                    <button type="button" onclick="toggleLibraryCard('${w.id}')" class="p-1.5 bg-slate-800/80 text-slate-400 rounded-lg shrink-0">
-                        <i data-lucide="chevron-down" id="lib-chevron-${w.id}" class="w-4 h-4 transition-transform duration-200"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Utfällbar detaljvy -->
-            <div id="lib-details-${w.id}" class="hidden px-4 pb-4 pt-1 border-t border-slate-800/80 space-y-3 bg-slate-950/30">
-                <div class="pt-2 space-y-3">
-                    ${muscleMapHtml}
-                    ${formattedBlocks}
-                </div>
-                <div class="pt-3 border-t border-slate-800/80 space-y-2">
-                    <div class="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Välj datum:</span>
-                        <input type="date" id="date-${w.id}" value="${todayStr}" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-indigo-500 font-mono">
-                    </div>
-                    <button onclick="scheduleIntervalsWorkout('${w.id}', '${encodeURIComponent(name)}', '${sport}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white rounded-xl flex items-center justify-center gap-2 transition shadow">
-                        <i data-lucide="send" class="w-3.5 h-3.5"></i> Skicka till Kalender (${sport})
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    }).join('');
-
-    if (window.lucide) lucide.createIcons();
-}
+            `;
+            }).join('');
+        
+            if (window.lucide) lucide.createIcons();
+        }
 
         async function scheduleIntervalsWorkout(workoutId, encodedName, sportType = 'Run') {
             const workoutName = decodeURIComponent(encodedName);
             const dateInput = document.getElementById(`date-${workoutId}`);
             const targetDate = dateInput ? dateInput.value : toLocalDateString();
-            const resolvedSport = detectSportType(workoutName, '', sportType);
+        
+            const libWorkout = (appState.libraryWorkouts || []).find(w => String(w.id) === String(workoutId));
+            const resolvedSport = (libWorkout && libWorkout.type)
+                ? libWorkout.type
+                : detectSportType(workoutName, libWorkout?.description || '', sportType);
 
             const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
             const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
@@ -3175,18 +3196,23 @@ function renderWeeklyCoachAdviceBanner(planContext) {
 
             try {
                 for (const part of splitParts) {
+                    const libWorkout = part.workoutId
+                        ? (appState.libraryWorkouts || []).find(w => String(w.id) === String(part.workoutId))
+                        : null;
+                    const finalSport = (libWorkout && libWorkout.type) ? libWorkout.type : part.sportType;
+                    
                     const payload = part.workoutId
                         ? {
                             workout_id: part.workoutId,
                             category: 'WORKOUT',
                             start_date_local: `${item.dateStr}T00:00:00`,
-                            type: part.sportType,
+                            type: finalSport,
                             name: part.title
                         }
                         : {
                             category: 'WORKOUT',
                             start_date_local: `${item.dateStr}T00:00:00`,
-                            type: part.sportType,
+                            type: finalSport,
                             name: part.title,
                             description: normalizeWorkoutSyntax(part.desc)
                         };
