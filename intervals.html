@@ -5126,58 +5126,107 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             const { primary, secondary } = inferMusclesFromWorkout(workout);
             if (!primary.length && !secondary.length) return '';
         
-            const inactiveFill = '#1e293b';
-            const primaryFill = '#f59e0b';   // Primär
-            const secondaryFill = '#facc15'; // Sekundär
+            const bodyBase = '#172554';
+            const bodyMid = '#1e3a8a';
+            const outline = '#38bdf8';
+            const inactiveMuscle = '#1e293b';
+            const primaryFill = '#f59e0b';
+            const secondaryFill = '#facc15';
         
             const getFill = (muscleKey) => {
                 if (primary.includes(muscleKey)) return primaryFill;
                 if (secondary.includes(muscleKey)) return secondaryFill;
-                return inactiveFill;
+                return inactiveMuscle;
             };
         
-            const svgSizeClass = compact ? 'w-14 h-24' : 'w-32 h-52';
+            const svgClass = compact ? 'w-16 h-28' : 'w-36 h-60';
             const boxClass = compact
-                ? 'rounded-lg bg-slate-950/60 border border-slate-800/90 px-2.5 py-1.5 text-slate-200'
+                ? 'rounded-lg bg-slate-950/70 border border-slate-800 px-2.5 py-1.5 text-slate-200'
                 : 'rounded-xl bg-slate-900/90 border border-slate-800 p-4 text-slate-200';
-            const gridGapClass = compact ? 'gap-2 py-0.5' : 'gap-4 py-1';
         
             const frontSvg = `
-                <svg viewBox="0 0 140 240" class="${svgSizeClass}" aria-label="Framsida muskler">
-                    <circle cx="70" cy="22" r="12" fill="#334155" />
-                    <rect x="64" y="34" width="12" height="10" rx="3" fill="#334155" />
-                    <ellipse cx="44" cy="54" rx="9" ry="12" fill="${getFill('upper_back')}" />
-                    <ellipse cx="96" cy="54" rx="9" ry="12" fill="${getFill('upper_back')}" />
-                    <rect x="33" y="64" width="11" height="36" rx="5" fill="#334155" />
-                    <rect x="96" y="64" width="11" height="36" rx="5" fill="#334155" />
-                    <path d="M50 46 Q70 52 90 46 L86 72 L54 72 Z" fill="#334155" />
-                    <rect x="58" y="74" width="24" height="38" rx="6" fill="${getFill('abs')}" />
-                    <path d="M50 72 L57 74 L57 110 L51 106 Z" fill="${getFill('obliques')}" />
-                    <path d="M90 72 L83 74 L83 110 L89 106 Z" fill="${getFill('obliques')}" />
-                    <ellipse cx="49" cy="118" rx="6" ry="10" fill="${getFill('hip_abductors')}" />
-                    <ellipse cx="91" cy="118" rx="6" ry="10" fill="${getFill('hip_abductors')}" />
-                    <rect x="52" y="114" width="15" height="54" rx="7" fill="${getFill('quads')}" />
-                    <rect x="73" y="114" width="15" height="54" rx="7" fill="${getFill('quads')}" />
-                    <rect x="54" y="174" width="12" height="48" rx="6" fill="${getFill('calves')}" />
-                    <rect x="74" y="174" width="12" height="48" rx="6" fill="${getFill('calves')}" />
+                <svg viewBox="0 0 160 280" class="${svgClass}" aria-label="Framsida muskler">
+                    <!-- Huvud & hals -->
+                    <ellipse cx="80" cy="24" rx="13" ry="16" fill="${bodyMid}" stroke="${outline}" stroke-width="1.2" />
+                    <path d="M72 39 L88 39 L90 50 L70 50 Z" fill="${bodyBase}" stroke="${outline}" stroke-width="1.2" />
+        
+                    <!-- Kropp & armar (bas) -->
+                    <path d="M52 52 Q80 58 108 52 L114 76 L104 124 L56 124 L46 76 Z" fill="${bodyBase}" stroke="${outline}" stroke-width="1.2" />
+                    <path d="M50 56 L34 72 L25 112 L35 115 L45 82 L52 76 Z" fill="${bodyMid}" stroke="${outline}" stroke-width="1.2" />
+                    <path d="M110 56 L126 72 L135 112 L125 115 L115 82 L108 76 Z" fill="${bodyMid}" stroke="${outline}" stroke-width="1.2" />
+        
+                    <!-- Axlar & armar (muskeldetaljer) -->
+                    <path d="M47 56 Q37 62 35 75 L46 77 L53 62 Z" fill="${getFill('upper_back')}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M113 56 Q123 62 125 75 L114 77 L107 62 Z" fill="${getFill('upper_back')}" stroke="#0f172a" stroke-width="1" />
+                    <ellipse cx="38" cy="94" rx="5.5" ry="13" transform="rotate(12 38 94)" fill="${getFill('upper_back')}" stroke="#0f172a" stroke-width="1" />
+                    <ellipse cx="122" cy="94" rx="5.5" ry="13" transform="rotate(-12 122 94)" fill="${getFill('upper_back')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <!-- Bröst & bål (abs + obliques) -->
+                    <path d="M56 60 Q68 65 79 61 L78 74 Q67 76 56 72 Z" fill="${bodyMid}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M104 60 Q92 65 81 61 L82 74 Q93 76 104 72 Z" fill="${bodyMid}" stroke="#0f172a" stroke-width="1" />
+        
+                    <rect x="69" y="77" width="9.5" height="9" rx="2.5" fill="${getFill('abs')}" stroke="#0f172a" stroke-width="1" />
+                    <rect x="81.5" y="77" width="9.5" height="9" rx="2.5" fill="${getFill('abs')}" stroke="#0f172a" stroke-width="1" />
+                    <rect x="69" y="88.5" width="9.5" height="9" rx="2.5" fill="${getFill('abs')}" stroke="#0f172a" stroke-width="1" />
+                    <rect x="81.5" y="88.5" width="9.5" height="9" rx="2.5" fill="${getFill('abs')}" stroke="#0f172a" stroke-width="1" />
+                    <rect x="70" y="100" width="9" height="8.5" rx="2.5" fill="${getFill('abs')}" stroke="#0f172a" stroke-width="1" />
+                    <rect x="81" y="100" width="9" height="8.5" rx="2.5" fill="${getFill('abs')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <path d="M56 76 L66 78 L66 112 L58 109 Z" fill="${getFill('obliques')}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M104 76 L94 78 L94 112 L102 109 Z" fill="${getFill('obliques')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <!-- Höftabduktorer & framsida lår (quads) -->
+                    <path d="M56 122 L66 122 L64 138 L54 134 Z" fill="${getFill('hip_abductors')}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M104 122 L94 122 L96 138 L106 134 Z" fill="${getFill('hip_abductors')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <path d="M57 128 L77 128 L75 182 L61 182 Z" fill="${getFill('quads')}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M83 128 L103 128 L99 182 L85 182 Z" fill="${getFill('quads')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <!-- Knän & underben / vader -->
+                    <ellipse cx="68" cy="188" rx="7" ry="5" fill="${bodyMid}" stroke="${outline}" stroke-width="1" />
+                    <ellipse cx="92" cy="188" rx="7" ry="5" fill="${bodyMid}" stroke="${outline}" stroke-width="1" />
+        
+                    <path d="M61 195 L74 195 L72 246 L62 246 Z" fill="${getFill('calves')}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M86 195 L99 195 L98 246 L88 246 Z" fill="${getFill('calves')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <!-- Fötter -->
+                    <path d="M61 248 L72 248 L71 266 L57 266 Z" fill="${bodyBase}" stroke="${outline}" stroke-width="1.2" />
+                    <path d="M88 248 L99 248 L103 266 L89 266 Z" fill="${bodyBase}" stroke="${outline}" stroke-width="1.2" />
                 </svg>
             `;
         
             const backSvg = `
-                <svg viewBox="0 0 140 240" class="${svgSizeClass}" aria-label="Baksida muskler">
-                    <circle cx="70" cy="22" r="12" fill="#334155" />
-                    <rect x="64" y="34" width="12" height="10" rx="3" fill="#334155" />
-                    <path d="M48 48 L92 48 L84 96 L56 96 Z" fill="${getFill('lats')}" />
-                    <path d="M52 48 L88 48 L80 72 L60 72 Z" fill="${getFill('upper_back')}" />
-                    <rect x="58" y="96" width="24" height="16" rx="4" fill="${getFill('lower_back')}" />
-                    <rect x="33" y="64" width="11" height="36" rx="5" fill="#334155" />
-                    <rect x="96" y="64" width="11" height="36" rx="5" fill="#334155" />
-                    <ellipse cx="59" cy="122" rx="12" ry="13" fill="${getFill('glutes')}" />
-                    <ellipse cx="81" cy="122" rx="12" ry="13" fill="${getFill('glutes')}" />
-                    <rect x="52" y="136" width="15" height="34" rx="7" fill="${getFill('hamstrings')}" />
-                    <rect x="73" y="136" width="15" height="34" rx="7" fill="${getFill('hamstrings')}" />
-                    <ellipse cx="60" cy="192" rx="7" ry="22" fill="${getFill('calves')}" />
-                    <ellipse cx="80" cy="192" rx="7" ry="22" fill="${getFill('calves')}" />
+                <svg viewBox="0 0 160 280" class="${svgClass}" aria-label="Baksida muskler">
+                    <!-- Huvud & nacke -->
+                    <ellipse cx="80" cy="24" rx="13" ry="16" fill="${bodyMid}" stroke="${outline}" stroke-width="1.2" />
+                    <path d="M72 39 L88 39 L90 50 L70 50 Z" fill="${bodyBase}" stroke="${outline}" stroke-width="1.2" />
+        
+                    <!-- Kropp & armar (bas) -->
+                    <path d="M52 52 Q80 58 108 52 L114 76 L104 124 L56 124 L46 76 Z" fill="${bodyBase}" stroke="${outline}" stroke-width="1.2" />
+                    <path d="M50 56 L34 72 L25 112 L35 115 L45 82 L52 76 Z" fill="${bodyMid}" stroke="${outline}" stroke-width="1.2" />
+                    <path d="M110 56 L126 72 L135 112 L125 115 L115 82 L108 76 Z" fill="${bodyMid}" stroke="${outline}" stroke-width="1.2" />
+        
+                    <!-- Övre rygg, lats & ländrygg -->
+                    <path d="M56 58 L80 64 L74 106 L55 96 Z" fill="${getFill('lats')}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M104 58 L80 64 L86 106 L105 96 Z" fill="${getFill('lats')}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M62 56 L98 56 L88 78 L72 78 Z" fill="${getFill('upper_back')}" stroke="#0f172a" stroke-width="1" />
+                    <rect x="69" y="104" width="22" height="15" rx="4" fill="${getFill('lower_back')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <!-- Säte (glutes) -->
+                    <path d="M56 122 Q68 119 79 126 L77 146 Q65 148 55 140 Z" fill="${getFill('glutes')}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M104 122 Q92 119 81 126 L83 146 Q95 148 105 140 Z" fill="${getFill('glutes')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <!-- Baksida lår (hamstrings) -->
+                    <path d="M57 146 L77 146 L74 186 L61 186 Z" fill="${getFill('hamstrings')}" stroke="#0f172a" stroke-width="1" />
+                    <path d="M83 146 L103 146 L99 186 L86 186 Z" fill="${getFill('hamstrings')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <!-- Vader (calves) & hälsenor -->
+                    <ellipse cx="67" cy="214" rx="7.5" ry="22" fill="${getFill('calves')}" stroke="#0f172a" stroke-width="1" />
+                    <ellipse cx="93" cy="214" rx="7.5" ry="22" fill="${getFill('calves')}" stroke="#0f172a" stroke-width="1" />
+        
+                    <!-- Fötter -->
+                    <path d="M61 248 L72 248 L71 266 L57 266 Z" fill="${bodyBase}" stroke="${outline}" stroke-width="1.2" />
+                    <path d="M88 248 L99 248 L103 266 L89 266 Z" fill="${bodyBase}" stroke="${outline}" stroke-width="1.2" />
                 </svg>
             `;
         
@@ -5191,7 +5240,7 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
                                 <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full" style="background:${secondaryFill}"></span>Sekundär</span>
                             </span>
                         </div>
-                        <div class="flex items-center justify-around ${gridGapClass}">
+                        <div class="flex items-center justify-around gap-2 py-0.5">
                             ${frontSvg}
                             ${backSvg}
                         </div>
@@ -5214,7 +5263,7 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
                             </span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 ${gridGapClass} items-center justify-items-center">
+                    <div class="grid grid-cols-2 gap-4 py-1 items-center justify-items-center">
                         ${frontSvg}
                         ${backSvg}
                     </div>
