@@ -568,7 +568,26 @@ Main Set 4x
                     </h3>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="complianceGrid">
                     </div>
-                </div>                
+                </div> 
+                                <!-- RUTA: ANTECKNINGAR / COACH GENIE-SAMMANFATTNING PÅ PASSET -->
+                <div id="activityNotesCard" class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <i data-lucide="file-text" class="w-4 h-4 text-indigo-400"></i> Passanteckningar & Coach Genie-sammanfattning
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="pasteClipboardToActivityNotes()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-semibold rounded-lg flex items-center gap-1 transition">
+                                <i data-lucide="clipboard-paste" class="w-3.5 h-3.5 text-indigo-400"></i> Klistra in
+                            </button>
+                            <button type="button" onclick="saveActivityNotesToIntervals()" id="saveActivityNotesBtn" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold rounded-lg flex items-center gap-1 transition shadow">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i> Spara till passet
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="activityNotesTextarea" rows="5" placeholder="Klistra in Coach Genies sammanfattning eller egna noteringar om passet här..." class="w-full bg-slate-950/90 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"></textarea>
+                    <div id="activityNotesStatus" class="text-[11px] text-slate-400 hidden"></div>
+                </div>
+
             </div>
 
             <div id="block1Container" class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4 transition-all">
@@ -3871,6 +3890,8 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
 
                 if (act) {
                     renderActivityOverviewAndBlocks(act, streamStats);
+                    populateActivityNotesEditor(act);
+
                     renderPlanVsOutcome(act);
 
                     let intervals = act.icu_intervals || act.laps || act.splits_metric || act.intervals || [];
@@ -4008,6 +4029,132 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             renderBlockCards(block1Config, 'block1Grid');
             renderBlockCards(block2Config, 'block2Grid');
         }
+        function populateActivityNotesEditor(act) {
+    const textarea = document.getElementById('activityNotesTextarea');
+    const statusEl = document.getElementById('activityNotesStatus');
+    if (!textarea) return;
+
+    textarea.value = (act && typeof act.description === 'string') ? act.description : '';
+    if (statusEl) {
+        statusEl.textContent = '';
+        statusEl.classList.add('hidden');
+    }
+}
+
+async function pasteClipboardToActivityNotes() {
+    const textarea = document.getElementById('activityNotesTextarea');
+    const statusEl = document.getElementById('activityNotesStatus');
+    if (!textarea) return;
+
+    try {
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+            textarea.focus();
+            if (statusEl) {
+                statusEl.textContent = 'Tryck Ctrl+V (eller Cmd+V) i rutan för att klistra in.';
+                statusEl.className = 'text-[11px] text-amber-400';
+                statusEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        const clipText = (await navigator.clipboard.readText() || '').trim();
+        if (!clipText) {
+            if (statusEl) {
+                statusEl.textContent = 'Urklippet var tomt.';
+                statusEl.className = 'text-[11px] text-amber-400';
+                statusEl.classList.remove('hidden');
+            }
+            return;
+        }
+
+        const current = textarea.value.trim();
+        textarea.value = current ? `${current}\n\n${clipText}` : clipText;
+        textarea.focus();
+
+        if (statusEl) {
+            statusEl.textContent = 'Inklistrat från urklipp – klicka på "Spara till passet" för att lagra i Intervals.icu.';
+            statusEl.className = 'text-[11px] text-indigo-300';
+            statusEl.classList.remove('hidden');
+        }
+    } catch (_) {
+        textarea.focus();
+        if (statusEl) {
+            statusEl.textContent = 'Webbläsaren blockerade automatisk läsning av urklipp – tryck Ctrl+V / Cmd+V direkt i rutan.';
+            statusEl.className = 'text-[11px] text-amber-400';
+            statusEl.classList.remove('hidden');
+        }
+    }
+}
+
+async function saveActivityNotesToIntervals() {
+    const activityId = appState.currentDetailActivityId;
+    const textarea = document.getElementById('activityNotesTextarea');
+    const statusEl = document.getElementById('activityNotesStatus');
+    const btn = document.getElementById('saveActivityNotesBtn');
+
+    if (!activityId || !textarea) return;
+
+    const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+    if (!apiKey) {
+        openSettingsModal();
+        return;
+    }
+
+    const newDescription = textarea.value.trim();
+    const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+
+    if (btn) btn.disabled = true;
+    if (statusEl) {
+        statusEl.textContent = 'Sparar anteckning till Intervals.icu...';
+        statusEl.className = 'text-[11px] text-slate-400';
+        statusEl.classList.remove('hidden');
+    }
+
+    try {
+        const res = await fetch(`https://intervals.icu/api/v1/activity/${activityId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': authHeader,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ description: newDescription })
+        });
+
+        if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`HTTP ${res.status}: ${errText}`);
+        }
+
+        const updatedAct = await res.json();
+
+        // Uppdatera lokal cache så sammanfattningen visas direkt utan omladdning
+        const idx = (appState.activities || []).findIndex(a => String(a.id) === String(activityId));
+        if (idx !== -1) {
+            appState.activities[idx] = { ...appState.activities[idx], ...updatedAct, description: newDescription };
+        }
+
+        renderActivityOverviewAndBlocks(
+            idx !== -1 ? appState.activities[idx] : { ...updatedAct, description: newDescription },
+            typeof computeStreamAverages === 'function' ? computeStreamAverages(appState.currentStreams) : {}
+        );
+
+        if (statusEl) {
+            statusEl.textContent = '✅ Sparat på passet i Intervals.icu!';
+            statusEl.className = 'text-[11px] text-emerald-400 font-semibold';
+            statusEl.classList.remove('hidden');
+        }
+    } catch (err) {
+        console.error('Fel vid sparande av passanteckning:', err);
+        if (statusEl) {
+            statusEl.textContent = `Kunde inte spara: ${err.message}`;
+            statusEl.className = 'text-[11px] text-rose-400';
+            statusEl.classList.remove('hidden');
+        }
+    } finally {
+        if (btn) btn.disabled = false;
+        if (window.lucide) lucide.createIcons();
+    }
+}
 
         function extractStatFromStreams(streams, startTime, endTime, streamName) {
             if (!streams) return null;
