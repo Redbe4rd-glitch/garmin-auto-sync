@@ -4293,14 +4293,110 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
             return 40;
         }
 
-        function renderPlanVsOutcome(act) {
+        function extractNativeIcuCompliance(act) {
+            if (!act || typeof act !== 'object') return null;
+        
+            // Vanliga compliance-/matchningsfält som kan finnas på en aktivitet från Intervals.icu
+            const candidateNums = [
+                act.compliance,
+                act.icu_compliance,
+                act.workout_compliance,
+                act.compliance_pct,
+                act.match_pct
+            ];
+        
+            for (const val of candidateNums) {
+                if (typeof val === 'number' && Number.isFinite(val)) {
+                    return val <= 1 && val > 0 ? Math.round(val * 100) : Math.round(val);
+                }
+                if (typeof val === 'string' && val.trim() !== '') {
+                    const parsed = parseFloat(val.replace('%', '').trim());
+                    if (Number.isFinite(parsed)) {
+                        return parsed <= 1 && parsed > 0 ? Math.round(parsed * 100) : Math.round(parsed);
+                    }
+                }
+            }
+        
+            return null;
+        }
+        
+        async function fetchPlannedEventForActivity(act) {
+            const apiKey = appState.apiKey || localStorage.getItem('icu_api_key');
+            const athleteId = appState.athleteId || localStorage.getItem('icu_athlete_id');
+            const actDate = String(act?.start_date_local || '').slice(0, 10);
+            if (!actDate || !apiKey || !athleteId) return null;
+        
+            const authHeader = 'Basic ' + btoa('API_KEY:' + apiKey);
+            const d = new Date(actDate + 'T12:00:00');
+            const prevDay = new Date(d); prevDay.setDate(prevDay.getDate() - 1);
+            const nextDay = new Date(d); nextDay.setDate(nextDay.getDate() + 1);
+            const fmt = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+        
+            try {
+                const res = await fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/events?oldest=${fmt(prevDay)}&newest=${fmt(nextDay)}`, {
+                    headers: { 'Authorization': authHeader }
+                });
+                if (!res.ok) return null;
+                const events = await res.json();
+                if (!Array.isArray(events)) return null;
+        
+                // Om aktiviteten redan har ett ihopparat event-ID i Intervals.icu, använd det direkt
+                const pairedId = act?.paired_event_id ?? act?.planned_event_id ?? act?.event_id;
+                if (pairedId != null) {
+                    const directMatch = events.find(ev => String(ev?.id) === String(pairedId));
+                    if (directMatch) return directMatch;
+                }
+        
+                const candidates = events.filter(ev => {
+                    const cat = String(ev?.category || '').toUpperCase();
+                    return cat === 'WORKOUT' || cat === 'PLANNED' || Boolean(ev?.workout_doc) || Boolean(ev?.description);
+                });
+                if (!candidates.length) return null;
+        
+                const exactDate = candidates.filter(ev => String(ev?.start_date_local || '').slice(0, 10) === actDate);
+                const pool = exactDate.length ? exactDate : candidates;
+        
+                const actName = String(act?.name || '').toLowerCase();
+                const scored = pool.map(ev => {
+                    let score = 0;
+                    const evName = String(ev?.name || '').toLowerCase();
+                    if (String(ev?.start_date_local || '').slice(0, 10) === actDate) score += 10;
+                    if (actName && evName && (actName.includes(evName) || evName.includes(actName))) score += 8;
+                    if (act?.type && ev?.type && String(act.type).toLowerCase() === String(ev.type).toLowerCase()) score += 4;
+                    return { ev, score };
+                }).sort((a, b) => b.score - a.score);
+        
+                return scored[0]?.ev || null;
+            } catch (_) {
+                return null;
+            }
+        }
+        
+        function extractPlannedMetrics(ev) {
+            if (!ev) return { plannedMinutes: 0, plannedLoad: 0, sourceLabel: '' };
+            const doc = ev.workout_doc || {};
+            let sec = Number(doc.duration || ev.moving_time || ev.elapsed_time || 0);
+            if (!sec && typeof ev.description === 'string') {
+                const matches = [...ev.description.matchAll(/(\d+)\s*m\b/gi)];
+                sec = matches.reduce((sum, m) => sum + parseInt(m[1], 10) * 60, 0);
+            }
+            const plannedMinutes = sec > 0 ? Math.round(sec / 60) : 0;
+            const plannedLoad = Number(ev.icu_training_load || doc.icu_training_load || 0);
+            return {
+                plannedMinutes,
+                plannedLoad,
+                sourceLabel: ev.name ? `Bokad: ${ev.name}` : 'Bokad i Intervals.icu'
+            };
+        }
+        
+        async function renderPlanVsOutcome(act) {
             const container = document.getElementById('complianceContainer');
             const grid = document.getElementById('complianceGrid');
             if (!container || !grid) return;
         
-            const actualLoad = act.icu_training_load || 0;
-            const actualDuration = act.moving_time ? Math.round(act.moving_time / 60) : 0;
-            
+            const actualLoad = Number(act?.icu_training_load || 0);
+            const actualDuration = act?.moving_time ? Math.round(act.moving_time / 60) : 0;
+        
             if (actualLoad <= 0 && actualDuration <= 0) {
                 container.classList.add('hidden');
                 return;
@@ -4308,35 +4404,99 @@ Passen kopplas nu direkt till rätt sportprofil på din Garmin-klocka!`);
         
             container.classList.remove('hidden');
         
-            let complianceText = 'Genomfört enligt plan';
-            let complianceColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-            let matchPct = 95;
+            const plannedEvent = await fetchPlannedEventForActivity(act);
+            const { plannedMinutes, plannedLoad, sourceLabel } = extractPlannedMetrics(plannedEvent);
+            const nativeCompliance = extractNativeIcuCompliance(act);
         
-            const avgHr = act.average_heartrate || 0;
-            const name = (act.name || '').toLowerCase();
+            let complianceText = 'Inget bokat pass hittat i kalendern';
+            let complianceColor = 'text-slate-400';
+            let matchPct = null;
+            let sourceTag = 'Fallback mot kalender';
         
-            if (name.includes('fatmax') && avgHr > 125) {
-                complianceText = 'För hög puls för FatMax-mål';
-                complianceColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-                matchPct = 78;
-            } else if (name.includes('tröskel') && avgHr < 130 && avgHr > 0) {
-                complianceText = 'Lägre intensitet än planerat';
-                complianceColor = 'text-sky-400 bg-sky-500/10 border-sky-500/20';
-                matchPct = 82;
+            const avgHr = Number(act?.average_heartrate || 0);
+            const name = `${act?.name || ''} ${plannedEvent?.name || ''}`.toLowerCase();
+        
+            if (nativeCompliance !== null) {
+                matchPct = Math.max(0, Math.min(100, nativeCompliance));
+                sourceTag = 'Intervals.icu compliance';
+                if (matchPct >= 85) {
+                    complianceText = 'Genomfört enligt plan';
+                    complianceColor = 'text-emerald-400';
+                } else if (matchPct >= 70) {
+                    complianceText = 'Viss avvikelse mot plan';
+                    complianceColor = 'text-amber-400';
+                } else {
+                    complianceText = 'Stor avvikelse mot plan';
+                    complianceColor = 'text-rose-400';
+                }
+            } else if (plannedMinutes > 0 || plannedLoad > 0) {
+                let score = 100;
+                const notes = [];
+        
+                if (plannedMinutes > 0 && actualDuration > 0) {
+                    const durDiffPct = Math.abs(actualDuration - plannedMinutes) / plannedMinutes;
+                    score -= Math.min(45, durDiffPct * 100);
+                    if (durDiffPct > 0.25) {
+                        notes.push(actualDuration > plannedMinutes ? 'Längre än bokat' : 'Kortare än bokat');
+                    }
+                }
+        
+                if (plannedLoad > 0 && actualLoad > 0) {
+                    const loadDiffPct = Math.abs(actualLoad - plannedLoad) / plannedLoad;
+                    score -= Math.min(45, loadDiffPct * 100);
+                    if (loadDiffPct > 0.25) {
+                        notes.push(actualLoad > plannedLoad ? 'Högre belastning än bokat' : 'Lägre belastning än bokat');
+                    }
+                }
+        
+                if (name.includes('fatmax') && avgHr > 125) {
+                    score -= 15;
+                    notes.push('För hög puls för FatMax');
+                } else if ((name.includes('tröskel') || name.includes('tusingar') || name.includes('norska')) && avgHr > 0 && avgHr < 130) {
+                    score -= 15;
+                    notes.push('Lägre puls än tröskelmål');
+                }
+        
+                matchPct = Math.max(0, Math.min(100, Math.round(score)));
+        
+                if (notes.length > 0) {
+                    complianceText = notes.join(' · ');
+                    complianceColor = matchPct >= 75 ? 'text-amber-400' : 'text-rose-400';
+                } else if (matchPct >= 85) {
+                    complianceText = 'Enligt bokat pass';
+                    complianceColor = 'text-emerald-400';
+                } else {
+                    complianceText = 'Mindre avvikelse mot bokat pass';
+                    complianceColor = 'text-amber-400';
+                }
             }
+        
+            const pctColor = matchPct === null
+                ? 'text-slate-400'
+                : (matchPct >= 85 ? 'text-emerald-400' : (matchPct >= 70 ? 'text-amber-400' : 'text-rose-400'));
+        
+            const plannedSub = (plannedMinutes > 0 || plannedLoad > 0)
+                ? `<div class="text-[11px] text-slate-400 mt-1">${sourceLabel}: ${plannedMinutes ? `${plannedMinutes} min` : '–'}${plannedLoad ? ` (${Math.round(plannedLoad)} TSS)` : ''}</div>`
+                : `<div class="text-[11px] text-slate-500 mt-1">Ingen bokad plan att jämföra mot</div>`;
+        
+            const pctSub = matchPct !== null
+                ? `<div class="text-[11px] text-slate-500 mt-1">Källa: ${sourceTag}</div>`
+                : '';
         
             grid.innerHTML = `
                 <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
                     <div class="text-[11px] text-slate-400">Faktisk Tid / Belastning</div>
                     <div class="text-sm font-bold text-white mt-1">${actualDuration} min (${Math.round(actualLoad)} TSS)</div>
+                    ${plannedSub}
                 </div>
                 <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
                     <div class="text-[11px] text-slate-400">Utförandebedömning</div>
-                    <div class="text-sm font-bold ${complianceColor.split(' ')[0]} mt-1">${complianceText}</div>
+                    <div class="text-sm font-bold ${complianceColor} mt-1">${complianceText}</div>
                 </div>
                 <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
                     <div class="text-[11px] text-slate-400">Matchningsgrad</div>
-                    <div class="text-sm font-bold text-emerald-400 mt-1">${matchPct}% Träffsäkerhet</div>
+                    <div class="text-sm font-bold ${pctColor} mt-1">${matchPct !== null ? `${matchPct}% Träffsäkerhet` : 'Ej jämförbart (inget bokat pass)'}</div>
+                    ${pctSub}
                 </div>
             `;
         }
