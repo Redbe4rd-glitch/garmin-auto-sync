@@ -1,5 +1,6 @@
 date,restingHeartRate,hrvStatus,hrvWeeklyAvg,sleepScore,sleepTimeSeconds,deepSleepSeconds,bodyBattery,rpe,painLocation,painLevel
-2026-11-26,39,LOW,47,79,25260,4200,67,,,
+2026-11-27,40,LOW,48,75,24900,5520,68,,,
+2026-11-26,39,LOW,47,79,25260,4200,8,,,
 2026-11-25,41,LOW,45,74,22920,3660,14,,,
 2026-11-24,41,LOW,43,78,25500,7080,16,,,
 2026-11-23,42,LOW,43,67,21900,6780,17,,,
